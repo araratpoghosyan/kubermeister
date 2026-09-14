@@ -1,0 +1,116 @@
+name: Release
+
+# Stable release: pushing a vX.Y.Z tag whose version matches package.json builds, packages and
+# publishes a versioned GitHub release. Cutting a release = merge the version bump PR, then
+# `git tag vX.Y.Z && git push origin vX.Y.Z`.
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+
+permissions:
+  contents: read
+
+# Never cancel a half-published release.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: verify tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Tag must match package.json version
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "v$PKG_VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $PKG_VERSION"
+            exit 1
+          fi
+
+  ci:
+    name: ci
+    needs: verify
+    uses: ./.github/workflows/ci.yml
+
+  # The release is created as a draft first so it never appears half-populated; `publish`
+  # flips it public once every platform has uploaded.
+  draft:
+    name: create draft release
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Create the draft release with generated notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+              --draft --verify-tag --title "Kubermeister ${GITHUB_REF_NAME#v}" --generate-notes
+          fi
+
+  package:
+    name: package (${{ matrix.os }})
+    needs: draft
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    env:
+      # Deterministic unsigned builds until signing secrets exist.
+      CSC_IDENTITY_AUTO_DISCOVERY: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Package
+        shell: bash
+        env:
+          # Only the presence flag: exporting CSC_LINK itself when the secret is empty makes
+          # electron-builder treat "" as a certificate path and fail with "not a file".
+          HAS_SIGNING_CERT: ${{ secrets.CSC_LINK != '' }}
+        run: |
+          flags=()
+          # Without a Developer ID certificate, ad-hoc sign the macOS bundle so its signature is
+          # valid and Gatekeeper shows the unverified-developer dialog instead of "damaged".
+          if [ "$RUNNER_OS" = macOS ] && [ "$HAS_SIGNING_CERT" != true ]; then
+            flags+=(-c.mac.identity=- -c.mac.hardenedRuntime=false)
+          fi
+          npm run package -- "${flags[@]}"
+      # Installers plus the electron-updater metadata (latest*.yml, blockmaps) the app will read.
+      - name: Upload assets to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          shopt -s nullglob
+          case "$RUNNER_OS" in
+            macOS)   files=(release/*.dmg release/*.dmg.blockmap release/latest-mac.yml) ;;
+            Windows) files=(release/*.exe release/*.exe.blockmap release/latest.yml) ;;
+            Linux)   files=(release/*.AppImage release/*.deb release/latest-linux.yml) ;;
+          esac
+          gh release upload "$GITHUB_REF_NAME" "${files[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+
+  publish:
+    name: publish release
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Make the release public and latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false --latest

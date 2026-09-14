@@ -63,10 +63,23 @@ Body: why the change is needed, what a reader of the history cannot learn from t
 
 ## Release model
 
-Two channels. `.github/workflows/tip.yml` rebuilds the rolling `tip` pre-release on every push
-to `main` after calling `ci.yml` as its gate: the tag is force-moved and the fixed-name assets
-(`Kubermeister-tip-<os>-<arch>.<ext>`) are replaced, so the names are load-bearing. `vX.Y.Z` tags
-will drive stable releases through a separate workflow. Contributors never bump versions by hand.
+Two channels, two apps that install side by side:
+
+- **Tip** (`.github/workflows/tip.yml`): every push to `main`, after `ci.yml` passes as the gate.
+  Ships as `Kubermeister Tip` (`io.kubermeister.tip`, badged icon, own settings folder, version
+  `<package.json>-tip.<build number>`). The `tip` tag is force-moved and the fixed-name assets
+  `Kubermeister-tip-<os>-<arch>.<ext>` are replaced on the single rolling pre-release. Its update
+  feed is the generic URL of that release.
+- **Stable** (`.github/workflows/release.yml`): a `vX.Y.Z` tag whose version matches package.json.
+  Draft release, package on three OSes, upload installers plus electron-updater metadata
+  (`latest*.yml`, blockmaps), publish as latest. Cutting a release: merge a
+  `chore(release): X.Y.Z` PR that bumps package.json, then `git tag vX.Y.Z && git push origin
+vX.Y.Z`.
+
+Asset names, app ids and product names are load-bearing for the updater and the Homebrew casks;
+change them together with the workflows. macOS is ad-hoc signed until the `CSC_*` and `APPLE_*`
+secrets exist; never export an empty `CSC_LINK`. Icons regenerate from `resources/icon.svg` and
+`resources/icon-tip.svg` with `resources/build-icon.sh`.
 
 ## Code style
 
