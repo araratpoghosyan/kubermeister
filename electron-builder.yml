@@ -15,7 +15,14 @@ extraResources:
 # Deterministic asset names; the release workflows and any package manager templates depend on
 # this exact pattern.
 artifactName: ${productName}-${version}-${os}-${arch}.${ext}
-# No `publish` block: releases upload assets themselves with `gh release upload`.
+# The publish block is never used to upload (workflows run with --publish never and use
+# `gh release upload`). It exists so electron-builder emits the electron-updater metadata
+# (latest*.yml, blockmaps) and embeds the update feed into the app. The tip workflow overrides it
+# with a generic feed pointing at the rolling tip release.
+# Owner and repo come from package.json `repository`; keeping only the provider here lets the
+# tip workflow swap it for a generic feed without merging conflicting keys.
+publish:
+  provider: github
 mac:
   icon: resources/icon.icns
   category: public.app-category.developer-tools

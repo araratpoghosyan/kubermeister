@@ -2,8 +2,10 @@ import { app, BrowserWindow, shell } from 'electron';
 import { join } from 'node:path';
 import { registerHandlers } from './ipc/index.js';
 
-// Set before `whenReady` so the macOS menu bar shows the product name in development too.
-app.setName('Kubermeister');
+// Packaged builds take their name from electron-builder's productName ("Kubermeister" or
+// "Kubermeister Tip"), which also separates their settings folders. Only development, which runs
+// from Electron's own bundle, needs the name set by hand.
+if (!app.isPackaged) app.setName('Kubermeister');
 
 /** Only `http:`/`https:` URLs are safe to hand to the OS browser. */
 function isExternalWebUrl(url: string): boolean {
