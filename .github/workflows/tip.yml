@@ -71,7 +71,18 @@ jobs:
       - run: npm run build
       - name: Package with tip asset names
         shell: bash
-        run: npm run package -- -c.artifactName='${productName}-tip-${os}-${arch}.${ext}'
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+        run: |
+          flags=(-c.artifactName='${productName}-tip-${os}-${arch}.${ext}')
+          # Without a Developer ID certificate, ad-hoc sign the macOS bundle so its signature is
+          # valid: Gatekeeper then shows the standard unverified-developer dialog (right-click,
+          # Open) instead of "damaged". Hardened runtime only matters for notarization and blocks
+          # ad-hoc library validation, so it is off in that case.
+          if [ "$RUNNER_OS" = macOS ] && [ -z "$CSC_LINK" ]; then
+            flags+=(-c.mac.identity=- -c.mac.hardenedRuntime=false)
+          fi
+          npm run package -- "${flags[@]}"
       - name: Upload assets to the tip release
         shell: bash
         env:
