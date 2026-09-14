@@ -1,13 +1,6 @@
 # Kubermeister
 
-Desktop Kubernetes client (Electron). The codebase is being brought over from
-`~/Projects/Personal/kubermeister-old` one reviewed slice at a time.
-
-## Import rule
-
-Nothing is copied from the old repository without the user's explicit approval for that specific
-slice. Read the old code, discuss it, propose the exact files, wait for approval, then import.
-Rewrite rather than copy when the old text describes things that do not exist here yet.
+Desktop Kubernetes client (Electron).
 
 ## Git workflow
 
@@ -34,11 +27,10 @@ Body: why the change is needed, what a reader of the history cannot learn from t
   Proper nouns that need capitals go in the body.
 - Breaking change: `!` after the scope, e.g. `feat(ipc)!: rename stream channels`.
 - **No trailers.** No `Co-Authored-By`, no `Signed-off-by`, nothing after the body.
-- Describe what the change does, not that it was imported. Origin, if useful, goes in the body.
 
 ## Release model
 
-Two channels, implemented in the CI slice: a rolling `tip` pre-release rebuilt on every merge to
+Two channels, to be implemented with the CI workflows: a rolling `tip` pre-release rebuilt on every merge to
 `main` (Ghostty-style nightly, fixed asset names, tag force-moved), and `vX.Y.Z` tags for stable
 releases. Contributors never bump versions by hand.
 
