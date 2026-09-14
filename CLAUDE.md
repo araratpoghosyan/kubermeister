@@ -5,6 +5,9 @@ Desktop Kubernetes client (Electron).
 ## Commands
 
 - `npm run dev` starts Electron with Vite HMR. `npm run build` writes `out/`.
+- `npm run package` builds the current OS's installers into `release/` (`package:dir` for a fast
+  unpacked bundle). The artifact name pattern in `electron-builder.yml` is load-bearing for the
+  release workflows; change both together.
 - After every change run `npm run lint`, `npm run typecheck`, and `npm run format`. ESLint does not
   type-check, and Prettier covers the whole repo including Markdown and JSON.
 

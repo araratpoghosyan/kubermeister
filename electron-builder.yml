@@ -1,0 +1,42 @@
+appId: io.kubermeister.app
+productName: Kubermeister
+directories:
+  buildResources: resources
+  output: release
+files:
+  - out/**/*
+# Redistributing the bundled Electron/Chromium binaries requires their third-party notices, which
+# electron-builder does not include by default.
+extraResources:
+  - from: node_modules/electron/dist/LICENSE
+    to: LICENSE.electron.txt
+  - from: node_modules/electron/dist/LICENSES.chromium.html
+    to: LICENSES.chromium.html
+# Deterministic asset names; the release workflows and any package manager templates depend on
+# this exact pattern.
+artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+# No `publish` block: releases upload assets themselves with `gh release upload`.
+mac:
+  icon: resources/icon.icns
+  category: public.app-category.developer-tools
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+  # Signing is controlled by CSC_* environment variables in CI; no `identity` key here, so no
+  # credentials means an unsigned build, credentials present means signed with no config change.
+  hardenedRuntime: true
+win:
+  icon: resources/icon.ico
+  target:
+    - target: nsis
+      arch: [x64]
+linux:
+  icon: resources/icon.png
+  category: Development
+  synopsis: Desktop Kubernetes client
+  maintainer: Ararat Poghosyan <ararat.poghosyan@gmail.com>
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
