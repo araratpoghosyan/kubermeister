@@ -1,0 +1,89 @@
+name: Package and upload
+description: >
+  Build, package with electron-builder, and upload installers plus electron-updater metadata to a
+  GitHub release. Signs and notarizes macOS when the Apple secrets are passed in; otherwise ad-hoc
+  signs so the bundle stays openable.
+
+inputs:
+  release-tag:
+    description: Release tag to upload to (must already exist).
+    required: true
+  metadata-channel:
+    description: electron-updater metadata file prefix ("latest" for stable, "tip" for nightly).
+    required: true
+  flags:
+    description: Extra electron-builder -c overrides, one per line.
+    required: false
+    default: ''
+  github-token:
+    required: true
+  csc-link:
+    description: Base64 .p12 with the Developer ID Application certificate. Empty = unsigned.
+    required: false
+    default: ''
+  csc-key-password:
+    required: false
+    default: ''
+  apple-id:
+    required: false
+    default: ''
+  apple-app-specific-password:
+    required: false
+    default: ''
+  apple-team-id:
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - run: npm run build
+      shell: bash
+
+    - name: Package
+      shell: bash
+      env:
+        # Secrets arrive as inputs and are exported only when non-empty: electron-builder treats a
+        # defined-but-empty CSC_LINK as a certificate path and fails with "not a file".
+        IN_CSC_LINK: ${{ inputs.csc-link }}
+        IN_CSC_KEY_PASSWORD: ${{ inputs.csc-key-password }}
+        IN_APPLE_ID: ${{ inputs.apple-id }}
+        IN_APPLE_APP_SPECIFIC_PASSWORD: ${{ inputs.apple-app-specific-password }}
+        IN_APPLE_TEAM_ID: ${{ inputs.apple-team-id }}
+        EXTRA_FLAGS: ${{ inputs.flags }}
+      run: |
+        flags=()
+        while IFS= read -r line; do [ -n "$line" ] && flags+=("$line"); done <<< "$EXTRA_FLAGS"
+        if [ "$RUNNER_OS" = macOS ]; then
+          if [ -n "$IN_CSC_LINK" ]; then
+            # Developer ID signing; hardened runtime stays on (electron-builder.yml default).
+            export CSC_LINK="$IN_CSC_LINK" CSC_KEY_PASSWORD="$IN_CSC_KEY_PASSWORD"
+            if [ -n "$IN_APPLE_ID" ]; then
+              # Notarize and staple so Gatekeeper opens the app with no dialog.
+              export APPLE_ID="$IN_APPLE_ID" APPLE_APP_SPECIFIC_PASSWORD="$IN_APPLE_APP_SPECIFIC_PASSWORD" APPLE_TEAM_ID="$IN_APPLE_TEAM_ID"
+              flags+=(-c.mac.notarize=true)
+            fi
+          else
+            # No certificate (forks, local): ad-hoc sign so the bundle signature is valid and
+            # Gatekeeper shows the unverified-developer dialog instead of "damaged". Hardened
+            # runtime only matters for notarization and blocks ad-hoc library validation.
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+            flags+=(-c.mac.identity=- -c.mac.hardenedRuntime=false)
+          fi
+        fi
+        npm run package -- "${flags[@]}"
+
+    - name: Upload installers and updater metadata
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        TAG: ${{ inputs.release-tag }}
+        CHANNEL: ${{ inputs.metadata-channel }}
+      run: |
+        shopt -s nullglob
+        case "$RUNNER_OS" in
+          macOS)   files=(release/*.dmg release/*.dmg.blockmap "release/${CHANNEL}-mac.yml") ;;
+          Windows) files=(release/*.exe release/*.exe.blockmap "release/${CHANNEL}.yml") ;;
+          Linux)   files=(release/*.AppImage release/*.deb "release/${CHANNEL}-linux.yml") ;;
+        esac
+        gh release upload "$TAG" "${files[@]}" --repo "$GITHUB_REPOSITORY" --clobber
