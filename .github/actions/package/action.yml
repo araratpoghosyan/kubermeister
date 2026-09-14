@@ -53,7 +53,8 @@ runs:
         EXTRA_FLAGS: ${{ inputs.flags }}
       run: |
         flags=()
-        while IFS= read -r line; do [ -n "$line" ] && flags+=("$line"); done <<< "$EXTRA_FLAGS"
+        # Strip a trailing carriage return: on Windows runners the multi-line input arrives CRLF.
+        while IFS= read -r line; do line=${line%$'\r'}; [ -n "$line" ] && flags+=("$line"); done <<< "$EXTRA_FLAGS"
         if [ "$RUNNER_OS" = macOS ]; then
           if [ -n "$IN_CSC_LINK" ]; then
             # Developer ID signing; hardened runtime stays on (electron-builder.yml default).
