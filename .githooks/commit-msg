@@ -1,0 +1,35 @@
+#!/bin/sh
+# Validates the commit header against the project's Conventional Commits rules.
+# Enable once per clone: git config core.hooksPath .githooks
+# Rules and the scope list are documented in CONTRIBUTING.md; keep the three in sync.
+
+header=$(sed -n '1p' "$1")
+
+types='feat|fix|perf|refactor|docs|test|chore|ci|build|style|revert'
+scopes='repo|main|preload|renderer|shared|ipc|k8s|build|ci|deps|docs|release'
+
+# Git-generated or interactive-rebase headers are not ours to validate.
+case "$header" in
+    Merge\ *|Revert\ \"*|fixup!\ *|squash!\ *) exit 0 ;;
+esac
+
+fail() {
+    printf '\ncommit-msg: %s\n\n    %s\n\n' "$1" "$header" >&2
+    printf 'Expected:  type(scope): subject\n' >&2
+    printf '  type   : %s\n' "$types" >&2
+    printf '  scope  : %s\n' "$scopes" >&2
+    printf '  subject: lowercase imperative, no trailing period, header <= 72 chars\n\n' >&2
+    exit 1
+}
+
+[ ${#header} -le 72 ] || fail "header is longer than 72 characters"
+
+printf '%s\n' "$header" | grep -Eq "^($types)\(($scopes)\)!?: [a-z0-9]" \
+    || fail "header does not match type(scope): subject with an allowed type and scope"
+
+printf '%s\n' "$header" | grep -Eq '\.$' && fail "subject ends with a period"
+
+# Subject must not contain uppercase letters (proper nouns go in the body).
+printf '%s\n' "${header#*: }" | grep -q '[A-Z]' && fail "subject contains uppercase letters"
+
+exit 0
