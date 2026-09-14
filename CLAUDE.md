@@ -30,9 +30,9 @@ Body: why the change is needed, what a reader of the history cannot learn from t
 
 ## Release model
 
-Two channels, to be implemented with the CI workflows: a rolling `tip` pre-release rebuilt on every merge to
-`main` (Ghostty-style nightly, fixed asset names, tag force-moved), and `vX.Y.Z` tags for stable
-releases. Contributors never bump versions by hand.
+Two channels, to be implemented with the CI workflows: a rolling `tip` pre-release rebuilt on
+every merge to `main` (Ghostty-style nightly, fixed asset names, tag force-moved), and `vX.Y.Z`
+tags for stable releases. Contributors never bump versions by hand.
 
 ## Code style
 
