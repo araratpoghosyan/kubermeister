@@ -30,9 +30,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+      # Lightweight tag: an annotated one needs a committer identity the runner does not have.
       - name: Move the tip tag to this commit
         run: |
-          git tag -fa tip -m "Kubermeister tip (nightly)" "$GITHUB_SHA"
+          git tag -f tip "$GITHUB_SHA"
           git push --force origin tip
       - name: Create or update the tip pre-release
         env:
