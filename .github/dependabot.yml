@@ -7,6 +7,15 @@ updates:
     groups:
       npm:
         patterns: ['*']
+    # Majors held back on purpose: typescript-eslint supports TypeScript below 6.1 only,
+    # electron-vite 5 requires Vite 7, and @types/node tracks the Node bundled with Electron.
+    ignore:
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+      - dependency-name: vite
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
     commit-message:
       prefix: chore(deps)
       prefix-development: chore(deps)

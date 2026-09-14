@@ -5,6 +5,8 @@ Desktop Kubernetes client (Electron).
 ## Commands
 
 - `npm run dev` starts Electron with Vite HMR. `npm run build` writes `out/`.
+- Node 24 and npm 11.19 or newer are required (`engines` + `engine-strict`). CI runs the same
+  versions; older npm silently drops optional lockfile entries and breaks `npm ci`.
 - Since Electron 42 the npm package no longer downloads its binary on install; the `postinstall`
   script runs Electron's installer so `node_modules/electron/dist` exists for electron-vite dev
   and for the license notices packaging copies. After an install with `--ignore-scripts`, run
