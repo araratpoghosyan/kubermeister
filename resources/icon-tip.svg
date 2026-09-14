@@ -1,0 +1,39 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Nightly ("tip") variant of icon.svg: same mark on a darker slate tile with an amber TIP
+       badge, so the two apps are distinguishable side by side in the Dock and in Applications. -->
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3b4256" />
+      <stop offset="1" stop-color="#252a3a" />
+    </linearGradient>
+    <linearGradient id="mark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" />
+      <stop offset="1" stop-color="#d9e2ff" />
+    </linearGradient>
+    <linearGradient id="badge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffb545" />
+      <stop offset="1" stop-color="#f28c1a" />
+    </linearGradient>
+    <filter id="elev" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="0.55" stdDeviation="0.65" flood-color="#05070f" flood-opacity="0.5" />
+      <feDropShadow dx="0" dy="0.12" stdDeviation="0.18" flood-color="#05070f" flood-opacity="0.4" />
+    </filter>
+    <filter id="badge-elev" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#05070f" flood-opacity="0.45" />
+    </filter>
+  </defs>
+
+  <rect x="104" y="104" width="816" height="816" rx="182" ry="182" fill="url(#tile)" />
+
+  <g transform="translate(228.5,228.5) scale(23.625)" fill="none" stroke="url(#mark)" stroke-linejoin="round" stroke-linecap="round" filter="url(#elev)">
+    <path d="M13.23 2.71 L19.43 6.29 Q20.66 7 20.66 8.43 L20.66 15.57 Q20.66 17 19.43 17.71 L13.23 21.29 Q12 22 10.77 21.29 L4.57 17.71 Q3.34 17 3.34 15.57 L3.34 8.43 Q3.34 7 4.57 6.29 L10.77 2.71 Q12 2 13.23 2.71 Z" stroke-width="1.4" />
+    <path d="M12 7V17M7.67 9.5 16.33 14.5M16.33 9.5 7.67 14.5" stroke-width="1" opacity="0.55" />
+    <circle cx="12" cy="12" r="2" fill="url(#mark)" stroke="none" />
+  </g>
+
+  <!-- TIP badge, bottom-right, inside the tile's safe area -->
+  <g filter="url(#badge-elev)">
+    <rect x="556" y="700" width="300" height="150" rx="44" ry="44" fill="url(#badge)" />
+    <text x="706" y="806" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-weight="800" font-size="104" letter-spacing="8" fill="#1a1400">TIP</text>
+  </g>
+</svg>
