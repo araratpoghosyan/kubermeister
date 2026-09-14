@@ -63,9 +63,10 @@ Body: why the change is needed, what a reader of the history cannot learn from t
 
 ## Release model
 
-Two channels, to be implemented with the CI workflows: a rolling `tip` pre-release rebuilt on
-every merge to `main` (Ghostty-style nightly, fixed asset names, tag force-moved), and `vX.Y.Z`
-tags for stable releases. Contributors never bump versions by hand.
+Two channels. `.github/workflows/tip.yml` rebuilds the rolling `tip` pre-release on every push
+to `main` after calling `ci.yml` as its gate: the tag is force-moved and the fixed-name assets
+(`Kubermeister-tip-<os>-<arch>.<ext>`) are replaced, so the names are load-bearing. `vX.Y.Z` tags
+will drive stable releases through a separate workflow. Contributors never bump versions by hand.
 
 ## Code style
 
