@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { BoxIcon, HeartIcon, ScrollIcon, TerminalIcon, WaypointsIcon } from 'lucide-react';
 import { RefreshButton } from '@/components/refresh-button';
 import { eventsTab, labelsTab, ResourceDetail, type DetailTabGroup } from '@/components/templates/resource-detail';
+import { manifestTab } from '@/components/templates/manifest-panel';
 import { LogsTab } from '@/components/pod/logs-tab';
 import { NetworkTab } from '@/components/pod/network-tab';
 import { OverviewTab } from '@/components/pod/overview-tab';
@@ -42,6 +43,7 @@ function PodDetailPage() {
         {
             label: 'INSPECT',
             items: [
+                manifestTab({ kind: 'Pod', name, namespace }),
                 labelsTab(pod ? { labels: pod.labels, annotations: pod.annotations } : undefined),
                 {
                     id: 'network',

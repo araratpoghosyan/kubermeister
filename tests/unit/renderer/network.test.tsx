@@ -125,7 +125,7 @@ describe('network details', () => {
             within(rail)
                 .getAllByRole('tab')
                 .map((t) => t.textContent),
-        ).toEqual(['Overview', 'Events', 'Ports1', 'Endpoints2', 'Selector1', 'Labels1']);
+        ).toEqual(['Overview', 'Events', 'Ports1', 'Endpoints2', 'Selector1', 'ManifestYAML', 'Labels1']);
         await userEvent.click(within(rail).getByRole('tab', { name: /Ports/ }));
         expect(within(page).getByTestId('service-ports')).toHaveTextContent('8080');
         await userEvent.click(within(rail).getByRole('tab', { name: /^Endpoints/ }));

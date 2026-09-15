@@ -8,6 +8,7 @@ import {
     ResourceDetail,
     type DetailTabGroup,
 } from '@/components/templates/resource-detail';
+import { manifestTab } from '@/components/templates/manifest-panel';
 import { ipcQueryKey } from '@/lib/query';
 import { useResource } from '@/lib/resources';
 import { VOLUME_TONE } from '@/lib/status';
@@ -35,7 +36,13 @@ function VolumeDetailPage() {
                       eventsTab({ kind: 'PersistentVolume', name }),
                   ],
               },
-              { label: 'INSPECT', items: [labelsTab({ labels: row.labels, annotations: row.annotations })] },
+              {
+                  label: 'INSPECT',
+                  items: [
+                      manifestTab({ kind: 'PersistentVolume', name }),
+                      labelsTab({ labels: row.labels, annotations: row.annotations }),
+                  ],
+              },
           ]
         : [];
 

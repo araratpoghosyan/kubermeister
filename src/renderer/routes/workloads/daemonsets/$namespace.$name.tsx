@@ -8,6 +8,7 @@ import {
     ResourceDetail,
     type DetailTabGroup,
 } from '@/components/templates/resource-detail';
+import { manifestTab } from '@/components/templates/manifest-panel';
 import { ipcQueryKey } from '@/lib/query';
 import { useResource } from '@/lib/resources';
 
@@ -34,7 +35,13 @@ function DaemonSetDetailPage() {
                       eventsTab({ kind: 'DaemonSet', name, namespace }),
                   ],
               },
-              { label: 'INSPECT', items: [labelsTab({ labels: row.labels, annotations: row.annotations })] },
+              {
+                  label: 'INSPECT',
+                  items: [
+                      manifestTab({ kind: 'DaemonSet', name, namespace }),
+                      labelsTab({ labels: row.labels, annotations: row.annotations }),
+                  ],
+              },
           ]
         : [];
 

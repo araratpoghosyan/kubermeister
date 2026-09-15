@@ -5,6 +5,7 @@ import { ComingSoonButton } from '@/components/coming-soon-button';
 import { RefreshButton } from '@/components/refresh-button';
 import { DetailCard, DetailMetrics } from '@/components/templates/detail-cards';
 import { eventsTab, labelsTab, ResourceDetail, type DetailTabGroup } from '@/components/templates/resource-detail';
+import { manifestTab } from '@/components/templates/manifest-panel';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ipcQueryKey, useIpcQuery } from '@/lib/query';
 import { useResource } from '@/lib/resources';
@@ -173,6 +174,7 @@ function DeploymentDetailPage() {
         {
             label: 'INSPECT',
             items: [
+                manifestTab({ kind: 'Deployment', name, namespace }),
                 labelsTab(deployment ? { labels: deployment.labels, annotations: deployment.annotations } : undefined),
             ],
         },

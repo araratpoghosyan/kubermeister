@@ -3,6 +3,7 @@ import { HeartIcon, KeyIcon, LockIcon } from 'lucide-react';
 import { RefreshButton } from '@/components/refresh-button';
 import { DetailCard, PropertyGrid } from '@/components/templates/detail-cards';
 import { eventsTab, labelsTab, ResourceDetail, type DetailTabGroup } from '@/components/templates/resource-detail';
+import { manifestTab } from '@/components/templates/manifest-panel';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ipcQueryKey, useIpcQuery } from '@/lib/query';
 import { useResource } from '@/lib/resources';
@@ -50,7 +51,7 @@ function SecretDetailPage() {
                     icon: KeyIcon,
                     count: entries.length || undefined,
                     content: (
-                        <DetailCard title="Data" desc="Values are masked: they are never read from the cluster">
+                        <DetailCard title="Data" desc="Values are masked here; the Manifest tab shows them as-is">
                             <Table data-testid="secret-keys">
                                 <TableHeader>
                                     <TableRow>
@@ -76,7 +77,10 @@ function SecretDetailPage() {
         },
         {
             label: 'INSPECT',
-            items: [labelsTab(secret ? { labels: secret.labels, annotations: secret.annotations } : undefined)],
+            items: [
+                manifestTab({ kind: 'Secret', name, namespace }),
+                labelsTab(secret ? { labels: secret.labels, annotations: secret.annotations } : undefined),
+            ],
         },
     ];
 

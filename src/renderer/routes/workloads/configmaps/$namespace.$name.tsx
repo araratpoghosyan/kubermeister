@@ -3,6 +3,7 @@ import { FileTextIcon, HeartIcon } from 'lucide-react';
 import { RefreshButton } from '@/components/refresh-button';
 import { DetailCard, PropertyGrid } from '@/components/templates/detail-cards';
 import { eventsTab, labelsTab, ResourceDetail, type DetailTabGroup } from '@/components/templates/resource-detail';
+import { manifestTab } from '@/components/templates/manifest-panel';
 import { ipcQueryKey, useIpcQuery } from '@/lib/query';
 import { useResource } from '@/lib/resources';
 import { useRefreshIntervalMs } from '@/lib/settings';
@@ -69,6 +70,7 @@ function ConfigMapDetailPage() {
         {
             label: 'INSPECT',
             items: [
+                manifestTab({ kind: 'ConfigMap', name, namespace }),
                 labelsTab(configMap ? { labels: configMap.labels, annotations: configMap.annotations } : undefined),
             ],
         },

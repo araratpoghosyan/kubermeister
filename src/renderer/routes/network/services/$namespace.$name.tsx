@@ -10,6 +10,7 @@ import {
     type DetailTab,
     type DetailTabGroup,
 } from '@/components/templates/resource-detail';
+import { manifestTab } from '@/components/templates/manifest-panel';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ipcQueryKey, useIpcQuery } from '@/lib/query';
 import { useResource } from '@/lib/resources';
@@ -139,7 +140,10 @@ function ServiceDetailPage() {
         { label: 'NETWORK', items: networkTabs },
         {
             label: 'INSPECT',
-            items: [labelsTab(service ? { labels: service.labels, annotations: service.annotations } : undefined)],
+            items: [
+                manifestTab({ kind: 'Service', name, namespace }),
+                labelsTab(service ? { labels: service.labels, annotations: service.annotations } : undefined),
+            ],
         },
     ];
 

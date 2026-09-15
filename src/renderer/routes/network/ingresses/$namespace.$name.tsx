@@ -9,6 +9,7 @@ import {
     type DetailTab,
     type DetailTabGroup,
 } from '@/components/templates/resource-detail';
+import { manifestTab } from '@/components/templates/manifest-panel';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ipcQueryKey, useIpcQuery } from '@/lib/query';
 import { useResource } from '@/lib/resources';
@@ -116,7 +117,10 @@ function IngressDetailPage() {
         { label: 'ROUTING', items: routingTabs },
         {
             label: 'INSPECT',
-            items: [labelsTab(ingress ? { labels: ingress.labels, annotations: ingress.annotations } : undefined)],
+            items: [
+                manifestTab({ kind: 'Ingress', name, namespace }),
+                labelsTab(ingress ? { labels: ingress.labels, annotations: ingress.annotations } : undefined),
+            ],
         },
     ];
 
