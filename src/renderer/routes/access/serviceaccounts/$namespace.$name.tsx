@@ -9,6 +9,8 @@ import {
     type DetailTabGroup,
 } from '@/components/templates/resource-detail';
 import { manifestTab } from '@/components/templates/manifest-panel';
+import { EditResourceButton } from '@/components/templates/edit-resource-button';
+import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
 import { ipcQueryKey } from '@/lib/query';
 import { useResource } from '@/lib/resources';
 
@@ -55,9 +57,18 @@ function ServiceAccountDetailPage() {
             query={query}
             found={!!row}
             actions={
-                <RefreshButton
-                    queryKeys={[ipcQueryKey('resources.get', { kind: 'ServiceAccount', name, namespace })]}
-                />
+                <>
+                    <RefreshButton
+                        queryKeys={[ipcQueryKey('resources.get', { kind: 'ServiceAccount', name, namespace })]}
+                    />
+                    <EditResourceButton />
+                    <DeleteResourceButton
+                        kind="ServiceAccount"
+                        name={name}
+                        namespace={namespace}
+                        backTo="/access/serviceaccounts"
+                    />
+                </>
             }
             meta={row ? [`namespace: ${row.namespace}`, `secrets: ${row.secrets}`] : undefined}
             groups={groups}

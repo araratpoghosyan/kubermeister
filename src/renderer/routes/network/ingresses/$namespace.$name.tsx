@@ -10,6 +10,8 @@ import {
     type DetailTabGroup,
 } from '@/components/templates/resource-detail';
 import { manifestTab } from '@/components/templates/manifest-panel';
+import { EditResourceButton } from '@/components/templates/edit-resource-button';
+import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ipcQueryKey, useIpcQuery } from '@/lib/query';
 import { useResource } from '@/lib/resources';
@@ -141,12 +143,21 @@ function IngressDetailPage() {
                     : undefined
             }
             actions={
-                <RefreshButton
-                    queryKeys={[
-                        ipcQueryKey('resources.get', { kind: 'Ingress', name, namespace }),
-                        ipcQueryKey('ingresses.rules', target),
-                    ]}
-                />
+                <>
+                    <RefreshButton
+                        queryKeys={[
+                            ipcQueryKey('resources.get', { kind: 'Ingress', name, namespace }),
+                            ipcQueryKey('ingresses.rules', target),
+                        ]}
+                    />
+                    <EditResourceButton />
+                    <DeleteResourceButton
+                        kind="Ingress"
+                        name={name}
+                        namespace={namespace}
+                        backTo="/network/ingresses"
+                    />
+                </>
             }
             groups={groups}
             query={query}

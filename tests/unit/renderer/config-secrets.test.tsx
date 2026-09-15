@@ -63,7 +63,14 @@ describe('config map screens', () => {
             within(table)
                 .getAllByRole('columnheader')
                 .map((h) => h.textContent),
-        ).toEqual(['Name', 'Keys', 'Size', 'Age']);
+        ).toEqual([
+            // The blank leading header belongs to the selection checkbox column.
+            '',
+            'Name',
+            'Keys',
+            'Size',
+            'Age',
+        ]);
     });
 
     it('shows one card per entry with its content type and value', async () => {

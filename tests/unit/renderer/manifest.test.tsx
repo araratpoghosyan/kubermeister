@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { renderRoutes, renderWithQuery } from './helpers';
+import { renderInRouter, renderRoutes } from './helpers';
 
 const invoke = vi.fn();
 const subscribe = vi.fn(() => () => {});
@@ -54,7 +54,7 @@ beforeEach(() => {
 
 describe('manifest panel', () => {
     it('shows the live yaml and asks for it by kind, name and namespace', async () => {
-        renderWithQuery(<ManifestPanel kind="ConfigMap" name="app-config" namespace="team-a" />);
+        renderInRouter(<ManifestPanel kind="ConfigMap" name="app-config" namespace="team-a" />);
         const panel = await screen.findByTestId('manifest-panel');
         expect(panel).toHaveTextContent('ConfigMap “app-config”');
         // CodeMirror renders the document into its own content element.
@@ -67,20 +67,20 @@ describe('manifest panel', () => {
     });
 
     it('offers the manifest as a download named after the object', async () => {
-        renderWithQuery(<ManifestPanel kind="ConfigMap" name="app-config" namespace="team-a" />);
+        renderInRouter(<ManifestPanel kind="ConfigMap" name="app-config" namespace="team-a" />);
         await userEvent.click(await screen.findByRole('button', { name: 'Download' }));
         expect(downloadTextFile).toHaveBeenCalledWith('app-config.yaml', YAML, 'text/yaml');
     });
 
     it('labels the editor for assistive technology and keeps it read only', async () => {
-        renderWithQuery(<ManifestPanel kind="ConfigMap" name="app-config" namespace="team-a" />);
+        renderInRouter(<ManifestPanel kind="ConfigMap" name="app-config" namespace="team-a" />);
         const editor = await screen.findByLabelText('ConfigMap manifest');
         expect(editor).toHaveAttribute('contenteditable', 'false');
     });
 
     it('reports a failed read with its cause and retries on demand', async () => {
         invoke.mockRejectedValue(new IpcError({ kind: 'forbidden', detail: 'no access', op: 'resources.getYaml' }));
-        renderWithQuery(<ManifestPanel kind="ConfigMap" name="app-config" namespace="team-a" />);
+        renderInRouter(<ManifestPanel kind="ConfigMap" name="app-config" namespace="team-a" />);
         const panel = await screen.findByTestId('manifest-error');
         expect(panel).toHaveTextContent('Access denied: no access');
 
@@ -90,7 +90,7 @@ describe('manifest panel', () => {
     });
 
     it('omits the namespace for a cluster-scoped kind', async () => {
-        renderWithQuery(<ManifestPanel kind="PersistentVolume" name="pv-1" />);
+        renderInRouter(<ManifestPanel kind="PersistentVolume" name="pv-1" />);
         await screen.findByTestId('manifest-panel');
         expect(invoke).toHaveBeenCalledWith('resources.getYaml', {
             kind: 'PersistentVolume',

@@ -53,6 +53,7 @@ function CronJobsPage() {
             query={cronJobs}
             detailPath={detailPath}
             rowProps={(cronJob) => ({ 'data-cronjob': cronJob.name })}
+            bulkDelete={{ kind: 'CronJob' }}
             testId="cronjobs-table"
             footerNote={cronJobs.live ? 'live' : undefined}
         />

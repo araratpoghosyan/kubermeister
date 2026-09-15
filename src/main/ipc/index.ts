@@ -9,6 +9,7 @@ import { readPodLogSnapshot } from '../k8s/logs.js';
 import { getActiveCluster, getActiveNamespaceInfo, listClusters, listNamespaces } from '../k8s/resources/cluster.js';
 import { getConfigMapEntries, getSecretEntries } from '../k8s/resources/config.js';
 import { listEvents, listEventsForObject, listRecentEvents } from '../k8s/resources/events.js';
+import { createResource, deleteResource, replaceResource, scaleResource } from '../k8s/resources/write.js';
 import { getObjectYaml } from '../k8s/resources/manifest.js';
 import { getRelease, getReleaseRevisions, listHelmCharts, listReleases } from '../k8s/resources/helm.js';
 import { getIngressRules, getServiceEndpoints, getServicePorts } from '../k8s/resources/network.js';
@@ -100,6 +101,10 @@ const handlers: Handlers = {
     'releases.revisions': ({ name, namespace }) => getReleaseRevisions(name, namespace),
     'helmCharts.list': () => listHelmCharts(),
     'resources.getYaml': ({ kind, name, namespace }) => getObjectYaml(kind, name, namespace),
+    'resources.create': ({ manifest, dryRun }) => createResource(manifest, dryRun),
+    'resources.replace': ({ manifest, dryRun }) => replaceResource(manifest, dryRun),
+    'resources.delete': ({ kind, name, namespace }) => deleteResource(kind, name, namespace),
+    'resources.scale': ({ kind, name, namespace, replicas }) => scaleResource(kind, name, replicas, namespace),
     'kubeconfig.useDefault': async () => {
         const settings = updateSettings({ connection: { kubeconfigPath: null } });
         reloadKubeConfig();

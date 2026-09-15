@@ -28,6 +28,7 @@ function NetworkPoliciesPage() {
             query={policies}
             detailPath={detailPath}
             rowProps={(policy) => ({ 'data-networkpolicy': policy.name })}
+            bulkDelete={{ kind: 'NetworkPolicy' }}
             testId="networkpolicies-table"
             footerNote={policies.live ? 'live' : undefined}
         />

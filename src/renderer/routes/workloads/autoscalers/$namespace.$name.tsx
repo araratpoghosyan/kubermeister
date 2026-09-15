@@ -9,6 +9,8 @@ import {
     type DetailTabGroup,
 } from '@/components/templates/resource-detail';
 import { manifestTab } from '@/components/templates/manifest-panel';
+import { EditResourceButton } from '@/components/templates/edit-resource-button';
+import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
 import { ipcQueryKey } from '@/lib/query';
 import { useResource } from '@/lib/resources';
 
@@ -56,9 +58,18 @@ function AutoscalerDetailPage() {
             query={query}
             found={!!row}
             actions={
-                <RefreshButton
-                    queryKeys={[ipcQueryKey('resources.get', { kind: 'HorizontalPodAutoscaler', name, namespace })]}
-                />
+                <>
+                    <RefreshButton
+                        queryKeys={[ipcQueryKey('resources.get', { kind: 'HorizontalPodAutoscaler', name, namespace })]}
+                    />
+                    <EditResourceButton />
+                    <DeleteResourceButton
+                        kind="HorizontalPodAutoscaler"
+                        name={name}
+                        namespace={namespace}
+                        backTo="/workloads/autoscalers"
+                    />
+                </>
             }
             meta={row ? [`reference: ${row.reference}`, `replicas: ${row.replicas}`] : undefined}
             groups={groups}

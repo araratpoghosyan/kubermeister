@@ -4,6 +4,8 @@ import { RefreshButton } from '@/components/refresh-button';
 import { DetailCard, PropertyGrid } from '@/components/templates/detail-cards';
 import { eventsTab, labelsTab, ResourceDetail, type DetailTabGroup } from '@/components/templates/resource-detail';
 import { manifestTab } from '@/components/templates/manifest-panel';
+import { EditResourceButton } from '@/components/templates/edit-resource-button';
+import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ipcQueryKey, useIpcQuery } from '@/lib/query';
 import { useResource } from '@/lib/resources';
@@ -95,12 +97,16 @@ function SecretDetailPage() {
             query={query}
             found={!!secret}
             actions={
-                <RefreshButton
-                    queryKeys={[
-                        ipcQueryKey('resources.get', { kind: 'Secret', name, namespace }),
-                        ipcQueryKey('secrets.entries', { name, namespace }),
-                    ]}
-                />
+                <>
+                    <RefreshButton
+                        queryKeys={[
+                            ipcQueryKey('resources.get', { kind: 'Secret', name, namespace }),
+                            ipcQueryKey('secrets.entries', { name, namespace }),
+                        ]}
+                    />
+                    <EditResourceButton />
+                    <DeleteResourceButton kind="Secret" name={name} namespace={namespace} backTo="/workloads/secrets" />
+                </>
             }
             meta={[
                 `namespace: ${secret?.namespace ?? namespace}`,

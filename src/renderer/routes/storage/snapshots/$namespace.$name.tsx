@@ -9,6 +9,8 @@ import {
     type DetailTabGroup,
 } from '@/components/templates/resource-detail';
 import { manifestTab } from '@/components/templates/manifest-panel';
+import { EditResourceButton } from '@/components/templates/edit-resource-button';
+import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
 import { ipcQueryKey } from '@/lib/query';
 import { useResource } from '@/lib/resources';
 import { SNAPSHOT_TONE } from '@/lib/status';
@@ -56,9 +58,18 @@ function SnapshotDetailPage() {
             found={!!row}
             status={row ? { label: row.ready, tone: SNAPSHOT_TONE[row.ready] } : undefined}
             actions={
-                <RefreshButton
-                    queryKeys={[ipcQueryKey('resources.get', { kind: 'VolumeSnapshot', name, namespace })]}
-                />
+                <>
+                    <RefreshButton
+                        queryKeys={[ipcQueryKey('resources.get', { kind: 'VolumeSnapshot', name, namespace })]}
+                    />
+                    <EditResourceButton />
+                    <DeleteResourceButton
+                        kind="VolumeSnapshot"
+                        name={name}
+                        namespace={namespace}
+                        backTo="/storage/snapshots"
+                    />
+                </>
             }
             meta={row ? [`namespace: ${row.namespace}`, `source: ${row.sourcePvc}`] : undefined}
             groups={groups}

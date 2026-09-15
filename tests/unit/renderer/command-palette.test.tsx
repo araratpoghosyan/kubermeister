@@ -63,19 +63,18 @@ describe('command palette', () => {
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     });
 
-    it('lists contexts, namespaces, the coming-soon action and every screen', async () => {
+    it('lists contexts, namespaces, the create action and every screen', async () => {
         renderRoutes(routeTree, '/overview/summary');
         await userEvent.keyboard('{Control>}k{/Control}');
         const dialog = await screen.findByRole('dialog', { name: 'Quick actions' });
         await waitFor(() => expect(within(dialog).getByRole('option', { name: /beta/ })).toBeInTheDocument());
         expect(within(dialog).getByRole('option', { name: /kube-system/ })).toHaveTextContent('9 pods');
-        expect(within(dialog).getByRole('option', { name: /Create resource/ })).toHaveAttribute(
-            'aria-disabled',
-            'true',
-        );
         for (const label of ['Cluster summary', 'Nodes', 'Namespaces', 'Pods', 'Jobs', 'Autoscalers', 'Settings']) {
             expect(within(dialog).getByRole('option', { name: label })).toBeInTheDocument();
         }
+        // Choosing an action closes the palette, so this goes last.
+        await userEvent.click(within(dialog).getByRole('option', { name: /Create resource/ }));
+        expect(await screen.findByTestId('create-page')).toBeInTheDocument();
     });
 
     it('switches context and namespace through the bridge and closes', async () => {

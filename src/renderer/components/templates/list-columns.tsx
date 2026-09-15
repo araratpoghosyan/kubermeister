@@ -1,3 +1,6 @@
+import type { Kind } from '../../../shared/k8s/registry';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScaleControl } from '@/components/templates/scale-control';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { LucideIcon } from 'lucide-react';
 import { StatusBadge } from '@/components/data-display/status-badge';
@@ -214,5 +217,66 @@ export function meterColumn<T>(
                 </div>
             );
         },
+    };
+}
+
+/**
+ * The leading checkbox column, present only on lists that offer bulk delete. Clicks are kept from
+ * the row so checking a box never opens the object.
+ */
+export function selectColumn<T>(): ColumnDef<T> {
+    return {
+        id: 'select',
+        size: 32,
+        enableSorting: false,
+        enableHiding: false,
+        header: ({ table }) => (
+            <Checkbox
+                checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && 'indeterminate')}
+                onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                aria-label="Select all rows on this page"
+            />
+        ),
+        cell: ({ row }) => (
+            <div
+                className="flex items-center"
+                onClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => event.stopPropagation()}
+            >
+                <Checkbox
+                    checked={row.getIsSelected()}
+                    onCheckedChange={(value) => row.toggleSelected(!!value)}
+                    aria-label="Select row"
+                />
+            </div>
+        ),
+    };
+}
+
+/** Inline replica steppers for a scalable kind, again keeping their clicks off the row. */
+export function scaleColumn<T extends { name: string; namespace?: string; replicas?: number }>(
+    kind: Kind,
+    options: { size?: number } = {},
+): ColumnDef<T> {
+    return {
+        id: 'scale',
+        header: 'Scale',
+        size: options.size ?? 110,
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+            <div
+                className="flex items-center"
+                onClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => event.stopPropagation()}
+            >
+                <ScaleControl
+                    kind={kind}
+                    name={row.original.name}
+                    namespace={row.original.namespace}
+                    replicas={row.original.replicas ?? 0}
+                />
+            </div>
+        ),
     };
 }

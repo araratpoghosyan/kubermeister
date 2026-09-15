@@ -9,6 +9,8 @@ import {
     type DetailTabGroup,
 } from '@/components/templates/resource-detail';
 import { manifestTab } from '@/components/templates/manifest-panel';
+import { EditResourceButton } from '@/components/templates/edit-resource-button';
+import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
 import { ipcQueryKey } from '@/lib/query';
 import { useResource } from '@/lib/resources';
 
@@ -53,7 +55,13 @@ function StorageClassDetailPage() {
             backTo="/storage/storageclasses"
             query={query}
             found={!!row}
-            actions={<RefreshButton queryKeys={[ipcQueryKey('resources.get', { kind: 'StorageClass', name })]} />}
+            actions={
+                <>
+                    <RefreshButton queryKeys={[ipcQueryKey('resources.get', { kind: 'StorageClass', name })]} />
+                    <EditResourceButton />
+                    <DeleteResourceButton kind="StorageClass" name={name} backTo="/storage/storageclasses" />
+                </>
+            }
             meta={row ? [`provisioner: ${row.provisioner}`, `binding: ${row.volumeBinding}`] : undefined}
             groups={groups}
             testId="storageclass-page"

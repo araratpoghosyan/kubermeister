@@ -92,11 +92,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 <CommandSeparator />
 
                 <CommandGroup heading="Actions">
-                    {/* Creating resources arrives with the Create screen; the entry keeps its place. */}
-                    <CommandItem value="create resource" disabled>
+                    <CommandItem value="create resource" onSelect={() => go('/create')}>
                         <PlusIcon className="size-3.5 text-text-muted" />
                         <span className="flex-1">Create resource</span>
-                        <span className="text-label text-text-dim">coming soon</span>
                     </CommandItem>
                 </CommandGroup>
 

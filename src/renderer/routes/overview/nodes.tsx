@@ -50,6 +50,7 @@ function NodesPage() {
             query={nodes}
             detailPath={detailPath}
             rowProps={(node) => ({ 'data-node': node.name })}
+            bulkDelete={{ kind: 'Node' }}
             testId="nodes-table"
         />
     );

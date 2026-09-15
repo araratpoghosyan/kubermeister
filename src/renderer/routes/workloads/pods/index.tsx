@@ -65,6 +65,7 @@ function PodsPage() {
                 query={pods}
                 detailPath={detailPath}
                 rowProps={(pod) => ({ 'data-pod': pod.name })}
+                bulkDelete={{ kind: 'Pod' }}
                 testId="pods-table"
                 footerNote={pods.live ? 'live' : undefined}
             />

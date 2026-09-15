@@ -9,6 +9,8 @@ import {
     type DetailTabGroup,
 } from '@/components/templates/resource-detail';
 import { manifestTab } from '@/components/templates/manifest-panel';
+import { EditResourceButton } from '@/components/templates/edit-resource-button';
+import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
 import { ipcQueryKey } from '@/lib/query';
 import { useResource } from '@/lib/resources';
 
@@ -54,7 +56,18 @@ function StatefulSetDetailPage() {
             query={query}
             found={!!row}
             actions={
-                <RefreshButton queryKeys={[ipcQueryKey('resources.get', { kind: 'StatefulSet', name, namespace })]} />
+                <>
+                    <RefreshButton
+                        queryKeys={[ipcQueryKey('resources.get', { kind: 'StatefulSet', name, namespace })]}
+                    />
+                    <EditResourceButton />
+                    <DeleteResourceButton
+                        kind="StatefulSet"
+                        name={name}
+                        namespace={namespace}
+                        backTo="/workloads/statefulsets"
+                    />
+                </>
             }
             meta={row ? [`ready: ${row.ready}`, `service: ${row.service}`] : undefined}
             groups={groups}

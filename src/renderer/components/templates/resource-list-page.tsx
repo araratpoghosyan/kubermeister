@@ -1,3 +1,7 @@
+import type { ManifestKind } from '../../../shared/k8s/manifest';
+import { BulkDeleteBar } from '@/components/templates/bulk-delete-bar';
+import { bulkRowId } from '@/lib/bulk-delete';
+import { useScope } from '@/lib/scope';
 import { useDeferredValue, useMemo, useState } from 'react';
 import {
     getCoreRowModel,
@@ -5,6 +9,8 @@ import {
     getSortedRowModel,
     useReactTable,
     type ColumnDef,
+    type OnChangeFn,
+    type RowSelectionState,
     type SortingState,
     type VisibilityState,
 } from '@tanstack/react-table';
@@ -25,7 +31,7 @@ import {
 import { DataTable } from '@/components/data-display/data-table';
 import { RefreshButton } from '@/components/refresh-button';
 import { useNavigateTo } from '@/components/layout/nav-link';
-import { ageToSeconds, namespaceColumn } from '@/components/templates/list-columns';
+import { ageToSeconds, namespaceColumn, selectColumn } from '@/components/templates/list-columns';
 import { describeError } from '@/lib/k8s-error';
 import type { K8sErrorKind } from '../../../shared/k8s/errors';
 
@@ -68,11 +74,19 @@ interface ResourceListPageProps<T> {
     toolbar?: React.ReactNode;
     /** Extra attributes per row (`data-*` hooks for tests and styling). */
     rowProps?: (row: T) => Record<string, string>;
+    /**
+     * Turn on row selection and the bulk delete bar for this kind. The plural noun for the copy is
+     * the page's own `nounPlural` or title.
+     */
+    bulkDelete?: { kind: ManifestKind };
     /** `data-testid` for the rendered table. */
     testId?: string;
 }
 
 const PAGE_SIZE = 50;
+
+/** One shared empty selection, so an unselected scope does not re-render the table each time. */
+const EMPTY_SELECTION: RowSelectionState = {};
 const SORTABLE_TYPES = ['string', 'number', 'boolean'];
 
 /**
@@ -148,6 +162,7 @@ export function ResourceListPage<T>({
     query,
     detailPath,
     nounPlural,
+    bulkDelete,
     searchPlaceholder,
     emptyMessage,
     footerNote,
@@ -176,6 +191,18 @@ export function ResourceListPage<T>({
     const queryText = useDeferredValue(search).trim().toLowerCase();
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+
+    // Selection is kept per scope: after a context or namespace switch the page reads a different,
+    // empty bucket, so a stale selection can never delete same-named objects in the new scope.
+    const { context, namespace } = useScope();
+    const scopeId = `${context ?? ''}/${namespace ?? '*'}`;
+    const [selectionByScope, setSelectionByScope] = useState<Record<string, RowSelectionState>>({});
+    const rowSelection = selectionByScope[scopeId] ?? EMPTY_SELECTION;
+    const onRowSelectionChange: OnChangeFn<RowSelectionState> = (updater) =>
+        setSelectionByScope((previous) => {
+            const current = previous[scopeId] ?? EMPTY_SELECTION;
+            return { ...previous, [scopeId]: typeof updater === 'function' ? updater(current) : updater };
+        });
 
     // Under "All namespaces" (rows spanning ≥2 namespaces), inject a Namespace column after Name so
     // same-named objects in different namespaces are distinguishable — unless the screen already
@@ -207,7 +234,13 @@ export function ResourceListPage<T>({
         () => (queryText ? rows.filter((item) => rowMatchesQuery(item, queryText, visibleFieldIds)) : rows),
         [rows, queryText, visibleFieldIds],
     );
-    const displayColumns = effectiveColumns;
+    // The checkbox column leads the row, added after the namespace injection so that memo's
+    // name-index maths is untouched.
+    const bulkEnabled = !!bulkDelete;
+    const displayColumns = useMemo(
+        () => (bulkEnabled ? [selectColumn<T>(), ...effectiveColumns] : effectiveColumns),
+        [bulkEnabled, effectiveColumns],
+    );
 
     // The sortable-field signature of the sampled rows is stable across polls (only the *shape*
     // matters, not the values), so key the column-model memo on it — not on the row array's per-poll
@@ -229,8 +262,13 @@ export function ResourceListPage<T>({
         getPaginationRowModel: getPaginationRowModel(),
         onSortingChange: setSorting,
         onColumnVisibilityChange: setColumnVisibility,
+        // A namespace-qualified row id keeps a selection stable across polls and unambiguous when
+        // rows from several namespaces share a name.
+        getRowId: bulkEnabled ? (row) => bulkRowId(row as T & { name: string; namespace?: string }) : undefined,
+        enableRowSelection: bulkEnabled,
+        onRowSelectionChange,
         initialState: { pagination: { pageSize: PAGE_SIZE } },
-        state: { sorting, columnVisibility },
+        state: { sorting, columnVisibility, rowSelection },
     });
     const hideableColumns = table.getAllColumns().filter((column) => column.getCanHide());
     const pageCount = table.getPageCount();
@@ -257,6 +295,7 @@ export function ResourceListPage<T>({
                     </Badge>
                 )}
                 <div className="flex-1" />
+                {bulkDelete && <BulkDeleteBar table={table} kind={bulkDelete.kind} noun={noun} />}
                 <div className="relative w-60">
                     <SearchIcon className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-text-dim" />
                     <Input

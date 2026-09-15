@@ -40,6 +40,7 @@ function CrdsPage() {
             query={crds}
             detailPath={detailPath}
             rowProps={(crd) => ({ 'data-crd': crd.name })}
+            bulkDelete={{ kind: 'CustomResourceDefinition' }}
             testId="crds-table"
             footerNote={crds.live ? 'live' : undefined}
         />

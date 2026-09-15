@@ -375,3 +375,35 @@ test('shows the live manifest of a pod and of a cluster-scoped object', async ()
         'kind: StorageClass',
     );
 });
+
+test('creates a config map from the editor, scales the deployment, then deletes what it made', async () => {
+    const { window } = launched;
+    await window.getByRole('link', { name: 'Create resource' }).click();
+    const create = window.getByTestId('create-page');
+    await expect(create).toContainText(`/ ${NAMESPACE}`);
+    await create.getByRole('combobox', { name: 'Insert template' }).click();
+    await window.getByRole('option', { name: /ConfigMap/ }).click();
+    await create.getByRole('button', { name: 'Dry run' }).click();
+    await expect(window.getByText('Dry run passed')).toBeVisible();
+    await create.getByRole('button', { name: 'Create' }).click();
+
+    // A successful create lands on the kind's own list.
+    const table = window.getByTestId('configmaps-table');
+    await expect(table.locator('[data-configmap="my-config"]')).toBeVisible();
+
+    // Scaling writes an absolute target, so the row shows the new count once the cluster agrees.
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Deployments' }).click();
+    const web = window.getByTestId('deployments-table').locator('[data-deployment="web"]');
+    await web.getByRole('button', { name: 'Scale up' }).click();
+    await expect(window.getByText(/Scaled Deployment/)).toBeVisible();
+    await expect(web).toContainText('2', { timeout: 30_000 });
+    await web.getByRole('button', { name: 'Scale down' }).click();
+
+    await window.getByTestId('sidebar').getByRole('link', { name: 'ConfigMaps' }).click();
+    await window.getByTestId('configmaps-table').locator('[data-configmap="my-config"]').getByRole('link').click();
+    await window.getByTestId('configmap-page').getByRole('button', { name: 'Delete' }).click();
+    const dialog = window.getByRole('alertdialog');
+    await expect(dialog).toContainText('Delete ConfigMap?');
+    await dialog.getByRole('button', { name: 'Delete' }).click();
+    await expect(window.getByTestId('configmaps-table').locator('[data-configmap="my-config"]')).toHaveCount(0);
+});

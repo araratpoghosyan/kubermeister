@@ -28,6 +28,7 @@ function RolesPage() {
             query={roles}
             detailPath={detailPath}
             rowProps={(role) => ({ 'data-role': role.name })}
+            bulkDelete={{ kind: 'Role' }}
             testId="roles-table"
             footerNote={roles.live ? 'live' : undefined}
         />

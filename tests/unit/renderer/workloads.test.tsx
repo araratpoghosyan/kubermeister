@@ -137,7 +137,17 @@ describe('workload lists', () => {
             within(daemons)
                 .getAllByRole('columnheader')
                 .map((h) => h.textContent),
-        ).toEqual(['Name', 'Desired', 'Current', 'Ready', 'Up-to-date', 'Node selector', 'Age']);
+        ).toEqual([
+            // The blank leading header belongs to the selection checkbox column.
+            '',
+            'Name',
+            'Desired',
+            'Current',
+            'Ready',
+            'Up-to-date',
+            'Node selector',
+            'Age',
+        ]);
         expect(agent).toHaveTextContent('kubernetes.io/os=linux');
     });
 });
