@@ -24,6 +24,8 @@ const row = {
     restarts: 0,
     age: '3d',
     node: 'n1',
+    cpu: 250,
+    mem: 64,
     cpuLimit: 500,
     memLimit: 128,
 };
@@ -83,9 +85,13 @@ const data: Record<string, unknown> = {
         { name: 'kube-system', pods: 9, tone: 'ok' },
     ],
     'namespace.active': { name: 'team-a', pods: 1, tone: 'accent' },
-    'resources.list': { kind: 'Pod', items: [row, { ...row, name: 'web-2', status: 'CrashLoop', restarts: 5 }] },
+    'resources.list': {
+        kind: 'Pod',
+        items: [row, { ...row, name: 'web-2', status: 'CrashLoop', restarts: 5, cpuLimit: 0, memLimit: 0 }],
+    },
     'resources.get': { kind: 'Pod', item: detail },
     'pods.logSnapshot': [],
+    'metrics.podSeries': { cpu: [100, 250], mem: [60, 64] },
     'events.forObject': [
         {
             time: '12:00:05',
@@ -113,7 +119,17 @@ describe('pods screens', () => {
             'href',
             '/workloads/pods/team-a/web-1',
         );
-        expect(table.querySelector('[data-pod="web-2"]')).toHaveTextContent('5');
+        const web1 = table.querySelector('[data-pod="web-1"]') as HTMLElement;
+        const web2 = table.querySelector('[data-pod="web-2"]') as HTMLElement;
+        expect(web2).toHaveTextContent('5');
+        expect(within(web2).getByText('5')).toHaveClass('text-warn');
+        expect(within(web1).getByText('0')).toHaveClass('text-text-muted');
+        expect(within(web1).getByText('1/1')).toHaveClass('text-ok');
+        expect(within(web2).getByText('1/1')).toHaveClass('text-danger');
+        expect(within(web1).getByRole('progressbar', { name: 'CPU usage' })).toHaveAttribute('aria-valuenow', '50');
+        expect(within(web1).getByRole('progressbar', { name: 'Memory usage' })).toHaveAttribute('aria-valuenow', '50');
+        expect(web1).toHaveTextContent('250m');
+        expect(web1).toHaveTextContent('64Mi');
         expect(invoke).toHaveBeenCalledWith('resources.list', { kind: 'Pod', namespace: undefined });
         expect(screen.getByRole('link', { name: 'Pods' })).toHaveAttribute('aria-current', 'page');
         expect(screen.getByTestId('resource-list')).toHaveTextContent('2 results');
@@ -146,6 +162,9 @@ describe('pods screens', () => {
                 .map((tab) => tab.textContent),
         ).toEqual(['Overview', 'Logs', 'Events', 'Labels1', 'Network1', 'Shell']);
         expect(within(page).getByTestId('containers')).toHaveTextContent('nginx:1.27');
+        await waitFor(() => expect(page).toHaveTextContent('250m'));
+        expect(page).toHaveTextContent('64Mi');
+        expect(invoke).toHaveBeenCalledWith('metrics.podSeries', { namespace: 'team-a', name: 'web-1' });
         await userEvent.click(within(rail).getByRole('tab', { name: /Labels/ }));
         expect(within(page).getByText('web')).toBeInTheDocument();
         await userEvent.click(within(rail).getByRole('tab', { name: /Events/ }));

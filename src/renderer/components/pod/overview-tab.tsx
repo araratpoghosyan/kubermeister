@@ -5,19 +5,36 @@ import { Card } from '@/components/ui/card';
 import { ComingSoonButton } from '@/components/coming-soon-button';
 import { DetailMetrics } from '@/components/templates/detail-cards';
 import { ContainerRow } from '@/components/pod/container-row';
+import { useIpcQuery } from '@/lib/query';
 import { cn } from '@/lib/utils';
 
-/** Pod-detail Overview tab: resource metrics, conditions, and per-container detail. */
-export function OverviewTab({ pod }: { pod?: PodDetail | null }) {
+const last = (series: number[]) => series.at(-1);
+
+/** Pod-detail Overview tab: live CPU and memory usage, conditions, and per-container detail. */
+export function OverviewTab({ name, namespace, pod }: { name: string; namespace: string; pod?: PodDetail | null }) {
+    const series = useIpcQuery('metrics.podSeries', { namespace, name }, { refetchInterval: 12_000 });
+    const cpu = series.data?.cpu ?? [];
+    const mem = series.data?.mem ?? [];
     const conditions = pod?.conditions ?? [];
     const containers = pod?.containers ?? [];
     return (
         <>
-            {/* Usage values arrive with the metrics feature; the cards keep their place until then. */}
             <DetailMetrics
                 metrics={[
-                    { label: 'CPU', value: '—', sub: 'no metrics yet' },
-                    { label: 'Memory', value: '—', sub: 'no metrics yet' },
+                    {
+                        label: 'CPU',
+                        value: cpu.length ? `${last(cpu)}m` : '—',
+                        sub: cpu.length ? 'current usage' : 'no metrics yet',
+                        spark: cpu,
+                        sparkColor: 'var(--ok)',
+                    },
+                    {
+                        label: 'Memory',
+                        value: mem.length ? `${last(mem)}Mi` : '—',
+                        sub: mem.length ? 'current usage' : 'no metrics yet',
+                        spark: mem,
+                        sparkColor: 'var(--warn)',
+                    },
                 ]}
             />
 

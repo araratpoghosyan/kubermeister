@@ -1,7 +1,8 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import type { LucideIcon } from 'lucide-react';
 import { StatusBadge } from '@/components/data-display/status-badge';
-import type { StatusTone } from '@/lib/status';
+import { usageTone, type StatusTone } from '@/lib/status';
+import { Meter } from '@/components/data-display/meter';
 import { NavLink } from '@/components/layout/nav-link';
 import { cn } from '@/lib/utils';
 
@@ -178,6 +179,39 @@ export function readyRatioColumn<T>(id: ScalarKey<T>, header = 'Ready', size = 9
                 <span className={cn('font-mono tabular-nums', parseRatio(value).complete ? 'text-ok' : 'text-warn')}>
                     {value}
                 </span>
+            );
+        },
+    };
+}
+
+/**
+ * A usage-meter column driven by a percentage getter (0 to 100, or `null` when there is nothing to
+ * measure against). Owns `usageTone` so the ok/warn/danger thresholds match everywhere. `label`
+ * overrides the leading text (defaults to `${pct}%`) for screens that show raw magnitudes and
+ * `emptyLabel` the text shown for a null percentage.
+ */
+export function meterColumn<T>(
+    id: string,
+    header: string,
+    getPct: (row: T) => number | null,
+    options: { size?: number; label?: (row: T) => string; labelClassName?: string; emptyLabel?: string } = {},
+): ColumnDef<T> {
+    const { size = 130, label, labelClassName = 'w-8', emptyLabel = 'no limit' } = options;
+    return {
+        id,
+        header,
+        size,
+        accessorFn: (row) => getPct(row) ?? -1,
+        cell: ({ row }) => {
+            const pct = getPct(row.original);
+            if (pct == null) return <span className="text-caption text-text-dim">{emptyLabel}</span>;
+            return (
+                <div className="flex items-center gap-2">
+                    <span className={cn('font-mono text-meta tabular-nums', labelClassName)}>
+                        {label ? label(row.original) : `${pct}%`}
+                    </span>
+                    <Meter value={pct} tone={usageTone(pct)} label={`${header} usage`} />
+                </div>
             );
         },
     };

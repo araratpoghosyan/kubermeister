@@ -28,6 +28,8 @@ const data: Record<string, unknown> = {
             version: 'v1.36',
             cpu: 4,
             memory: 7.8,
+            cpuUsed: 25,
+            memUsed: null,
             pods: 4,
             age: '3d',
             instanceType: 'k3s',

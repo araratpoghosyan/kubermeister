@@ -5,9 +5,11 @@ import userEvent from '@testing-library/user-event';
 import { ServerIcon } from 'lucide-react';
 import { describe, expect, it, vi } from 'vitest';
 import { DataTable } from '@/components/data-display/data-table';
+import { Meter } from '@/components/data-display/meter';
 import {
     ageColumn,
     ageToSeconds,
+    meterColumn,
     nameColumn,
     namespaceColumn,
     parseRatio,
@@ -22,12 +24,13 @@ interface Row {
     status: 'Ready' | 'NotReady';
     ready: string;
     cpu: number;
+    used: number | null;
     note?: string;
     age: string;
 }
 const rows: Row[] = [
-    { name: 'a', namespace: 'ns-1', status: 'Ready', ready: '2/2', cpu: 4, note: 'x', age: '3d' },
-    { name: 'b', status: 'NotReady', ready: '1/3', cpu: 2, age: '5m' },
+    { name: 'a', namespace: 'ns-1', status: 'Ready', ready: '2/2', cpu: 4, used: 95, note: 'x', age: '3d' },
+    { name: 'b', status: 'NotReady', ready: '1/3', cpu: 2, used: null, age: '5m' },
 ];
 
 function Harness({ columns, onRowClick }: { columns: ColumnDef<Row>[]; onRowClick?: (row: Row) => void }) {
@@ -134,5 +137,45 @@ describe('DataTable', () => {
         renderColumns([nameColumn<Row>()]);
         const table = await screen.findByTestId('t');
         expect(table.querySelector('[data-row="a"]')).not.toHaveClass('cursor-pointer');
+    });
+});
+
+describe('Meter and meterColumn', () => {
+    it('clamps the value, exposes it as a progressbar, and colors by tone', () => {
+        const { rerender } = render(<Meter value={140} tone="danger" label="CPU usage" />);
+        const bar = screen.getByRole('progressbar', { name: 'CPU usage' });
+        expect(bar).toHaveAttribute('aria-valuenow', '100');
+        expect(bar.firstElementChild).toHaveStyle({ width: '100%' });
+        expect(bar.firstElementChild).toHaveClass('bg-danger');
+        rerender(<Meter value={-5} />);
+        expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0');
+        expect(screen.getByRole('progressbar').firstElementChild).toHaveClass('bg-primary');
+    });
+
+    it('renders a toned meter with a label, or the empty label when there is nothing to measure', async () => {
+        renderColumns([
+            meterColumn<Row>('used', 'CPU', (row) => row.used, {
+                label: (row) => `${row.cpu}m`,
+                emptyLabel: 'no data',
+            }),
+        ]);
+        const table = await screen.findByTestId('t');
+        const rowA = table.querySelector('[data-row="a"]') as HTMLElement;
+        const rowB = table.querySelector('[data-row="b"]') as HTMLElement;
+        expect(rowA).toHaveTextContent('4m');
+        expect(within(rowA).getByRole('progressbar', { name: 'CPU usage' })).toHaveAttribute('aria-valuenow', '95');
+        expect(within(rowA).getByRole('progressbar').firstElementChild).toHaveClass('bg-danger');
+        expect(rowB).toHaveTextContent('no data');
+        expect(within(rowB).queryByRole('progressbar')).not.toBeInTheDocument();
+        const column = meterColumn<Row>('used', 'CPU', (row) => row.used);
+        expect(accessor(column, rows[0]!)).toBe(95);
+        expect(accessor(column, rows[1]!)).toBe(-1);
+    });
+
+    it('defaults the label to the percentage and the empty text to no limit', async () => {
+        renderColumns([meterColumn<Row>('used', 'Memory', (row) => row.used)]);
+        const table = await screen.findByTestId('t');
+        expect(table.querySelector('[data-row="a"]')).toHaveTextContent('95%');
+        expect(table.querySelector('[data-row="b"]')).toHaveTextContent('no limit');
     });
 });

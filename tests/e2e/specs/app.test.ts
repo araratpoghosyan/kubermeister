@@ -37,6 +37,10 @@ test('lists the k3s node as Ready and the seeded namespace', async () => {
     await expect(nodes.getByRole('row')).toHaveCount(2);
     await expect(nodes).toContainText('Ready');
     await expect(nodes).toContainText('control-plane');
+    // Usage meters fill in once metrics-server has reported the node; until then the cell says so.
+    await expect(
+        nodes.getByRole('progressbar', { name: 'CPU usage' }).or(nodes.getByText('no data').first()),
+    ).toBeVisible();
 
     await window.getByRole('link', { name: 'Namespaces' }).click();
     const namespaces = window.getByTestId('namespaces-table');
@@ -67,6 +71,9 @@ test('lists the seeded pod, opens its detail, and rescopes by namespace', async 
     const row = pods.locator('[data-pod^="web-"]');
     await expect(row).toHaveCount(1);
     await expect(row).toContainText('Running');
+    // The seeded container declares limits, so usage renders as a meter even before the first sample.
+    await expect(row.getByRole('progressbar', { name: 'CPU usage' })).toBeVisible();
+    await expect(row.getByRole('progressbar', { name: 'Memory usage' })).toBeVisible();
 
     await row.getByRole('link').click();
     // The header carries the namespace; the list only shows a Namespace column across namespaces.
