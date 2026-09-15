@@ -41,6 +41,9 @@ export const IPC_CHANNELS = [
     'deployments.rollouts',
     'configMaps.entries',
     'secrets.entries',
+    'services.ports',
+    'services.endpoints',
+    'ingresses.rules',
 ] as const;
 
 export const SUBSCRIPTION_CHANNELS = ['update.state', 'open-settings'] as const;

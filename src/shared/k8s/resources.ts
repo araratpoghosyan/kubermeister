@@ -1,5 +1,15 @@
 import { z } from 'zod';
 import { podDetailSchema, podSchema } from './pods.js';
+import {
+    endpointsDetailSchema,
+    endpointsSchema,
+    ingressDetailSchema,
+    ingressSchema,
+    networkPolicyDetailSchema,
+    networkPolicySchema,
+    serviceDetailSchema,
+    serviceSchema,
+} from './network.js';
 import { kindSchema } from './registry.js';
 import {
     autoscalerDetailSchema,
@@ -47,6 +57,10 @@ export const resourceListOutputSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('HorizontalPodAutoscaler'), items: z.array(autoscalerSchema) }),
     z.object({ kind: z.literal('ConfigMap'), items: z.array(configMapSchema) }),
     z.object({ kind: z.literal('Secret'), items: z.array(secretSchema) }),
+    z.object({ kind: z.literal('Service'), items: z.array(serviceSchema) }),
+    z.object({ kind: z.literal('Ingress'), items: z.array(ingressSchema) }),
+    z.object({ kind: z.literal('Endpoints'), items: z.array(endpointsSchema) }),
+    z.object({ kind: z.literal('NetworkPolicy'), items: z.array(networkPolicySchema) }),
 ]);
 
 export const resourceGetOutputSchema = z.discriminatedUnion('kind', [
@@ -59,6 +73,10 @@ export const resourceGetOutputSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('HorizontalPodAutoscaler'), item: autoscalerDetailSchema.nullable() }),
     z.object({ kind: z.literal('ConfigMap'), item: configMapDetailSchema.nullable() }),
     z.object({ kind: z.literal('Secret'), item: secretDetailSchema.nullable() }),
+    z.object({ kind: z.literal('Service'), item: serviceDetailSchema.nullable() }),
+    z.object({ kind: z.literal('Ingress'), item: ingressDetailSchema.nullable() }),
+    z.object({ kind: z.literal('Endpoints'), item: endpointsDetailSchema.nullable() }),
+    z.object({ kind: z.literal('NetworkPolicy'), item: networkPolicyDetailSchema.nullable() }),
 ]);
 
 export type ResourceListInput = z.infer<typeof resourceListInputSchema>;

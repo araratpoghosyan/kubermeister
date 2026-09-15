@@ -4,6 +4,17 @@ const podsMod = { listPods: vi.fn(), getPod: vi.fn() };
 vi.mock('../../../src/main/k8s/resources/pods.js', () => podsMod);
 const configMod = { listConfigMaps: vi.fn(), getConfigMap: vi.fn(), listSecrets: vi.fn(), getSecret: vi.fn() };
 vi.mock('../../../src/main/k8s/resources/config.js', () => configMod);
+const networkMod = {
+    listServices: vi.fn(),
+    getService: vi.fn(),
+    listIngresses: vi.fn(),
+    getIngress: vi.fn(),
+    listEndpoints: vi.fn(),
+    getEndpoints: vi.fn(),
+    listNetworkPolicies: vi.fn(),
+    getNetworkPolicy: vi.fn(),
+};
+vi.mock('../../../src/main/k8s/resources/network.js', () => networkMod);
 const workloadsMod = {
     listDeployments: vi.fn(),
     getDeployment: vi.fn(),
@@ -99,5 +110,28 @@ describe('generic resource dispatch', () => {
         await expect(listResources({ kind: 'Secret' })).resolves.toEqual({ kind: 'Secret', items: [] });
         await expect(getResource({ kind: 'ConfigMap', name: 'c' })).resolves.toEqual({ kind: 'ConfigMap', item: null });
         await expect(getResource({ kind: 'Secret', name: 's' })).resolves.toEqual({ kind: 'Secret', item: null });
+    });
+
+    it('routes the network kinds to their sources', async () => {
+        for (const fn of Object.values(networkMod)) fn.mockResolvedValue([]);
+        networkMod.getService.mockResolvedValue(null);
+        networkMod.getIngress.mockResolvedValue(null);
+        networkMod.getEndpoints.mockResolvedValue(null);
+        networkMod.getNetworkPolicy.mockResolvedValue(null);
+        await expect(listResources({ kind: 'Service', namespace: 'a' })).resolves.toEqual({
+            kind: 'Service',
+            items: [],
+        });
+        expect(networkMod.listServices).toHaveBeenCalledWith('a');
+        await expect(listResources({ kind: 'Ingress' })).resolves.toEqual({ kind: 'Ingress', items: [] });
+        await expect(listResources({ kind: 'Endpoints' })).resolves.toEqual({ kind: 'Endpoints', items: [] });
+        await expect(listResources({ kind: 'NetworkPolicy' })).resolves.toEqual({ kind: 'NetworkPolicy', items: [] });
+        await expect(getResource({ kind: 'Service', name: 's' })).resolves.toEqual({ kind: 'Service', item: null });
+        await expect(getResource({ kind: 'Ingress', name: 'i' })).resolves.toEqual({ kind: 'Ingress', item: null });
+        await expect(getResource({ kind: 'Endpoints', name: 'e' })).resolves.toEqual({ kind: 'Endpoints', item: null });
+        await expect(getResource({ kind: 'NetworkPolicy', name: 'n' })).resolves.toEqual({
+            kind: 'NetworkPolicy',
+            item: null,
+        });
     });
 });

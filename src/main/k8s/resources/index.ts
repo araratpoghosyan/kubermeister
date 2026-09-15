@@ -8,6 +8,16 @@ import type {
     RowOf,
 } from '../../../shared/k8s/resources.js';
 import { getConfigMap, getSecret, listConfigMaps, listSecrets } from './config.js';
+import {
+    getEndpoints,
+    getIngress,
+    getNetworkPolicy,
+    getService,
+    listEndpoints,
+    listIngresses,
+    listNetworkPolicies,
+    listServices,
+} from './network.js';
 import { getPod, listPods } from './pods.js';
 import {
     getAutoscaler,
@@ -40,6 +50,10 @@ const SOURCES: { [K in Kind]: Source<K> } = {
     HorizontalPodAutoscaler: { list: listAutoscalers, get: getAutoscaler },
     ConfigMap: { list: listConfigMaps, get: getConfigMap },
     Secret: { list: listSecrets, get: getSecret },
+    Service: { list: listServices, get: getService },
+    Ingress: { list: listIngresses, get: getIngress },
+    Endpoints: { list: listEndpoints, get: getEndpoints },
+    NetworkPolicy: { list: listNetworkPolicies, get: getNetworkPolicy },
 };
 
 export async function listResources(input: ResourceListInput): Promise<ResourceListOutput> {
@@ -65,6 +79,14 @@ export async function listResources(input: ResourceListInput): Promise<ResourceL
             return { kind: 'ConfigMap', items: await SOURCES.ConfigMap.list(input.namespace) };
         case 'Secret':
             return { kind: 'Secret', items: await SOURCES.Secret.list(input.namespace) };
+        case 'Service':
+            return { kind: 'Service', items: await SOURCES.Service.list(input.namespace) };
+        case 'Ingress':
+            return { kind: 'Ingress', items: await SOURCES.Ingress.list(input.namespace) };
+        case 'Endpoints':
+            return { kind: 'Endpoints', items: await SOURCES.Endpoints.list(input.namespace) };
+        case 'NetworkPolicy':
+            return { kind: 'NetworkPolicy', items: await SOURCES.NetworkPolicy.list(input.namespace) };
     }
 }
 
@@ -91,5 +113,13 @@ export async function getResource(input: ResourceGetInput): Promise<ResourceGetO
             return { kind: 'ConfigMap', item: await SOURCES.ConfigMap.get(input.name, input.namespace) };
         case 'Secret':
             return { kind: 'Secret', item: await SOURCES.Secret.get(input.name, input.namespace) };
+        case 'Service':
+            return { kind: 'Service', item: await SOURCES.Service.get(input.name, input.namespace) };
+        case 'Ingress':
+            return { kind: 'Ingress', item: await SOURCES.Ingress.get(input.name, input.namespace) };
+        case 'Endpoints':
+            return { kind: 'Endpoints', item: await SOURCES.Endpoints.get(input.name, input.namespace) };
+        case 'NetworkPolicy':
+            return { kind: 'NetworkPolicy', item: await SOURCES.NetworkPolicy.get(input.name, input.namespace) };
     }
 }

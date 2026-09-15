@@ -62,6 +62,34 @@ export const KIND_REGISTRY = {
         listPath: '/workloads/configmaps',
     },
     Secret: { kind: 'Secret', apiVersion: 'v1', clusterScoped: false, scalable: false, listPath: '/workloads/secrets' },
+    Service: {
+        kind: 'Service',
+        apiVersion: 'v1',
+        clusterScoped: false,
+        scalable: false,
+        listPath: '/network/services',
+    },
+    Ingress: {
+        kind: 'Ingress',
+        apiVersion: 'networking.k8s.io/v1',
+        clusterScoped: false,
+        scalable: false,
+        listPath: '/network/ingresses',
+    },
+    Endpoints: {
+        kind: 'Endpoints',
+        apiVersion: 'v1',
+        clusterScoped: false,
+        scalable: false,
+        listPath: '/network/endpoints',
+    },
+    NetworkPolicy: {
+        kind: 'NetworkPolicy',
+        apiVersion: 'networking.k8s.io/v1',
+        clusterScoped: false,
+        scalable: false,
+        listPath: '/network/networkpolicies',
+    },
 } as const satisfies Record<string, KindInfo>;
 
 export type Kind = keyof typeof KIND_REGISTRY;

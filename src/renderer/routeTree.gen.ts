@@ -17,6 +17,10 @@ import { Route as OverviewNamespacesRouteImport } from './routes/overview/namesp
 import { Route as OverviewNodesRouteImport } from './routes/overview/nodes';
 import { Route as OverviewQuotasRouteImport } from './routes/overview/quotas';
 import { Route as OverviewSummaryRouteImport } from './routes/overview/summary';
+import { Route as NetworkEndpointsIndexRouteImport } from './routes/network/endpoints/index';
+import { Route as NetworkIngressesIndexRouteImport } from './routes/network/ingresses/index';
+import { Route as NetworkNetworkpoliciesIndexRouteImport } from './routes/network/networkpolicies/index';
+import { Route as NetworkServicesIndexRouteImport } from './routes/network/services/index';
 import { Route as OverviewNodesNameRouteImport } from './routes/overview/nodes_.$name';
 import { Route as WorkloadsAutoscalersIndexRouteImport } from './routes/workloads/autoscalers/index';
 import { Route as WorkloadsConfigmapsIndexRouteImport } from './routes/workloads/configmaps/index';
@@ -27,6 +31,10 @@ import { Route as WorkloadsJobsIndexRouteImport } from './routes/workloads/jobs/
 import { Route as WorkloadsPodsIndexRouteImport } from './routes/workloads/pods/index';
 import { Route as WorkloadsSecretsIndexRouteImport } from './routes/workloads/secrets/index';
 import { Route as WorkloadsStatefulsetsIndexRouteImport } from './routes/workloads/statefulsets/index';
+import { Route as NetworkEndpointsNamespaceNameRouteImport } from './routes/network/endpoints/$namespace.$name';
+import { Route as NetworkIngressesNamespaceNameRouteImport } from './routes/network/ingresses/$namespace.$name';
+import { Route as NetworkNetworkpoliciesNamespaceNameRouteImport } from './routes/network/networkpolicies/$namespace.$name';
+import { Route as NetworkServicesNamespaceNameRouteImport } from './routes/network/services/$namespace.$name';
 import { Route as WorkloadsAutoscalersNamespaceNameRouteImport } from './routes/workloads/autoscalers/$namespace.$name';
 import { Route as WorkloadsConfigmapsNamespaceNameRouteImport } from './routes/workloads/configmaps/$namespace.$name';
 import { Route as WorkloadsCronjobsNamespaceNameRouteImport } from './routes/workloads/cronjobs/$namespace.$name';
@@ -75,6 +83,27 @@ const OverviewQuotasRoute = OverviewQuotasRouteImport.update({
 const OverviewSummaryRoute = OverviewSummaryRouteImport.update({
   id: '/overview/summary',
   path: '/overview/summary',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const NetworkEndpointsIndexRoute = NetworkEndpointsIndexRouteImport.update({
+  id: '/network/endpoints/',
+  path: '/network/endpoints/',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const NetworkIngressesIndexRoute = NetworkIngressesIndexRouteImport.update({
+  id: '/network/ingresses/',
+  path: '/network/ingresses/',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const NetworkNetworkpoliciesIndexRoute =
+  NetworkNetworkpoliciesIndexRouteImport.update({
+    id: '/network/networkpolicies/',
+    path: '/network/networkpolicies/',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const NetworkServicesIndexRoute = NetworkServicesIndexRouteImport.update({
+  id: '/network/services/',
+  path: '/network/services/',
   getParentRoute: () => rootRouteImport,
 } as any);
 const OverviewNodesNameRoute = OverviewNodesNameRouteImport.update({
@@ -130,6 +159,30 @@ const WorkloadsStatefulsetsIndexRoute =
   WorkloadsStatefulsetsIndexRouteImport.update({
     id: '/workloads/statefulsets/',
     path: '/workloads/statefulsets/',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const NetworkEndpointsNamespaceNameRoute =
+  NetworkEndpointsNamespaceNameRouteImport.update({
+    id: '/network/endpoints/$namespace/$name',
+    path: '/network/endpoints/$namespace/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const NetworkIngressesNamespaceNameRoute =
+  NetworkIngressesNamespaceNameRouteImport.update({
+    id: '/network/ingresses/$namespace/$name',
+    path: '/network/ingresses/$namespace/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const NetworkNetworkpoliciesNamespaceNameRoute =
+  NetworkNetworkpoliciesNamespaceNameRouteImport.update({
+    id: '/network/networkpolicies/$namespace/$name',
+    path: '/network/networkpolicies/$namespace/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const NetworkServicesNamespaceNameRoute =
+  NetworkServicesNamespaceNameRouteImport.update({
+    id: '/network/services/$namespace/$name',
+    path: '/network/services/$namespace/$name',
     getParentRoute: () => rootRouteImport,
   } as any);
 const WorkloadsAutoscalersNamespaceNameRoute =
@@ -197,6 +250,10 @@ export interface FileRoutesByFullPath {
   '/overview/quotas': typeof OverviewQuotasRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
   '/overview/nodes/$name': typeof OverviewNodesNameRoute;
+  '/network/endpoints/': typeof NetworkEndpointsIndexRoute;
+  '/network/ingresses/': typeof NetworkIngressesIndexRoute;
+  '/network/networkpolicies/': typeof NetworkNetworkpoliciesIndexRoute;
+  '/network/services/': typeof NetworkServicesIndexRoute;
   '/workloads/autoscalers/': typeof WorkloadsAutoscalersIndexRoute;
   '/workloads/configmaps/': typeof WorkloadsConfigmapsIndexRoute;
   '/workloads/cronjobs/': typeof WorkloadsCronjobsIndexRoute;
@@ -206,6 +263,10 @@ export interface FileRoutesByFullPath {
   '/workloads/pods/': typeof WorkloadsPodsIndexRoute;
   '/workloads/secrets/': typeof WorkloadsSecretsIndexRoute;
   '/workloads/statefulsets/': typeof WorkloadsStatefulsetsIndexRoute;
+  '/network/endpoints/$namespace/$name': typeof NetworkEndpointsNamespaceNameRoute;
+  '/network/ingresses/$namespace/$name': typeof NetworkIngressesNamespaceNameRoute;
+  '/network/networkpolicies/$namespace/$name': typeof NetworkNetworkpoliciesNamespaceNameRoute;
+  '/network/services/$namespace/$name': typeof NetworkServicesNamespaceNameRoute;
   '/workloads/autoscalers/$namespace/$name': typeof WorkloadsAutoscalersNamespaceNameRoute;
   '/workloads/configmaps/$namespace/$name': typeof WorkloadsConfigmapsNamespaceNameRoute;
   '/workloads/cronjobs/$namespace/$name': typeof WorkloadsCronjobsNamespaceNameRoute;
@@ -226,6 +287,10 @@ export interface FileRoutesByTo {
   '/overview/quotas': typeof OverviewQuotasRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
   '/overview/nodes/$name': typeof OverviewNodesNameRoute;
+  '/network/endpoints': typeof NetworkEndpointsIndexRoute;
+  '/network/ingresses': typeof NetworkIngressesIndexRoute;
+  '/network/networkpolicies': typeof NetworkNetworkpoliciesIndexRoute;
+  '/network/services': typeof NetworkServicesIndexRoute;
   '/workloads/autoscalers': typeof WorkloadsAutoscalersIndexRoute;
   '/workloads/configmaps': typeof WorkloadsConfigmapsIndexRoute;
   '/workloads/cronjobs': typeof WorkloadsCronjobsIndexRoute;
@@ -235,6 +300,10 @@ export interface FileRoutesByTo {
   '/workloads/pods': typeof WorkloadsPodsIndexRoute;
   '/workloads/secrets': typeof WorkloadsSecretsIndexRoute;
   '/workloads/statefulsets': typeof WorkloadsStatefulsetsIndexRoute;
+  '/network/endpoints/$namespace/$name': typeof NetworkEndpointsNamespaceNameRoute;
+  '/network/ingresses/$namespace/$name': typeof NetworkIngressesNamespaceNameRoute;
+  '/network/networkpolicies/$namespace/$name': typeof NetworkNetworkpoliciesNamespaceNameRoute;
+  '/network/services/$namespace/$name': typeof NetworkServicesNamespaceNameRoute;
   '/workloads/autoscalers/$namespace/$name': typeof WorkloadsAutoscalersNamespaceNameRoute;
   '/workloads/configmaps/$namespace/$name': typeof WorkloadsConfigmapsNamespaceNameRoute;
   '/workloads/cronjobs/$namespace/$name': typeof WorkloadsCronjobsNamespaceNameRoute;
@@ -256,6 +325,10 @@ export interface FileRoutesById {
   '/overview/quotas': typeof OverviewQuotasRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
   '/overview/nodes_/$name': typeof OverviewNodesNameRoute;
+  '/network/endpoints/': typeof NetworkEndpointsIndexRoute;
+  '/network/ingresses/': typeof NetworkIngressesIndexRoute;
+  '/network/networkpolicies/': typeof NetworkNetworkpoliciesIndexRoute;
+  '/network/services/': typeof NetworkServicesIndexRoute;
   '/workloads/autoscalers/': typeof WorkloadsAutoscalersIndexRoute;
   '/workloads/configmaps/': typeof WorkloadsConfigmapsIndexRoute;
   '/workloads/cronjobs/': typeof WorkloadsCronjobsIndexRoute;
@@ -265,6 +338,10 @@ export interface FileRoutesById {
   '/workloads/pods/': typeof WorkloadsPodsIndexRoute;
   '/workloads/secrets/': typeof WorkloadsSecretsIndexRoute;
   '/workloads/statefulsets/': typeof WorkloadsStatefulsetsIndexRoute;
+  '/network/endpoints/$namespace/$name': typeof NetworkEndpointsNamespaceNameRoute;
+  '/network/ingresses/$namespace/$name': typeof NetworkIngressesNamespaceNameRoute;
+  '/network/networkpolicies/$namespace/$name': typeof NetworkNetworkpoliciesNamespaceNameRoute;
+  '/network/services/$namespace/$name': typeof NetworkServicesNamespaceNameRoute;
   '/workloads/autoscalers/$namespace/$name': typeof WorkloadsAutoscalersNamespaceNameRoute;
   '/workloads/configmaps/$namespace/$name': typeof WorkloadsConfigmapsNamespaceNameRoute;
   '/workloads/cronjobs/$namespace/$name': typeof WorkloadsCronjobsNamespaceNameRoute;
@@ -287,6 +364,10 @@ export interface FileRouteTypes {
     | '/overview/quotas'
     | '/overview/summary'
     | '/overview/nodes/$name'
+    | '/network/endpoints/'
+    | '/network/ingresses/'
+    | '/network/networkpolicies/'
+    | '/network/services/'
     | '/workloads/autoscalers/'
     | '/workloads/configmaps/'
     | '/workloads/cronjobs/'
@@ -296,6 +377,10 @@ export interface FileRouteTypes {
     | '/workloads/pods/'
     | '/workloads/secrets/'
     | '/workloads/statefulsets/'
+    | '/network/endpoints/$namespace/$name'
+    | '/network/ingresses/$namespace/$name'
+    | '/network/networkpolicies/$namespace/$name'
+    | '/network/services/$namespace/$name'
     | '/workloads/autoscalers/$namespace/$name'
     | '/workloads/configmaps/$namespace/$name'
     | '/workloads/cronjobs/$namespace/$name'
@@ -316,6 +401,10 @@ export interface FileRouteTypes {
     | '/overview/quotas'
     | '/overview/summary'
     | '/overview/nodes/$name'
+    | '/network/endpoints'
+    | '/network/ingresses'
+    | '/network/networkpolicies'
+    | '/network/services'
     | '/workloads/autoscalers'
     | '/workloads/configmaps'
     | '/workloads/cronjobs'
@@ -325,6 +414,10 @@ export interface FileRouteTypes {
     | '/workloads/pods'
     | '/workloads/secrets'
     | '/workloads/statefulsets'
+    | '/network/endpoints/$namespace/$name'
+    | '/network/ingresses/$namespace/$name'
+    | '/network/networkpolicies/$namespace/$name'
+    | '/network/services/$namespace/$name'
     | '/workloads/autoscalers/$namespace/$name'
     | '/workloads/configmaps/$namespace/$name'
     | '/workloads/cronjobs/$namespace/$name'
@@ -345,6 +438,10 @@ export interface FileRouteTypes {
     | '/overview/quotas'
     | '/overview/summary'
     | '/overview/nodes_/$name'
+    | '/network/endpoints/'
+    | '/network/ingresses/'
+    | '/network/networkpolicies/'
+    | '/network/services/'
     | '/workloads/autoscalers/'
     | '/workloads/configmaps/'
     | '/workloads/cronjobs/'
@@ -354,6 +451,10 @@ export interface FileRouteTypes {
     | '/workloads/pods/'
     | '/workloads/secrets/'
     | '/workloads/statefulsets/'
+    | '/network/endpoints/$namespace/$name'
+    | '/network/ingresses/$namespace/$name'
+    | '/network/networkpolicies/$namespace/$name'
+    | '/network/services/$namespace/$name'
     | '/workloads/autoscalers/$namespace/$name'
     | '/workloads/configmaps/$namespace/$name'
     | '/workloads/cronjobs/$namespace/$name'
@@ -375,6 +476,10 @@ export interface RootRouteChildren {
   OverviewQuotasRoute: typeof OverviewQuotasRoute;
   OverviewSummaryRoute: typeof OverviewSummaryRoute;
   OverviewNodesNameRoute: typeof OverviewNodesNameRoute;
+  NetworkEndpointsIndexRoute: typeof NetworkEndpointsIndexRoute;
+  NetworkIngressesIndexRoute: typeof NetworkIngressesIndexRoute;
+  NetworkNetworkpoliciesIndexRoute: typeof NetworkNetworkpoliciesIndexRoute;
+  NetworkServicesIndexRoute: typeof NetworkServicesIndexRoute;
   WorkloadsAutoscalersIndexRoute: typeof WorkloadsAutoscalersIndexRoute;
   WorkloadsConfigmapsIndexRoute: typeof WorkloadsConfigmapsIndexRoute;
   WorkloadsCronjobsIndexRoute: typeof WorkloadsCronjobsIndexRoute;
@@ -384,6 +489,10 @@ export interface RootRouteChildren {
   WorkloadsPodsIndexRoute: typeof WorkloadsPodsIndexRoute;
   WorkloadsSecretsIndexRoute: typeof WorkloadsSecretsIndexRoute;
   WorkloadsStatefulsetsIndexRoute: typeof WorkloadsStatefulsetsIndexRoute;
+  NetworkEndpointsNamespaceNameRoute: typeof NetworkEndpointsNamespaceNameRoute;
+  NetworkIngressesNamespaceNameRoute: typeof NetworkIngressesNamespaceNameRoute;
+  NetworkNetworkpoliciesNamespaceNameRoute: typeof NetworkNetworkpoliciesNamespaceNameRoute;
+  NetworkServicesNamespaceNameRoute: typeof NetworkServicesNamespaceNameRoute;
   WorkloadsAutoscalersNamespaceNameRoute: typeof WorkloadsAutoscalersNamespaceNameRoute;
   WorkloadsConfigmapsNamespaceNameRoute: typeof WorkloadsConfigmapsNamespaceNameRoute;
   WorkloadsCronjobsNamespaceNameRoute: typeof WorkloadsCronjobsNamespaceNameRoute;
@@ -451,6 +560,34 @@ declare module '@tanstack/react-router' {
       path: '/overview/summary';
       fullPath: '/overview/summary';
       preLoaderRoute: typeof OverviewSummaryRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/network/endpoints/': {
+      id: '/network/endpoints/';
+      path: '/network/endpoints';
+      fullPath: '/network/endpoints/';
+      preLoaderRoute: typeof NetworkEndpointsIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/network/ingresses/': {
+      id: '/network/ingresses/';
+      path: '/network/ingresses';
+      fullPath: '/network/ingresses/';
+      preLoaderRoute: typeof NetworkIngressesIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/network/networkpolicies/': {
+      id: '/network/networkpolicies/';
+      path: '/network/networkpolicies';
+      fullPath: '/network/networkpolicies/';
+      preLoaderRoute: typeof NetworkNetworkpoliciesIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/network/services/': {
+      id: '/network/services/';
+      path: '/network/services';
+      fullPath: '/network/services/';
+      preLoaderRoute: typeof NetworkServicesIndexRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/overview/nodes_/$name': {
@@ -521,6 +658,34 @@ declare module '@tanstack/react-router' {
       path: '/workloads/statefulsets';
       fullPath: '/workloads/statefulsets/';
       preLoaderRoute: typeof WorkloadsStatefulsetsIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/network/endpoints/$namespace/$name': {
+      id: '/network/endpoints/$namespace/$name';
+      path: '/network/endpoints/$namespace/$name';
+      fullPath: '/network/endpoints/$namespace/$name';
+      preLoaderRoute: typeof NetworkEndpointsNamespaceNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/network/ingresses/$namespace/$name': {
+      id: '/network/ingresses/$namespace/$name';
+      path: '/network/ingresses/$namespace/$name';
+      fullPath: '/network/ingresses/$namespace/$name';
+      preLoaderRoute: typeof NetworkIngressesNamespaceNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/network/networkpolicies/$namespace/$name': {
+      id: '/network/networkpolicies/$namespace/$name';
+      path: '/network/networkpolicies/$namespace/$name';
+      fullPath: '/network/networkpolicies/$namespace/$name';
+      preLoaderRoute: typeof NetworkNetworkpoliciesNamespaceNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/network/services/$namespace/$name': {
+      id: '/network/services/$namespace/$name';
+      path: '/network/services/$namespace/$name';
+      fullPath: '/network/services/$namespace/$name';
+      preLoaderRoute: typeof NetworkServicesNamespaceNameRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/workloads/autoscalers/$namespace/$name': {
@@ -599,6 +764,10 @@ const rootRouteChildren: RootRouteChildren = {
   OverviewQuotasRoute: OverviewQuotasRoute,
   OverviewSummaryRoute: OverviewSummaryRoute,
   OverviewNodesNameRoute: OverviewNodesNameRoute,
+  NetworkEndpointsIndexRoute: NetworkEndpointsIndexRoute,
+  NetworkIngressesIndexRoute: NetworkIngressesIndexRoute,
+  NetworkNetworkpoliciesIndexRoute: NetworkNetworkpoliciesIndexRoute,
+  NetworkServicesIndexRoute: NetworkServicesIndexRoute,
   WorkloadsAutoscalersIndexRoute: WorkloadsAutoscalersIndexRoute,
   WorkloadsConfigmapsIndexRoute: WorkloadsConfigmapsIndexRoute,
   WorkloadsCronjobsIndexRoute: WorkloadsCronjobsIndexRoute,
@@ -608,6 +777,11 @@ const rootRouteChildren: RootRouteChildren = {
   WorkloadsPodsIndexRoute: WorkloadsPodsIndexRoute,
   WorkloadsSecretsIndexRoute: WorkloadsSecretsIndexRoute,
   WorkloadsStatefulsetsIndexRoute: WorkloadsStatefulsetsIndexRoute,
+  NetworkEndpointsNamespaceNameRoute: NetworkEndpointsNamespaceNameRoute,
+  NetworkIngressesNamespaceNameRoute: NetworkIngressesNamespaceNameRoute,
+  NetworkNetworkpoliciesNamespaceNameRoute:
+    NetworkNetworkpoliciesNamespaceNameRoute,
+  NetworkServicesNamespaceNameRoute: NetworkServicesNamespaceNameRoute,
   WorkloadsAutoscalersNamespaceNameRoute:
     WorkloadsAutoscalersNamespaceNameRoute,
   WorkloadsConfigmapsNamespaceNameRoute: WorkloadsConfigmapsNamespaceNameRoute,
