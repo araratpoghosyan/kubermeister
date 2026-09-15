@@ -1,86 +1,263 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { GaugeIcon } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Area, AreaChart, CartesianGrid } from 'recharts';
+import { PlusIcon, TriangleAlertIcon } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { ChartContainer, type ChartConfig } from '@/components/ui/chart';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ComingSoonButton } from '@/components/coming-soon-button';
+import { EventsList } from '@/components/data-display/events-list';
+import { MetricCard } from '@/components/data-display/metric-card';
 import { StatusBadge } from '@/components/data-display/status-badge';
-import { LoadingRows, QueryError } from '@/components/overview/query-state';
-import { DetailCard, DetailMetrics, PropertyGrid } from '@/components/templates/detail-cards';
-import { DetailHeader } from '@/components/templates/detail-header';
+import { RefreshButton } from '@/components/refresh-button';
+import { describeError } from '@/lib/k8s-error';
 import { useIpcQuery } from '@/lib/query';
 import { CLUSTER_TONE } from '@/lib/status';
+import { cn } from '@/lib/utils';
 
-export const Route = createFileRoute('/overview/summary')({ component: SummaryPage });
+export const Route = createFileRoute('/overview/summary')({ component: DashboardPage });
 
-function SummaryPage() {
-    const cluster = useIpcQuery('cluster.active', {}, { refetchInterval: 15_000 });
-    const nodes = useIpcQuery('nodes.list', {}, { refetchInterval: 15_000 });
-    const namespaces = useIpcQuery('namespaces.list', {}, { refetchInterval: 15_000 });
-    const pods = namespaces.data?.reduce((sum, ns) => sum + ns.pods, 0);
+const chartConfig = {
+    cpu: { label: 'CPU usage', color: 'var(--chart-1)' },
+    mem: { label: 'Memory usage', color: 'var(--chart-4)' },
+} satisfies ChartConfig;
+
+const DASHBOARD_KEYS = [
+    ['cluster.active'],
+    ['namespaces.list'],
+    ['events.recent'],
+    ['metrics.alerts'],
+    ['metrics.sparklines'],
+    ['metrics.workloadHealth'],
+];
+const REFRESH_MS = 15_000;
+const SAMPLE_MS = 12_000;
+
+const last = (series: number[]) => series.at(-1) ?? 0;
+
+function DashboardPage() {
+    const queryClient = useQueryClient();
+    const clusterQuery = useIpcQuery('cluster.active', {}, { refetchInterval: REFRESH_MS });
+    const namespacesQuery = useIpcQuery('namespaces.list', {}, { refetchInterval: REFRESH_MS });
+    const eventsQuery = useIpcQuery('events.recent', {}, { refetchInterval: REFRESH_MS });
+    const alertsQuery = useIpcQuery('metrics.alerts', {}, { refetchInterval: REFRESH_MS });
+    const spark = useIpcQuery('metrics.sparklines', {}, { refetchInterval: SAMPLE_MS }).data;
+    const workloadHealth = useIpcQuery('metrics.workloadHealth', {}, { refetchInterval: SAMPLE_MS }).data;
+
+    // Sparklines and workload health are best-effort (empty, not failed, without metrics-server), so
+    // reachability is judged on the core reads alone: a failed cluster read must not render as a
+    // healthy but idle dashboard.
+    const coreQueries = [clusterQuery, namespacesQuery, eventsQuery, alertsQuery];
+    const loading = coreQueries.some((q) => q.isPending);
+    const failedQuery = coreQueries.find((q) => q.isError);
+    const retry = () => {
+        for (const queryKey of DASHBOARD_KEYS) void queryClient.invalidateQueries({ queryKey });
+    };
+
+    const cluster = clusterQuery.data;
+    const namespaces = namespacesQuery.data ?? [];
+    const events = eventsQuery.data ?? [];
+    const alerts = alertsQuery.data ?? [];
+    const sparkCpu = spark?.cpu ?? [];
+    const sparkMem = spark?.mem ?? [];
+    const totalPods = namespaces.reduce((sum, ns) => sum + ns.pods, 0);
+    const memHealth = (workloadHealth ?? []).map((p) => p.mem);
+    const avgMem = memHealth.length ? Math.round(memHealth.reduce((a, b) => a + b, 0) / memHealth.length) : 0;
+    const peakMem = memHealth.length ? Math.max(...memHealth) : 0;
+    const alertTone = alerts.some((a) => a.tone === 'danger') ? 'danger' : alerts.length ? 'warn' : 'neutral';
+    const clusterMeta = cluster
+        ? `${cluster.provider} · v${cluster.version} · ${cluster.region}`
+        : 'No cluster connected';
 
     return (
-        <div className="flex h-full flex-col overflow-auto" data-testid="summary-page">
-            {cluster.isPending && <LoadingRows rows={3} />}
-            {cluster.isError && (
-                <div className="p-4.5">
-                    <QueryError error={cluster.error} />
+        <div className="h-full overflow-auto bg-background p-4" data-testid="cluster-summary">
+            <div className="mb-4 flex items-end justify-between">
+                <div>
+                    <div className="text-label font-medium tracking-wider text-text-muted">CLUSTER OVERVIEW</div>
+                    <div className="mt-0.5 flex items-center gap-2.5 text-title font-semibold">
+                        {cluster?.name ?? '—'}
+                        {cluster && <StatusBadge tone={CLUSTER_TONE[cluster.status]}>{cluster.status}</StatusBadge>}
+                    </div>
+                    <div className="mt-1 font-mono text-cell text-text-muted">{clusterMeta}</div>
                 </div>
-            )}
-            {cluster.data === null && <p className="p-4.5 text-body text-text-muted">No current context.</p>}
-            {cluster.data && (
-                <div data-testid="cluster-summary">
-                    <DetailHeader
-                        icon={GaugeIcon}
-                        eyebrow="Cluster"
-                        title={cluster.data.name}
-                        status={{ label: cluster.data.status, tone: CLUSTER_TONE[cluster.data.status] }}
-                        meta={[`Kubernetes ${cluster.data.version}`, cluster.data.provider, cluster.data.region]}
-                    />
-                    <div className="space-y-4 px-4.5 pb-4.5">
-                        <DetailMetrics
-                            metrics={[
-                                { label: 'Nodes', value: String(cluster.data.nodes) },
-                                { label: 'Namespaces', value: namespaces.data ? String(namespaces.data.length) : '—' },
-                                { label: 'Pods', value: pods === undefined ? '—' : String(pods) },
-                                { label: 'Version', value: cluster.data.version },
-                            ]}
-                        />
-                        <div className="grid gap-4 lg:grid-cols-2">
-                            <DetailCard title="Cluster" desc="Facts from the active context">
-                                <PropertyGrid
-                                    columns={1}
-                                    rows={[
-                                        ['Context', cluster.data.name],
-                                        ['Provider', cluster.data.provider],
-                                        ['Region', cluster.data.region],
-                                        ['Kubernetes', cluster.data.version],
-                                    ]}
-                                />
-                            </DetailCard>
-                            <DetailCard title="Nodes" desc="Readiness per node">
-                                {nodes.data ? (
-                                    <ul className="space-y-1.5 text-cell">
-                                        {nodes.data.map((node) => (
-                                            <li key={node.name} className="flex items-center justify-between gap-3">
-                                                <span className="truncate font-mono text-text-2">{node.name}</span>
-                                                <StatusBadge
-                                                    tone={
-                                                        node.status === 'Ready'
-                                                            ? 'ok'
-                                                            : node.status === 'Cordoned'
-                                                              ? 'warn'
-                                                              : 'danger'
-                                                    }
-                                                >
-                                                    {node.status}
-                                                </StatusBadge>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <LoadingRows rows={2} />
-                                )}
-                            </DetailCard>
-                        </div>
+                <div className="flex gap-2">
+                    <RefreshButton label="Refresh" queryKeys={DASHBOARD_KEYS} />
+                    <ComingSoonButton size="sm" tip="Creating resources arrives with the Create screen">
+                        <PlusIcon />
+                        Deploy
+                    </ComingSoonButton>
+                </div>
+            </div>
+
+            {failedQuery ? (
+                <Card
+                    className="flex flex-col items-center justify-center gap-3 rounded-card py-16 text-center shadow-none"
+                    data-testid="dashboard-error"
+                >
+                    <div className="flex flex-col items-center gap-1 text-body text-text-muted">
+                        <span className="font-medium text-foreground">{describeError(failedQuery.error).title}</span>
+                        <span>Couldn't load the cluster overview.</span>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={retry}>
+                        Retry
+                    </Button>
+                </Card>
+            ) : loading ? (
+                <div className="flex flex-col gap-3" role="status" aria-label="Loading">
+                    <div className="grid grid-cols-4 gap-3">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                            <Skeleton key={i} className="h-24 w-full rounded-card" />
+                        ))}
+                    </div>
+                    <Skeleton className="h-44 w-full rounded-card" />
+                    <div className="grid grid-cols-[1.6fr_1fr] gap-3">
+                        <Skeleton className="h-40 w-full rounded-card" />
+                        <Skeleton className="h-40 w-full rounded-card" />
                     </div>
                 </div>
+            ) : (
+                <>
+                    <div className="mb-4 grid grid-cols-4 gap-3" data-testid="dashboard-metrics">
+                        <MetricCard
+                            label="Nodes"
+                            value={`${cluster?.nodes ?? 0}`}
+                            sub={cluster?.status ?? '—'}
+                            spark={spark?.nodes ?? []}
+                            sparkColor="var(--ok)"
+                        />
+                        <MetricCard
+                            label="Pods running"
+                            value={`${totalPods}`}
+                            sub={`across ${namespaces.length} namespace${namespaces.length === 1 ? '' : 's'}`}
+                        />
+                        <MetricCard
+                            label="CPU usage"
+                            value={`${last(sparkCpu)}%`}
+                            sub="cluster average"
+                            spark={sparkCpu}
+                            sparkColor="var(--warn)"
+                        />
+                        <MetricCard
+                            label="Memory"
+                            value={`${last(sparkMem)}%`}
+                            sub="cluster average"
+                            spark={sparkMem}
+                            sparkColor="var(--danger)"
+                        />
+                    </div>
+
+                    <Card className="gap-0 rounded-card py-0 shadow-none" data-testid="workload-health">
+                        <div className="flex items-center border-b border-border px-3.5 py-3">
+                            <div className="text-body font-semibold">Workload health</div>
+                            <div className="flex-1" />
+                            <span className="font-mono text-label text-text-muted">live · ~12s samples</span>
+                        </div>
+                        <div className="p-3.5">
+                            <ChartContainer config={chartConfig} className="aspect-auto h-32 w-full">
+                                <AreaChart
+                                    data={workloadHealth ?? []}
+                                    margin={{ left: 0, right: 0, top: 4, bottom: 0 }}
+                                >
+                                    <defs>
+                                        <linearGradient id="fillCpu" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="var(--color-cpu)" stopOpacity={0.35} />
+                                            <stop offset="100%" stopColor="var(--color-cpu)" stopOpacity={0} />
+                                        </linearGradient>
+                                        <linearGradient id="fillMem" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="var(--color-mem)" stopOpacity={0.22} />
+                                            <stop offset="100%" stopColor="var(--color-mem)" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid vertical={false} strokeDasharray="0" />
+                                    <Area
+                                        dataKey="cpu"
+                                        type="monotone"
+                                        stroke="var(--color-cpu)"
+                                        strokeWidth={1.5}
+                                        fill="url(#fillCpu)"
+                                        isAnimationActive={false}
+                                    />
+                                    <Area
+                                        dataKey="mem"
+                                        type="monotone"
+                                        stroke="var(--color-mem)"
+                                        strokeWidth={1.5}
+                                        fill="url(#fillMem)"
+                                        isAnimationActive={false}
+                                    />
+                                </AreaChart>
+                            </ChartContainer>
+                            <div className="mt-2.5 flex items-center gap-4.5 text-label text-text-muted">
+                                <span className="flex items-center gap-1.5">
+                                    <span className="h-0.5 w-2" style={{ background: chartConfig.cpu.color }} />
+                                    {chartConfig.cpu.label}
+                                </span>
+                                <span className="flex items-center gap-1.5">
+                                    <span className="h-0.5 w-2" style={{ background: chartConfig.mem.color }} />
+                                    {chartConfig.mem.label}
+                                </span>
+                                <div className="flex-1" />
+                                {memHealth.length > 0 && (
+                                    <span className="font-mono">
+                                        mem avg {avgMem}% / peak {peakMem}%
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </Card>
+
+                    <div className="mt-3 grid grid-cols-[1.6fr_1fr] items-start gap-3">
+                        <Card className="min-w-0 gap-0 rounded-card py-0 shadow-none" data-testid="recent-events">
+                            <div className="flex items-center border-b border-border px-3.5 py-3">
+                                <div className="text-body font-semibold">Recent events</div>
+                            </div>
+                            <EventsList events={events} emptyMessage="No recent events." />
+                        </Card>
+
+                        <Card className="min-w-0 gap-0 rounded-card py-0 shadow-none" data-testid="alerts">
+                            <div className="flex items-center border-b border-border px-3.5 py-3">
+                                <div className="text-body font-semibold">Alerts</div>
+                                <div className="flex-1" />
+                                <Badge variant={alertTone} className="rounded-sm" data-testid="alert-count">
+                                    {alerts.length}
+                                </Badge>
+                            </div>
+                            <div role="list" aria-label="Alerts">
+                                {alerts.length === 0 && (
+                                    <div className="px-3.5 py-6 text-center text-cell text-text-muted">
+                                        No active alerts.
+                                    </div>
+                                )}
+                                {alerts.map((alert, i) => (
+                                    <div
+                                        key={`${alert.title}-${alert.detail}`}
+                                        role="listitem"
+                                        data-tone={alert.tone}
+                                        className={cn(
+                                            'flex items-start gap-2.5 px-3.5 py-2.5',
+                                            i < alerts.length - 1 && 'border-b border-border',
+                                        )}
+                                    >
+                                        <TriangleAlertIcon
+                                            className={cn(
+                                                'mt-0.5 size-3.5',
+                                                alert.tone === 'danger' ? 'text-danger' : 'text-warn',
+                                            )}
+                                        />
+                                        <div className="min-w-0 flex-1">
+                                            <div className="text-body font-medium break-words">{alert.title}</div>
+                                            <div className="mt-0.5 text-label break-words text-text-muted">
+                                                {alert.detail}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </Card>
+                    </div>
+                </>
             )}
         </div>
     );

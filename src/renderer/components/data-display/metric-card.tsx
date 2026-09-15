@@ -13,7 +13,7 @@ interface MetricCardProps {
 
 export function MetricCard({ label, value, sub, spark, sparkColor, className }: MetricCardProps) {
     return (
-        <Card className={cn('gap-0 rounded-card p-3.5 shadow-none', className)}>
+        <Card className={cn('gap-0 rounded-card p-3.5 shadow-none', className)} data-metric={label}>
             <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                     <div className="text-caption font-medium tracking-wide text-text-muted uppercase">{label}</div>

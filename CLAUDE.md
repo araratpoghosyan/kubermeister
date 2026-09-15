@@ -87,8 +87,10 @@ Body: why the change is needed, what a reader of the history cannot learn from t
   the `dark`/`light` root class and persists under `km-theme`. `cn` in `lib/utils.ts` teaches
   tailwind-merge the theme font sizes (`text-body`, `text-meta`, ...) so they are not merged away as
   colors. `@tanstack/react-table` stays on v8 (v9 is a different API; Dependabot ignores the major).
-  The shadcn CLI writes `import { cn } from "cn"` and installs a `cn` package: fix the import to
-  `@/lib/utils` and uninstall the package.
+  Charts use recharts through the shadcn `chart` wrapper; the summary dashboard is the reference.
+  The shadcn CLI writes `import { cn } from "cn"`, installs a `cn` package and puts new packages
+  under `dependencies`: fix the import to `@/lib/utils`, uninstall `cn` and move the package to
+  `devDependencies`.
 - **Streams** (`src/shared/streams.ts`, `src/main/ipc/streams.ts`) push many messages over time:
   the preload's `stream()` mints a `sub.<subId>` event and drives `stream.start/send/stop`; main
   keys every stream by window so one window can never address another's, and sweeps them on

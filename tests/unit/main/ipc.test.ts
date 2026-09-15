@@ -28,7 +28,7 @@ const resources = {
 const nodesMod = { listNodes: vi.fn(), getNode: vi.fn() };
 const generic = { listResources: vi.fn(), getResource: vi.fn() };
 const logsMod = { readPodLogSnapshot: vi.fn() };
-const eventsMod = { listEventsForObject: vi.fn() };
+const eventsMod = { listEventsForObject: vi.fn(), listRecentEvents: vi.fn() };
 const metricsMod = {
     getSparklines: vi.fn(),
     getWorkloadHealth: vi.fn(),
@@ -261,6 +261,8 @@ describe('registerHandlers', () => {
             ev,
         ]);
         await expect(invoke('events.forObject', { kind: '', name: 'web-1' })).rejects.toThrow();
+        eventsMod.listRecentEvents.mockResolvedValue([ev]);
+        await expect(invoke('events.recent', {})).resolves.toEqual([ev]);
     });
 
     it('forwards the metrics channels and validates their inputs', async () => {

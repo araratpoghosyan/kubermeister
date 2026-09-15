@@ -32,6 +32,10 @@ const data: Record<string, unknown> = {
     'cluster.active': { name: 'alpha', nodes: 1, status: 'Degraded', version: '1.36.4', provider: 'k3s', region: '—' },
     'resources.list': { kind: 'Pod', items: [] },
     'resources.get': { kind: 'Pod', item: null },
+    'events.recent': [],
+    'metrics.alerts': [],
+    'metrics.sparklines': { nodes: [], cpu: [], mem: [] },
+    'metrics.workloadHealth': [],
     'context.set': undefined,
     'namespace.set': undefined,
 };

@@ -124,3 +124,26 @@ describe('listEventsForObject', () => {
         ).rejects.toMatchObject({ op: 'events.forObject' });
     });
 });
+
+describe('listRecentEvents', () => {
+    beforeEach(() => {
+        core.listEventForAllNamespaces.mockReset();
+    });
+
+    it('reads a bounded page across all namespaces and keeps the newest twenty', async () => {
+        const items = Array.from({ length: 30 }, (_, i) =>
+            event({ reason: `r${i}`, lastTimestamp: new Date(Date.UTC(2026, 8, 15, 12, 0, i)) }),
+        );
+        core.listEventForAllNamespaces.mockResolvedValue({ items });
+        const result = await events.listRecentEvents();
+        expect(core.listEventForAllNamespaces).toHaveBeenCalledWith({ limit: 500 });
+        expect(result).toHaveLength(events.RECENT_EVENTS);
+        expect(result[0]?.reason).toBe('r29');
+        expect(result.at(-1)?.reason).toBe('r10');
+    });
+
+    it('classifies failures under its channel op', async () => {
+        core.listEventForAllNamespaces.mockRejectedValue(new Error('boom'));
+        await expect(events.listRecentEvents()).rejects.toMatchObject({ op: 'events.recent' });
+    });
+});

@@ -27,7 +27,9 @@ test('shows the cluster summary for the test context', async () => {
     const summary = window.getByTestId('cluster-summary');
     await expect(summary).toContainText(CONTEXT_NAME);
     await expect(summary).toContainText('Healthy');
-    await expect(summary.getByText('1', { exact: true })).toBeVisible();
+    await expect(summary.locator('[data-metric="Nodes"]')).toContainText('1');
+    await expect(summary.getByTestId('workload-health')).toContainText('live · ~12s samples');
+    await expect(summary.getByTestId('recent-events')).toContainText('Scheduled');
 });
 
 test('lists the k3s node as Ready and the seeded namespace', async () => {

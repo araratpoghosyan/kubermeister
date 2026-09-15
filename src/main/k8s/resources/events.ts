@@ -39,6 +39,19 @@ export function sortedByTimeDesc(events: CoreV1Event[]): CoreV1Event[] {
     return [...events].sort((a, b) => at(b) - at(a));
 }
 
+// Bounds the working set on an event-heavy cluster: the core API cannot order events by time, and
+// events carry a short TTL, so this caps the fetch rather than guaranteeing the globally newest N.
+const EVENT_LIST_LIMIT = 500;
+export const RECENT_EVENTS = 20;
+
+/** The newest events across all namespaces, for the cluster summary. Cluster-wide by design. */
+export function listRecentEvents(): Promise<ClusterEvent[]> {
+    return withK8s('events.recent', async () => {
+        const result = await apis().core.listEventForAllNamespaces({ limit: EVENT_LIST_LIMIT });
+        return sortedByTimeDesc(result.items).slice(0, RECENT_EVENTS).map(toClusterEvent);
+    });
+}
+
 /** Kinds whose objects have no namespace, so their events are searched across all namespaces. */
 const CLUSTER_SCOPED_KINDS = new Set([
     'Node',

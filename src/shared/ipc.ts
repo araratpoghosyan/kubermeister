@@ -93,6 +93,7 @@ export const ipcSchemas = {
     'resources.get': { input: resourceGetInputSchema, output: resourceGetOutputSchema },
     'pods.logSnapshot': { input: podLogSnapshotInputSchema, output: z.array(logLineSchema) },
     'events.forObject': { input: objectEventsInputSchema, output: z.array(clusterEventSchema) },
+    'events.recent': { input: noInput, output: z.array(clusterEventSchema) },
     'metrics.sparklines': { input: noInput, output: clusterSparklinesSchema },
     'metrics.workloadHealth': { input: noInput, output: z.array(healthPointSchema) },
     'metrics.alerts': { input: noInput, output: z.array(alertSchema) },
