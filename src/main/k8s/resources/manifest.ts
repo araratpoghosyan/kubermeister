@@ -1,6 +1,6 @@
-import type { Manifest, ManifestKind } from '../../../shared/k8s/manifest.js';
+import { isClusterScopedManifestKind, type Manifest, type ManifestKind } from '../../../shared/k8s/manifest.js';
 import { KIND_REGISTRY } from '../../../shared/k8s/registry.js';
-import { apis, listItems } from '../client.js';
+import { apis, resolveObjectNamespace } from '../client.js';
 import { K8sError, withK8s } from '../errors.js';
 import { yamlToText } from '../yaml.js';
 import { listSnapshotObjects } from './storage.js';
@@ -16,116 +16,34 @@ interface RawItem {
     metadata?: { name?: string; namespace?: string };
 }
 
-/** Lists the raw objects for an unresolved namespace; cluster-scoped kinds ignore it. */
-type ListFn = (namespace: string | undefined) => Promise<{ items: RawItem[] }>;
+/**
+ * Lists the raw objects of one kind in one namespace. A namespaced kind is only ever listed in a
+ * concrete namespace (see {@link findRawObject}); a cluster-scoped kind ignores the argument.
+ */
+type ListFn = (namespace: string) => Promise<{ items: RawItem[] }>;
 
 const LIST_FNS: Record<ManifestKind, ListFn> = {
-    Pod: (ns) =>
-        listItems(
-            ns,
-            (n) => apis().core.listNamespacedPod({ namespace: n }),
-            () => apis().core.listPodForAllNamespaces(),
-        ),
-    Deployment: (ns) =>
-        listItems(
-            ns,
-            (n) => apis().apps.listNamespacedDeployment({ namespace: n }),
-            () => apis().apps.listDeploymentForAllNamespaces(),
-        ),
-    StatefulSet: (ns) =>
-        listItems(
-            ns,
-            (n) => apis().apps.listNamespacedStatefulSet({ namespace: n }),
-            () => apis().apps.listStatefulSetForAllNamespaces(),
-        ),
-    DaemonSet: (ns) =>
-        listItems(
-            ns,
-            (n) => apis().apps.listNamespacedDaemonSet({ namespace: n }),
-            () => apis().apps.listDaemonSetForAllNamespaces(),
-        ),
-    Job: (ns) =>
-        listItems(
-            ns,
-            (n) => apis().batch.listNamespacedJob({ namespace: n }),
-            () => apis().batch.listJobForAllNamespaces(),
-        ),
-    CronJob: (ns) =>
-        listItems(
-            ns,
-            (n) => apis().batch.listNamespacedCronJob({ namespace: n }),
-            () => apis().batch.listCronJobForAllNamespaces(),
-        ),
-    HorizontalPodAutoscaler: (ns) =>
-        listItems(
-            ns,
-            (n) => apis().hpa.listNamespacedHorizontalPodAutoscaler({ namespace: n }),
-            () => apis().hpa.listHorizontalPodAutoscalerForAllNamespaces(),
-        ),
-    ConfigMap: (ns) =>
-        listItems(
-            ns,
-            (n) => apis().core.listNamespacedConfigMap({ namespace: n }),
-            () => apis().core.listConfigMapForAllNamespaces(),
-        ),
-    Secret: (ns) =>
-        listItems(
-            ns,
-            (n) => apis().core.listNamespacedSecret({ namespace: n }),
-            () => apis().core.listSecretForAllNamespaces(),
-        ),
-    Service: (ns) =>
-        listItems(
-            ns,
-            (n) => apis().core.listNamespacedService({ namespace: n }),
-            () => apis().core.listServiceForAllNamespaces(),
-        ),
-    Ingress: (ns) =>
-        listItems(
-            ns,
-            (n) => apis().net.listNamespacedIngress({ namespace: n }),
-            () => apis().net.listIngressForAllNamespaces(),
-        ),
-    Endpoints: (ns) =>
-        listItems(
-            ns,
-            (n) => apis().core.listNamespacedEndpoints({ namespace: n }),
-            () => apis().core.listEndpointsForAllNamespaces(),
-        ),
-    NetworkPolicy: (ns) =>
-        listItems(
-            ns,
-            (n) => apis().net.listNamespacedNetworkPolicy({ namespace: n }),
-            () => apis().net.listNetworkPolicyForAllNamespaces(),
-        ),
+    Pod: (ns) => apis().core.listNamespacedPod({ namespace: ns }),
+    Deployment: (ns) => apis().apps.listNamespacedDeployment({ namespace: ns }),
+    StatefulSet: (ns) => apis().apps.listNamespacedStatefulSet({ namespace: ns }),
+    DaemonSet: (ns) => apis().apps.listNamespacedDaemonSet({ namespace: ns }),
+    Job: (ns) => apis().batch.listNamespacedJob({ namespace: ns }),
+    CronJob: (ns) => apis().batch.listNamespacedCronJob({ namespace: ns }),
+    HorizontalPodAutoscaler: (ns) => apis().hpa.listNamespacedHorizontalPodAutoscaler({ namespace: ns }),
+    ConfigMap: (ns) => apis().core.listNamespacedConfigMap({ namespace: ns }),
+    Secret: (ns) => apis().core.listNamespacedSecret({ namespace: ns }),
+    Service: (ns) => apis().core.listNamespacedService({ namespace: ns }),
+    Ingress: (ns) => apis().net.listNamespacedIngress({ namespace: ns }),
+    Endpoints: (ns) => apis().core.listNamespacedEndpoints({ namespace: ns }),
+    NetworkPolicy: (ns) => apis().net.listNamespacedNetworkPolicy({ namespace: ns }),
     PersistentVolume: () => apis().core.listPersistentVolume(),
-    PersistentVolumeClaim: (ns) =>
-        listItems(
-            ns,
-            (n) => apis().core.listNamespacedPersistentVolumeClaim({ namespace: n }),
-            () => apis().core.listPersistentVolumeClaimForAllNamespaces(),
-        ),
+    PersistentVolumeClaim: (ns) => apis().core.listNamespacedPersistentVolumeClaim({ namespace: ns }),
     StorageClass: () => apis().storage.listStorageClass(),
     // The snapshot reader returns the objects directly, since its CRD may be absent entirely.
     VolumeSnapshot: async (ns) => ({ items: await listSnapshotObjects(ns) }),
-    ServiceAccount: (ns) =>
-        listItems(
-            ns,
-            (n) => apis().core.listNamespacedServiceAccount({ namespace: n }),
-            () => apis().core.listServiceAccountForAllNamespaces(),
-        ),
-    Role: (ns) =>
-        listItems(
-            ns,
-            (n) => apis().rbac.listNamespacedRole({ namespace: n }),
-            () => apis().rbac.listRoleForAllNamespaces(),
-        ),
-    RoleBinding: (ns) =>
-        listItems(
-            ns,
-            (n) => apis().rbac.listNamespacedRoleBinding({ namespace: n }),
-            () => apis().rbac.listRoleBindingForAllNamespaces(),
-        ),
+    ServiceAccount: (ns) => apis().core.listNamespacedServiceAccount({ namespace: ns }),
+    Role: (ns) => apis().rbac.listNamespacedRole({ namespace: ns }),
+    RoleBinding: (ns) => apis().rbac.listNamespacedRoleBinding({ namespace: ns }),
     ClusterRole: () => apis().rbac.listClusterRole(),
     ClusterRoleBinding: () => apis().rbac.listClusterRoleBinding(),
     CustomResourceDefinition: () => apis().apiextensions.listCustomResourceDefinition(),
@@ -141,12 +59,25 @@ function typeMeta(kind: ManifestKind): { apiVersion: string; kind: string } {
     return { apiVersion: info.apiVersion, kind: info.kind };
 }
 
+/**
+ * The one object of a kind with this name in one namespace. A namespaced kind is only ever looked
+ * up in a concrete namespace, the explicit or the active one: with neither, the lookup is refused
+ * rather than settled by whichever same-named object across the cluster lists first, because what
+ * comes back here is what the editor writes back later.
+ */
 export async function findRawObject(
     kind: ManifestKind,
     name: string,
     namespace: string | undefined,
+    op: string,
 ): Promise<RawItem | undefined> {
-    const { items } = await LIST_FNS[kind](namespace);
+    const clusterScoped = isClusterScopedManifestKind(kind);
+    const ns = clusterScoped ? undefined : (resolveObjectNamespace(namespace) ?? undefined);
+    if (!clusterScoped && !ns) {
+        throw new K8sError('invalid', `A namespace is required to read ${typeMeta(kind).kind} "${name}".`, op);
+    }
+    // A cluster-scoped list takes no namespace; the empty string only satisfies the shared signature.
+    const { items } = await LIST_FNS[kind](ns ?? '');
     return items.find((item) => item.metadata?.name === name);
 }
 
@@ -155,10 +86,11 @@ export async function findRawObject(
  * panel needs to say so instead of showing a blank editor.
  */
 export function getObjectYaml(kind: ManifestKind, name: string, namespace?: string): Promise<Manifest> {
-    return withK8s('resources.getYaml', async () => {
-        const obj = await findRawObject(kind, name, namespace);
+    const op = 'resources.getYaml';
+    return withK8s(op, async () => {
+        const obj = await findRawObject(kind, name, namespace, op);
         const meta = typeMeta(kind);
-        if (!obj) throw new K8sError('notFound', `${meta.kind} "${name}" was not found.`, 'resources.getYaml');
+        if (!obj) throw new K8sError('notFound', `${meta.kind} "${name}" was not found.`, op);
         const manifest: Record<string, unknown> = { ...obj };
         manifest.apiVersion ??= meta.apiVersion;
         manifest.kind ??= meta.kind;

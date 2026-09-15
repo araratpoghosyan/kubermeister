@@ -125,11 +125,8 @@ export function listServiceAccounts(namespace?: string): Promise<ServiceAccount[
 
 export function getServiceAccount(name: string, namespace?: string): Promise<ServiceAccountDetail | null> {
     return withK8s('resources.get', async () => {
-        const account = await getNamespaced(
-            name,
-            namespace,
-            (n, ns) => apis().core.readNamespacedServiceAccount({ name: n, namespace: ns }),
-            (fieldSelector) => apis().core.listServiceAccountForAllNamespaces({ fieldSelector }),
+        const account = await getNamespaced(name, namespace, (n, ns) =>
+            apis().core.readNamespacedServiceAccount({ name: n, namespace: ns }),
         );
         return account ? toServiceAccountDetail(account) : null;
     });
@@ -148,11 +145,8 @@ export function listRoles(namespace?: string): Promise<Role[]> {
 
 export function getRole(name: string, namespace?: string): Promise<RoleDetail | null> {
     return withK8s('resources.get', async () => {
-        const role = await getNamespaced(
-            name,
-            namespace,
-            (n, ns) => apis().rbac.readNamespacedRole({ name: n, namespace: ns }),
-            (fieldSelector) => apis().rbac.listRoleForAllNamespaces({ fieldSelector }),
+        const role = await getNamespaced(name, namespace, (n, ns) =>
+            apis().rbac.readNamespacedRole({ name: n, namespace: ns }),
         );
         return role ? toRoleDetail(role) : null;
     });
@@ -171,11 +165,8 @@ export function listRoleBindings(namespace?: string): Promise<RoleBinding[]> {
 
 export function getRoleBinding(name: string, namespace?: string): Promise<RoleBindingDetail | null> {
     return withK8s('resources.get', async () => {
-        const binding = await getNamespaced(
-            name,
-            namespace,
-            (n, ns) => apis().rbac.readNamespacedRoleBinding({ name: n, namespace: ns }),
-            (fieldSelector) => apis().rbac.listRoleBindingForAllNamespaces({ fieldSelector }),
+        const binding = await getNamespaced(name, namespace, (n, ns) =>
+            apis().rbac.readNamespacedRoleBinding({ name: n, namespace: ns }),
         );
         return binding ? toRoleBindingDetail(binding) : null;
     });

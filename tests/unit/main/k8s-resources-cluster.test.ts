@@ -136,11 +136,8 @@ describe('readers', () => {
         mockApis({ pods: [pod('team-a'), pod('kube-system')] });
         await expect(cluster.getActiveNamespaceInfo()).resolves.toEqual({ name: 'team-a', pods: 1, tone: 'accent' });
         client.getActiveNamespace.mockReturnValue(null);
-        await expect(cluster.getActiveNamespaceInfo()).resolves.toEqual({
-            name: 'All namespaces',
-            pods: 2,
-            tone: 'accent',
-        });
+        // No label stands in for the name: the renderer says "All namespaces", main says null.
+        await expect(cluster.getActiveNamespaceInfo()).resolves.toEqual({ name: null, pods: 2, tone: 'accent' });
     });
 
     it('returns live cluster facts for the active context', async () => {

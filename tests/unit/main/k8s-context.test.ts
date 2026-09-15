@@ -66,4 +66,11 @@ describe('contexts', () => {
         expect(updateSettings).toHaveBeenCalledWith({ session: { lastNamespace: 'kube-system' } });
         expect(setNamespace(null)).toEqual({ namespace: null });
     });
+
+    it('treats a malformed namespace as no selection rather than activating it', async () => {
+        const { setNamespace, getActiveNamespace } = await load();
+        expect(setNamespace('')).toEqual({ namespace: null });
+        expect(setNamespace('Not Valid')).toEqual({ namespace: null });
+        expect(getActiveNamespace()).toBeNull();
+    });
 });

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { namespaceNameSchema } from './names.js';
 
 /** Helm's own release states, folded into the vocabulary the badges render. */
 export const releaseStatusSchema = z.enum([
@@ -37,7 +38,7 @@ export const releaseRevisionSchema = z.object({
     description: z.string(),
 });
 
-export const releaseTargetSchema = z.object({ name: z.string().min(1), namespace: z.string().optional() });
+export const releaseTargetSchema = z.object({ name: z.string().min(1), namespace: namespaceNameSchema });
 
 export const customResourceSchema = z.object({
     name: z.string(),

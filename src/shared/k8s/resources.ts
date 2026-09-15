@@ -24,6 +24,7 @@ import {
     serviceAccountSchema,
 } from './access.js';
 import { kindSchema } from './registry.js';
+import { namespaceNameSchema } from './names.js';
 import {
     claimDetailSchema,
     claimSchema,
@@ -61,13 +62,14 @@ import {
 export const resourceListInputSchema = z.object({
     kind: kindSchema,
     /** Omitted: the active namespace, or all namespaces when none is selected. */
-    namespace: z.string().optional(),
+    namespace: namespaceNameSchema.optional(),
 });
 
 export const resourceGetInputSchema = z.object({
     kind: kindSchema,
     name: z.string().min(1),
-    namespace: z.string().optional(),
+    /** Omitted: the active namespace; a namespaced kind with none selected reads as not found. */
+    namespace: namespaceNameSchema.optional(),
 });
 
 export const resourceListOutputSchema = z.discriminatedUnion('kind', [

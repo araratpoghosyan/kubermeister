@@ -15,7 +15,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { breadcrumbsForPath } from '@/lib/nav';
 import { useIpcQuery } from '@/lib/query';
-import { selectNamespace, switchContext } from '@/lib/scope';
+import { selectNamespace, useSwitchContext } from '@/lib/scope';
 import { useRefreshIntervalMs } from '@/lib/settings';
 import { CLUSTER_TONE, type StatusTone } from '@/lib/status';
 import { cn } from '@/lib/utils';
@@ -88,6 +88,7 @@ export function ContextSelector() {
         ? { tone: CLUSTER_TONE[cluster.data.status], title: HEALTH_TITLE[cluster.data.status] }
         : NO_CLUSTER;
     const [switching, setSwitching] = useState(false);
+    const switchContext = useSwitchContext();
 
     const select = async (name: string) => {
         if (name === current?.name) return;
@@ -143,7 +144,9 @@ export function NamespaceSelector() {
     const namespaces = useIpcQuery('namespaces.list', {});
     const active = useIpcQuery('namespace.active', {});
     const [open, setOpen] = useState(false);
-    const activeName = active.data?.name;
+    // A null name is the all-namespaces selection; undefined means the selection is not known yet.
+    const activeName = active.data?.name ?? undefined;
+    const allSelected = active.data?.name === null;
 
     const select = async (namespace: string | null) => {
         setOpen(false);
@@ -180,9 +183,7 @@ export function NamespaceSelector() {
                         <CommandEmpty>No namespaces found.</CommandEmpty>
                         <CommandGroup heading="Namespaces">
                             <CommandItem value={ALL_NAMESPACES} onSelect={() => void select(null)} className="gap-1.5">
-                                <CheckIcon
-                                    className={cn('size-3 text-primary', activeName !== ALL_NAMESPACES && 'invisible')}
-                                />
+                                <CheckIcon className={cn('size-3 text-primary', !allSelected && 'invisible')} />
                                 <span>{ALL_NAMESPACES}</span>
                             </CommandItem>
                             {(namespaces.data ?? []).map((ns) => (

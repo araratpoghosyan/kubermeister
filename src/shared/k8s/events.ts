@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { namespaceNameSchema } from './names.js';
 
 export const eventTypeSchema = z.enum(['Normal', 'Warning']);
 
@@ -16,7 +17,7 @@ export const objectEventsInputSchema = z.object({
     kind: z.string().min(1),
     name: z.string().min(1),
     /** Omitted for cluster-scoped kinds or to fall back to the active namespace. */
-    namespace: z.string().min(1).optional(),
+    namespace: namespaceNameSchema.optional(),
 });
 
 export type EventType = z.infer<typeof eventTypeSchema>;

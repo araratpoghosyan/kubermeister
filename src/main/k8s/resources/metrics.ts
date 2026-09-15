@@ -1,5 +1,5 @@
 import type { ClusterSparklines, HealthPoint, ResourceSeries } from '../../../shared/k8s/metrics.js';
-import { apis, readOrNull } from '../client.js';
+import { apis, isSafeLabelKey, isSafeLabelValue, readOrNull } from '../client.js';
 import { withK8s } from '../errors.js';
 import { clusterSparklines, ensureSampler, nodeSeries, trackResourceSeries, workloadHealth } from '../sampler.js';
 
@@ -51,9 +51,11 @@ export function getDeploymentSeries(namespace: string, name: string): Promise<Re
         const deployment = await readOrNull(() => apis().apps.readNamespacedDeployment({ name, namespace }));
         const matchLabels = deployment?.spec?.selector?.matchLabels;
         if (!matchLabels) return { cpu: [], mem: [] };
-        const labelSelector = Object.entries(matchLabels)
-            .map(([k, v]) => `${k}=${v}`)
-            .join(',');
+        // The API server validates labels, but the selector is still built from cluster data: a
+        // pair that could smuggle a selector term yields no series rather than a rewritten query.
+        const pairs = Object.entries(matchLabels);
+        if (!pairs.every(([k, v]) => isSafeLabelKey(k) && isSafeLabelValue(v))) return { cpu: [], mem: [] };
+        const labelSelector = pairs.map(([k, v]) => `${k}=${v}`).join(',');
         const pods = await apis().core.listNamespacedPod({ namespace, labelSelector });
         return sumSeries(pods.items.map((p) => trackResourceSeries(namespace, p.metadata?.name ?? '')));
     });

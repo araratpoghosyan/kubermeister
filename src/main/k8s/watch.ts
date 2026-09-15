@@ -36,13 +36,14 @@ interface WatchSource<K extends Kind> {
  */
 const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
     Pod: {
-        path: (ns) => (ns ? `/api/v1/namespaces/${ns}/pods` : '/api/v1/pods'),
+        path: (ns) => (ns ? `/api/v1/namespaces/${encodeURIComponent(ns)}/pods` : '/api/v1/pods'),
         list: (ns) =>
             ns ? () => apis().core.listNamespacedPod({ namespace: ns }) : () => apis().core.listPodForAllNamespaces(),
         toRow: (pod) => toPod(pod, Date.now(), usageFor(pod)),
     },
     Deployment: {
-        path: (ns) => (ns ? `/apis/apps/v1/namespaces/${ns}/deployments` : '/apis/apps/v1/deployments'),
+        path: (ns) =>
+            ns ? `/apis/apps/v1/namespaces/${encodeURIComponent(ns)}/deployments` : '/apis/apps/v1/deployments',
         list: (ns) =>
             ns
                 ? () => apis().apps.listNamespacedDeployment({ namespace: ns })
@@ -50,7 +51,8 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
         toRow: (d) => toDeployment(d),
     },
     StatefulSet: {
-        path: (ns) => (ns ? `/apis/apps/v1/namespaces/${ns}/statefulsets` : '/apis/apps/v1/statefulsets'),
+        path: (ns) =>
+            ns ? `/apis/apps/v1/namespaces/${encodeURIComponent(ns)}/statefulsets` : '/apis/apps/v1/statefulsets',
         list: (ns) =>
             ns
                 ? () => apis().apps.listNamespacedStatefulSet({ namespace: ns })
@@ -58,7 +60,8 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
         toRow: (s) => toStatefulSet(s),
     },
     DaemonSet: {
-        path: (ns) => (ns ? `/apis/apps/v1/namespaces/${ns}/daemonsets` : '/apis/apps/v1/daemonsets'),
+        path: (ns) =>
+            ns ? `/apis/apps/v1/namespaces/${encodeURIComponent(ns)}/daemonsets` : '/apis/apps/v1/daemonsets',
         list: (ns) =>
             ns
                 ? () => apis().apps.listNamespacedDaemonSet({ namespace: ns })
@@ -66,13 +69,13 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
         toRow: (d) => toDaemonSet(d),
     },
     Job: {
-        path: (ns) => (ns ? `/apis/batch/v1/namespaces/${ns}/jobs` : '/apis/batch/v1/jobs'),
+        path: (ns) => (ns ? `/apis/batch/v1/namespaces/${encodeURIComponent(ns)}/jobs` : '/apis/batch/v1/jobs'),
         list: (ns) =>
             ns ? () => apis().batch.listNamespacedJob({ namespace: ns }) : () => apis().batch.listJobForAllNamespaces(),
         toRow: (job) => toJob(job),
     },
     CronJob: {
-        path: (ns) => (ns ? `/apis/batch/v1/namespaces/${ns}/cronjobs` : '/apis/batch/v1/cronjobs'),
+        path: (ns) => (ns ? `/apis/batch/v1/namespaces/${encodeURIComponent(ns)}/cronjobs` : '/apis/batch/v1/cronjobs'),
         list: (ns) =>
             ns
                 ? () => apis().batch.listNamespacedCronJob({ namespace: ns })
@@ -84,7 +87,7 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
     HorizontalPodAutoscaler: {
         path: (ns) =>
             ns
-                ? `/apis/autoscaling/v2/namespaces/${ns}/horizontalpodautoscalers`
+                ? `/apis/autoscaling/v2/namespaces/${encodeURIComponent(ns)}/horizontalpodautoscalers`
                 : '/apis/autoscaling/v2/horizontalpodautoscalers',
         list: (ns) =>
             ns
@@ -93,7 +96,7 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
         toRow: (autoscaler) => toAutoscaler(autoscaler as V2HorizontalPodAutoscaler),
     },
     ConfigMap: {
-        path: (ns) => (ns ? `/api/v1/namespaces/${ns}/configmaps` : '/api/v1/configmaps'),
+        path: (ns) => (ns ? `/api/v1/namespaces/${encodeURIComponent(ns)}/configmaps` : '/api/v1/configmaps'),
         list: (ns) =>
             ns
                 ? () => apis().core.listNamespacedConfigMap({ namespace: ns })
@@ -101,7 +104,7 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
         toRow: (configMap) => toConfigMap(configMap),
     },
     Secret: {
-        path: (ns) => (ns ? `/api/v1/namespaces/${ns}/secrets` : '/api/v1/secrets'),
+        path: (ns) => (ns ? `/api/v1/namespaces/${encodeURIComponent(ns)}/secrets` : '/api/v1/secrets'),
         list: (ns) =>
             ns
                 ? () => apis().core.listNamespacedSecret({ namespace: ns })
@@ -109,7 +112,7 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
         toRow: (secret) => toSecret(secret),
     },
     Service: {
-        path: (ns) => (ns ? `/api/v1/namespaces/${ns}/services` : '/api/v1/services'),
+        path: (ns) => (ns ? `/api/v1/namespaces/${encodeURIComponent(ns)}/services` : '/api/v1/services'),
         list: (ns) =>
             ns
                 ? () => apis().core.listNamespacedService({ namespace: ns })
@@ -118,7 +121,9 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
     },
     Ingress: {
         path: (ns) =>
-            ns ? `/apis/networking.k8s.io/v1/namespaces/${ns}/ingresses` : '/apis/networking.k8s.io/v1/ingresses',
+            ns
+                ? `/apis/networking.k8s.io/v1/namespaces/${encodeURIComponent(ns)}/ingresses`
+                : '/apis/networking.k8s.io/v1/ingresses',
         list: (ns) =>
             ns
                 ? () => apis().net.listNamespacedIngress({ namespace: ns })
@@ -126,7 +131,7 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
         toRow: (ingress) => toIngress(ingress),
     },
     Endpoints: {
-        path: (ns) => (ns ? `/api/v1/namespaces/${ns}/endpoints` : '/api/v1/endpoints'),
+        path: (ns) => (ns ? `/api/v1/namespaces/${encodeURIComponent(ns)}/endpoints` : '/api/v1/endpoints'),
         list: (ns) =>
             ns
                 ? () => apis().core.listNamespacedEndpoints({ namespace: ns })
@@ -136,7 +141,7 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
     NetworkPolicy: {
         path: (ns) =>
             ns
-                ? `/apis/networking.k8s.io/v1/namespaces/${ns}/networkpolicies`
+                ? `/apis/networking.k8s.io/v1/namespaces/${encodeURIComponent(ns)}/networkpolicies`
                 : '/apis/networking.k8s.io/v1/networkpolicies',
         list: (ns) =>
             ns
@@ -150,7 +155,10 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
         toRow: (volume) => toVolume(volume),
     },
     PersistentVolumeClaim: {
-        path: (ns) => (ns ? `/api/v1/namespaces/${ns}/persistentvolumeclaims` : '/api/v1/persistentvolumeclaims'),
+        path: (ns) =>
+            ns
+                ? `/api/v1/namespaces/${encodeURIComponent(ns)}/persistentvolumeclaims`
+                : '/api/v1/persistentvolumeclaims',
         list: (ns) =>
             ns
                 ? () => apis().core.listNamespacedPersistentVolumeClaim({ namespace: ns })
@@ -158,7 +166,7 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
         toRow: (claim) => toClaim(claim),
     },
     ServiceAccount: {
-        path: (ns) => (ns ? `/api/v1/namespaces/${ns}/serviceaccounts` : '/api/v1/serviceaccounts'),
+        path: (ns) => (ns ? `/api/v1/namespaces/${encodeURIComponent(ns)}/serviceaccounts` : '/api/v1/serviceaccounts'),
         list: (ns) =>
             ns
                 ? () => apis().core.listNamespacedServiceAccount({ namespace: ns })
@@ -168,7 +176,7 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
     Role: {
         path: (ns) =>
             ns
-                ? `/apis/rbac.authorization.k8s.io/v1/namespaces/${ns}/roles`
+                ? `/apis/rbac.authorization.k8s.io/v1/namespaces/${encodeURIComponent(ns)}/roles`
                 : `/apis/rbac.authorization.k8s.io/v1/roles`,
         list: (ns) =>
             ns ? () => apis().rbac.listNamespacedRole({ namespace: ns }) : () => apis().rbac.listRoleForAllNamespaces(),
@@ -177,7 +185,7 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
     RoleBinding: {
         path: (ns) =>
             ns
-                ? `/apis/rbac.authorization.k8s.io/v1/namespaces/${ns}/rolebindings`
+                ? `/apis/rbac.authorization.k8s.io/v1/namespaces/${encodeURIComponent(ns)}/rolebindings`
                 : `/apis/rbac.authorization.k8s.io/v1/rolebindings`,
         list: (ns) =>
             ns

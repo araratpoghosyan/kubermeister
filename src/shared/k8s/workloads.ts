@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { namespaceNameSchema } from './names.js';
 
 const pairs = z.array(z.tuple([z.string(), z.string()]));
 
@@ -142,7 +143,7 @@ export const configMapEntrySchema = z.object({
 /** One Secret key. The value is never read: only the key name and a fixed mask cross the bridge. */
 export const secretEntrySchema = z.object({ key: z.string(), masked: z.string() });
 
-export const namespacedNameSchema = z.object({ name: z.string().min(1), namespace: z.string().min(1) });
+export const namespacedNameSchema = z.object({ name: z.string().min(1), namespace: namespaceNameSchema });
 
 export type DeploymentStatus = z.infer<typeof deploymentStatusSchema>;
 export type Deployment = z.infer<typeof deploymentSchema>;

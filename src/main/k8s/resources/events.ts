@@ -1,5 +1,6 @@
 import type { CoreV1Event } from '@kubernetes/client-node';
 import type { ClusterEvent, EventType, ObjectEventsInput } from '../../../shared/k8s/events.js';
+import { isClusterScopedKindName } from '../../../shared/k8s/registry.js';
 import { apis, isSafeSelectorValue, listItems, resolveObjectNamespace } from '../client.js';
 import { withK8s } from '../errors.js';
 
@@ -64,23 +65,18 @@ export function listEvents(namespace?: string): Promise<ClusterEvent[]> {
     });
 }
 
-/** Kinds whose objects have no namespace, so their events are searched across all namespaces. */
-const CLUSTER_SCOPED_KINDS = new Set([
-    'Node',
-    'PersistentVolume',
-    'Namespace',
-    'ClusterRole',
-    'ClusterRoleBinding',
-    'StorageClass',
-    'CustomResourceDefinition',
-]);
-
-/** Events involving one object, newest first. Unsafe selector values yield no events rather than a bad query. */
+/**
+ * Events involving one object, newest first. Unsafe selector values yield no events rather than a
+ * bad query. A cluster-scoped kind's events are searched across all namespaces; a namespaced kind
+ * with no namespace to search yields none, since events of same-named objects elsewhere are not its.
+ */
 export function listEventsForObject({ kind, name, namespace }: ObjectEventsInput): Promise<ClusterEvent[]> {
     return withK8s('events.forObject', async () => {
         if (!isSafeSelectorValue(kind) || !isSafeSelectorValue(name)) return [];
         const fieldSelector = `involvedObject.kind=${kind},involvedObject.name=${name}`;
-        const scope = CLUSTER_SCOPED_KINDS.has(kind) ? undefined : (resolveObjectNamespace(namespace) ?? undefined);
+        const clusterScoped = isClusterScopedKindName(kind);
+        const scope = clusterScoped ? undefined : (resolveObjectNamespace(namespace) ?? undefined);
+        if (!clusterScoped && !scope) return [];
         const result = scope
             ? await apis().core.listNamespacedEvent({ namespace: scope, fieldSelector })
             : await apis().core.listEventForAllNamespaces({ fieldSelector });

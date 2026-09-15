@@ -57,11 +57,10 @@ const client = {
         name: string,
         namespace: string | undefined,
         readOne: (name: string, ns: string) => Promise<T>,
-        listByName: (selector: string) => Promise<{ items: T[] }>,
     ) => {
         const ns = client.resolveObjectNamespace(namespace);
-        if (ns) return client.readOrNull(() => readOne(name, ns));
-        return (await listByName(`metadata.name=${name}`)).items[0];
+        if (!ns) return undefined;
+        return client.readOrNull(() => readOne(name, ns));
     },
 };
 vi.mock('../../../src/main/k8s/client.js', () => client);
@@ -299,19 +298,19 @@ describe('readers', () => {
         expect(apps.listDaemonSetForAllNamespaces).toHaveBeenCalled();
     });
 
-    it('finds objects by name across namespaces when none is active', async () => {
+    it('answers not found for a single object when no namespace is known, without searching the cluster', async () => {
         client.getActiveNamespace.mockReturnValue(null);
-        apps.listDeploymentForAllNamespaces.mockResolvedValue({ items: [deployment()] });
         apps.listStatefulSetForAllNamespaces.mockResolvedValue({
             items: [{ metadata: { name: 'db', namespace: 'x' } }],
         });
-        apps.listDaemonSetForAllNamespaces.mockResolvedValue({ items: [] });
-        await expect(workloads.getDeployment('web')).resolves.toMatchObject({ name: 'web' });
-        expect(apps.listDeploymentForAllNamespaces).toHaveBeenCalledWith({ fieldSelector: 'metadata.name=web' });
-        await expect(workloads.getStatefulSet('db')).resolves.toMatchObject({ name: 'db' });
+        await expect(workloads.getDeployment('web')).resolves.toBeNull();
+        await expect(workloads.getStatefulSet('db')).resolves.toBeNull();
         await expect(workloads.getDaemonSet('agent')).resolves.toBeNull();
+        expect(apps.listDeploymentForAllNamespaces).not.toHaveBeenCalled();
+        expect(apps.readNamespacedDeployment).not.toHaveBeenCalled();
+        // Lists still span the cluster; only the single-object reads refuse to guess.
         await expect(workloads.listStatefulSets()).resolves.toHaveLength(1);
-        expect(apps.listStatefulSetForAllNamespaces).toHaveBeenCalledTimes(2);
+        expect(apps.listStatefulSetForAllNamespaces).toHaveBeenCalledTimes(1);
     });
 
     it('returns no replicasets for a deployment without a namespace', async () => {

@@ -1,7 +1,7 @@
 import { ApiException } from '@kubernetes/client-node';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const objects = { create: vi.fn(), replace: vi.fn(), delete: vi.fn() };
+const objects = { create: vi.fn(), replace: vi.fn(), delete: vi.fn(), resource: vi.fn() };
 const apps = {
     readNamespacedDeploymentScale: vi.fn(),
     replaceNamespacedDeploymentScale: vi.fn(),
@@ -11,7 +11,7 @@ const apps = {
 const client = {
     apis: () => ({ objects, apps }),
     getActiveNamespace: vi.fn<() => string | null>(),
-    resolveObjectNamespace: (explicit?: string) => explicit ?? client.getActiveNamespace(),
+    activeContextName: vi.fn<() => string>(),
 };
 vi.mock('../../../src/main/k8s/client.js', () => client);
 
@@ -20,12 +20,16 @@ const write = await import('../../../src/main/k8s/resources/write.js');
 const CONFIG_MAP = ['apiVersion: v1', 'kind: ConfigMap', 'metadata:', '  name: app-config', 'data:', '  a: b'].join(
     '\n',
 );
+const ON_ALPHA = { context: 'alpha' };
 
 beforeEach(() => {
     vi.clearAllMocks();
     client.getActiveNamespace.mockReturnValue('team-a');
+    client.activeContextName.mockReturnValue('alpha');
     objects.create.mockImplementation(async (spec: Record<string, unknown>) => spec);
     objects.replace.mockImplementation(async (spec: Record<string, unknown>) => spec);
+    // Discovery is only asked about kinds the registry does not know.
+    objects.resource.mockResolvedValue(undefined);
 });
 
 describe('parseManifest', () => {
@@ -50,51 +54,103 @@ describe('parseManifest', () => {
     });
 });
 
+describe('context stamp', () => {
+    it('refuses every write whose stamp names a context other than the one main is on', async () => {
+        client.activeContextName.mockReturnValue('beta');
+        const stale = { context: 'alpha' };
+        const expected = { kind: 'conflict', detail: expect.stringContaining('meant for context "alpha"') };
+        await expect(write.createResource({ ...stale, manifest: CONFIG_MAP })).rejects.toMatchObject(expected);
+        await expect(write.replaceResource({ ...stale, manifest: CONFIG_MAP })).rejects.toMatchObject(expected);
+        await expect(
+            write.deleteResource({ ...stale, kind: 'ConfigMap', name: 'app-config', namespace: 'team-a' }),
+        ).rejects.toMatchObject(expected);
+        await expect(
+            write.scaleResource({ ...stale, kind: 'Deployment', name: 'web', namespace: 'team-a', replicas: 1 }),
+        ).rejects.toMatchObject(expected);
+        expect(objects.create).not.toHaveBeenCalled();
+        expect(objects.replace).not.toHaveBeenCalled();
+        expect(objects.delete).not.toHaveBeenCalled();
+        expect(apps.readNamespacedDeploymentScale).not.toHaveBeenCalled();
+    });
+});
+
 describe('createResource', () => {
     it('applies the active namespace to a namespaced kind that omits one', async () => {
-        expect(await write.createResource(CONFIG_MAP)).toEqual({
+        expect(await write.createResource({ ...ON_ALPHA, manifest: CONFIG_MAP })).toEqual({
             kind: 'ConfigMap',
             name: 'app-config',
             namespace: 'team-a',
         });
         expect(objects.create).toHaveBeenCalledWith(
-            expect.objectContaining({ metadata: expect.objectContaining({ namespace: 'team-a' }) }),
+            expect.objectContaining({ metadata: { name: 'app-config', namespace: 'team-a' } }),
             undefined,
             undefined,
         );
+        expect(objects.resource).not.toHaveBeenCalled();
     });
 
     it('keeps a namespace the manifest states', async () => {
         const manifest = CONFIG_MAP.replace('  name: app-config', '  name: app-config\n  namespace: other');
-        expect((await write.createResource(manifest)).namespace).toBe('other');
+        expect(await write.createResource({ ...ON_ALPHA, manifest })).toMatchObject({ namespace: 'other' });
     });
 
     it('never gives a namespace to a cluster-scoped kind, registered or not', async () => {
-        const clusterRole = 'apiVersion: rbac.authorization.k8s.io/v1\nkind: ClusterRole\nmetadata:\n  name: reader';
-        expect((await write.createResource(clusterRole)).namespace).toBeUndefined();
-        const namespaceObject = 'apiVersion: v1\nkind: Namespace\nmetadata:\n  name: team-b';
-        expect((await write.createResource(namespaceObject)).namespace).toBeUndefined();
+        client.getActiveNamespace.mockReturnValue('team-a');
+        for (const kind of ['ClusterRole', 'Namespace', 'PriorityClass']) {
+            const manifest = `apiVersion: v1\nkind: ${kind}\nmetadata:\n  name: thing`;
+            expect(await write.createResource({ ...ON_ALPHA, manifest })).toMatchObject({ namespace: undefined });
+        }
     });
 
-    it('leaves the namespace unset when no namespace is active', async () => {
+    it('refuses a namespaced kind with no namespace anywhere instead of letting the client pick one', async () => {
         client.getActiveNamespace.mockReturnValue(null);
-        expect((await write.createResource(CONFIG_MAP)).namespace).toBeUndefined();
+        await expect(write.createResource({ ...ON_ALPHA, manifest: CONFIG_MAP })).rejects.toMatchObject({
+            kind: 'invalid',
+            op: 'resources.create',
+            detail: 'ConfigMap "app-config" needs a namespace: select one or add metadata.namespace.',
+        });
+        expect(objects.create).not.toHaveBeenCalled();
+    });
+
+    it('asks discovery about an unknown kind and scopes it accordingly', async () => {
+        const manifest = 'apiVersion: example.io/v1\nkind: Widget\nmetadata:\n  name: w';
+        objects.resource.mockResolvedValue({ name: 'widgets', namespaced: true });
+        expect(await write.createResource({ ...ON_ALPHA, manifest })).toMatchObject({ namespace: 'team-a' });
+        expect(objects.resource).toHaveBeenCalledWith('example.io/v1', 'Widget');
+
+        objects.resource.mockResolvedValue({ name: 'widgets', namespaced: false });
+        const scoped = `${manifest}\n  namespace: team-a`;
+        expect(await write.createResource({ ...ON_ALPHA, manifest: scoped })).toMatchObject({ namespace: undefined });
+
+        client.getActiveNamespace.mockReturnValue(null);
+        objects.resource.mockResolvedValue({ name: 'widgets', namespaced: true });
+        await expect(write.createResource({ ...ON_ALPHA, manifest })).rejects.toMatchObject({ kind: 'invalid' });
+
+        objects.resource.mockResolvedValue(undefined);
+        await expect(write.createResource({ ...ON_ALPHA, manifest })).rejects.toMatchObject({
+            kind: 'invalid',
+            detail: 'The API server does not know example.io/v1 Widget.',
+        });
     });
 
     it('asks the server to run admission without persisting on a dry run', async () => {
-        await write.createResource(CONFIG_MAP, true);
+        await write.createResource({ ...ON_ALPHA, manifest: CONFIG_MAP, dryRun: true });
         expect(objects.create).toHaveBeenCalledWith(expect.anything(), undefined, 'All');
     });
 
     it('reports what the server named the object when the manifest only generated one', async () => {
-        objects.create.mockResolvedValue({ kind: 'Pod', metadata: { name: 'web-x9', namespace: 'team-a' } });
+        objects.create.mockResolvedValue({ kind: 'Pod', metadata: { name: 'web-x7k2q', namespace: 'team-a' } });
         const manifest = 'apiVersion: v1\nkind: Pod\nmetadata:\n  generateName: web-';
-        expect(await write.createResource(manifest)).toEqual({ kind: 'Pod', name: 'web-x9', namespace: 'team-a' });
+        expect(await write.createResource({ ...ON_ALPHA, manifest })).toEqual({
+            kind: 'Pod',
+            name: 'web-x7k2q',
+            namespace: 'team-a',
+        });
     });
 
     it('classifies a rejected write, including a name that is already taken', async () => {
-        objects.create.mockRejectedValue(new ApiException(409, 'exists', {}, {}));
-        await expect(write.createResource(CONFIG_MAP)).rejects.toMatchObject({
+        objects.create.mockRejectedValue(new ApiException(409, 'exists', { message: 'already exists' }, {}));
+        await expect(write.createResource({ ...ON_ALPHA, manifest: CONFIG_MAP })).rejects.toMatchObject({
             kind: 'conflict',
             op: 'resources.create',
         });
@@ -102,43 +158,95 @@ describe('createResource', () => {
 });
 
 describe('replaceResource', () => {
-    const versioned = CONFIG_MAP.replace('  name: app-config', '  name: app-config\n  resourceVersion: "42"');
+    const VERSIONED = CONFIG_MAP.replace('  name: app-config', '  name: app-config\n  resourceVersion: "42"');
+    const IN_TEAM_A = VERSIONED.replace('  name: app-config', '  name: app-config\n  namespace: team-a');
 
     it('replaces an object that carries the version it was read with', async () => {
-        expect(await write.replaceResource(versioned)).toMatchObject({ name: 'app-config', namespace: 'team-a' });
-        expect(objects.replace).toHaveBeenCalledWith(expect.anything(), undefined, undefined);
+        expect(await write.replaceResource({ ...ON_ALPHA, manifest: VERSIONED })).toMatchObject({ name: 'app-config' });
+        expect(objects.replace).toHaveBeenCalledWith(
+            expect.objectContaining({ metadata: expect.objectContaining({ resourceVersion: '42' }) }),
+            undefined,
+            undefined,
+        );
     });
 
     it('refuses a manifest without a resource version, which would overwrite blindly', async () => {
-        await expect(write.replaceResource(CONFIG_MAP)).rejects.toMatchObject({
+        await expect(write.replaceResource({ ...ON_ALPHA, manifest: CONFIG_MAP })).rejects.toMatchObject({
             kind: 'invalid',
             detail: expect.stringContaining('resourceVersion'),
         });
+        expect(objects.replace).not.toHaveBeenCalled();
     });
 
     it('refuses a generated name, which no existing object has', async () => {
-        const manifest = 'apiVersion: v1\nkind: Pod\nmetadata:\n  generateName: web-';
-        await expect(write.replaceResource(manifest)).rejects.toMatchObject({ kind: 'invalid' });
+        const manifest = 'apiVersion: v1\nkind: Pod\nmetadata:\n  generateName: web-\n  resourceVersion: "1"';
+        await expect(write.replaceResource({ ...ON_ALPHA, manifest })).rejects.toMatchObject({ kind: 'invalid' });
     });
 
     it('reports a concurrent change as a conflict rather than overwriting it', async () => {
-        objects.replace.mockRejectedValue(new ApiException(409, 'changed', {}, {}));
-        await expect(write.replaceResource(versioned)).rejects.toMatchObject({ kind: 'conflict' });
+        objects.replace.mockRejectedValue(new ApiException(409, 'conflict', { message: 'modified' }, {}));
+        await expect(write.replaceResource({ ...ON_ALPHA, manifest: VERSIONED })).rejects.toMatchObject({
+            kind: 'conflict',
+        });
     });
 
     it('runs admission without persisting on a dry run', async () => {
-        await write.replaceResource(versioned, true);
+        await write.replaceResource({ ...ON_ALPHA, manifest: VERSIONED, dryRun: true });
         expect(objects.replace).toHaveBeenCalledWith(expect.anything(), undefined, 'All');
+    });
+
+    it('saves a manifest that still describes the object the editor was opened on', async () => {
+        const expect_ = { kind: 'ConfigMap' as const, name: 'app-config', namespace: 'team-a' };
+        expect(await write.replaceResource({ ...ON_ALPHA, manifest: IN_TEAM_A, expect: expect_ })).toMatchObject({
+            namespace: 'team-a',
+        });
+    });
+
+    it('refuses a manifest that was re-aimed at another object, even on a dry run', async () => {
+        const editing = { kind: 'ConfigMap' as const, name: 'app-config', namespace: 'team-a' };
+        const cases: Array<[string, string]> = [
+            ['name', IN_TEAM_A.replace('name: app-config', 'name: other-config')],
+            ['namespace', IN_TEAM_A.replace('namespace: team-a', 'namespace: billing')],
+            ['kind', IN_TEAM_A.replace('kind: ConfigMap', 'kind: Secret')],
+            // Dropping the namespace line would otherwise let the active namespace stand in.
+            ['missing namespace', VERSIONED],
+        ];
+        for (const [, manifest] of cases) {
+            await expect(
+                write.replaceResource({ ...ON_ALPHA, manifest, expect: editing, dryRun: true }),
+            ).rejects.toMatchObject({
+                kind: 'invalid',
+                op: 'resources.replace',
+                detail: expect.stringContaining('this editor is for ConfigMap "team-a/app-config"'),
+            });
+        }
+        expect(objects.replace).not.toHaveBeenCalled();
+    });
+
+    it('pins a cluster-scoped object to no namespace at all', async () => {
+        const role =
+            'apiVersion: rbac.authorization.k8s.io/v1\nkind: ClusterRole\nmetadata:\n  name: reader\n  resourceVersion: "3"';
+        const editing = { kind: 'ClusterRole' as const, name: 'reader' };
+        expect(await write.replaceResource({ ...ON_ALPHA, manifest: role, expect: editing })).toMatchObject({
+            kind: 'ClusterRole',
+            namespace: undefined,
+        });
+        await expect(
+            write.replaceResource({
+                ...ON_ALPHA,
+                manifest: role.replace('name: reader', 'name: writer'),
+                expect: editing,
+            }),
+        ).rejects.toMatchObject({ detail: expect.stringContaining('ClusterRole "reader"') });
     });
 });
 
 describe('deleteResource', () => {
-    it('deletes a namespaced object in the active namespace', async () => {
-        expect(await write.deleteResource('ConfigMap', 'app-config')).toEqual({
-            kind: 'ConfigMap',
-            name: 'app-config',
-            namespace: 'team-a',
-        });
+    it('deletes a namespaced object in exactly the namespace named', async () => {
+        client.getActiveNamespace.mockReturnValue('other');
+        expect(
+            await write.deleteResource({ ...ON_ALPHA, kind: 'ConfigMap', name: 'app-config', namespace: 'team-a' }),
+        ).toEqual({ kind: 'ConfigMap', name: 'app-config', namespace: 'team-a' });
         expect(objects.delete).toHaveBeenCalledWith({
             apiVersion: 'v1',
             kind: 'ConfigMap',
@@ -146,18 +254,22 @@ describe('deleteResource', () => {
         });
     });
 
-    it('refuses a namespaced delete when no namespace resolves, rather than guessing', async () => {
-        client.getActiveNamespace.mockReturnValue(null);
-        await expect(write.deleteResource('ConfigMap', 'app-config')).rejects.toMatchObject({
+    it('refuses a namespaced delete without a namespace, never falling back to the active one', async () => {
+        client.getActiveNamespace.mockReturnValue('team-a');
+        await expect(
+            write.deleteResource({ ...ON_ALPHA, kind: 'ConfigMap', name: 'app-config' }),
+        ).rejects.toMatchObject({
             kind: 'invalid',
             op: 'resources.delete',
+            detail: 'A namespace is required to address ConfigMap "app-config".',
         });
         expect(objects.delete).not.toHaveBeenCalled();
     });
 
     it('deletes a cluster-scoped object with no namespace at all', async () => {
-        client.getActiveNamespace.mockReturnValue(null);
-        expect(await write.deleteResource('ClusterRole', 'reader')).toMatchObject({ namespace: undefined });
+        expect(await write.deleteResource({ ...ON_ALPHA, kind: 'ClusterRole', name: 'reader' })).toMatchObject({
+            namespace: undefined,
+        });
         expect(objects.delete).toHaveBeenCalledWith({
             apiVersion: 'rbac.authorization.k8s.io/v1',
             kind: 'ClusterRole',
@@ -166,25 +278,29 @@ describe('deleteResource', () => {
     });
 
     it('deletes a node, which is not a registered kind', async () => {
-        client.getActiveNamespace.mockReturnValue(null);
-        expect(await write.deleteResource('Node', 'node-1')).toMatchObject({ kind: 'Node' });
+        expect(await write.deleteResource({ ...ON_ALPHA, kind: 'Node', name: 'node-1' })).toMatchObject({
+            kind: 'Node',
+        });
     });
 
     it('reports an object that is already gone as not found', async () => {
         objects.delete.mockRejectedValue(new ApiException(404, 'gone', {}, {}));
-        await expect(write.deleteResource('ConfigMap', 'ghost', 'team-a')).rejects.toMatchObject({
-            kind: 'notFound',
-        });
+        await expect(
+            write.deleteResource({ ...ON_ALPHA, kind: 'ConfigMap', name: 'ghost', namespace: 'team-a' }),
+        ).rejects.toMatchObject({ kind: 'notFound' });
     });
 });
 
 describe('scaleResource', () => {
+    const web = { ...ON_ALPHA, kind: 'Deployment' as const, name: 'web', namespace: 'team-a' };
+
     it('reads the current scale and writes back the requested count', async () => {
         apps.readNamespacedDeploymentScale.mockResolvedValue({
             metadata: { resourceVersion: '7' },
-            spec: { replicas: 1 },
+            spec: { replicas: 2 },
         });
-        expect(await write.scaleResource('Deployment', 'web', 3)).toEqual({
+        apps.replaceNamespacedDeploymentScale.mockResolvedValue({});
+        expect(await write.scaleResource({ ...web, replicas: 5 })).toEqual({
             kind: 'Deployment',
             name: 'web',
             namespace: 'team-a',
@@ -192,37 +308,36 @@ describe('scaleResource', () => {
         expect(apps.replaceNamespacedDeploymentScale).toHaveBeenCalledWith({
             name: 'web',
             namespace: 'team-a',
-            body: { metadata: { resourceVersion: '7' }, spec: { replicas: 3 } },
+            body: { metadata: { resourceVersion: '7' }, spec: { replicas: 5 } },
         });
     });
 
     it('scales a stateful set through its own subresource', async () => {
-        apps.readNamespacedStatefulSetScale.mockResolvedValue({ spec: {} });
-        await write.scaleResource('StatefulSet', 'db', 2, 'team-b');
-        expect(apps.replaceNamespacedStatefulSetScale).toHaveBeenCalledWith({
-            name: 'db',
-            namespace: 'team-b',
-            body: { spec: { replicas: 2 } },
-        });
+        apps.readNamespacedStatefulSetScale.mockResolvedValue({ spec: { replicas: 1 } });
+        apps.replaceNamespacedStatefulSetScale.mockResolvedValue({});
+        await write.scaleResource({ ...web, kind: 'StatefulSet', name: 'db', replicas: 3 });
+        expect(apps.replaceNamespacedStatefulSetScale).toHaveBeenCalledWith(
+            expect.objectContaining({ name: 'db', body: { spec: { replicas: 3 } } }),
+        );
     });
 
     it('refuses a kind that has no scale subresource', async () => {
-        await expect(write.scaleResource('DaemonSet', 'agent', 2)).rejects.toMatchObject({
+        await expect(write.scaleResource({ ...web, kind: 'ConfigMap', replicas: 1 })).rejects.toMatchObject({
             kind: 'invalid',
-            detail: 'DaemonSet cannot be scaled.',
+            detail: 'ConfigMap cannot be scaled.',
         });
-        await expect(write.scaleResource('Pod', 'web-1', 2)).rejects.toMatchObject({ kind: 'invalid' });
     });
 
-    it('refuses to scale when no namespace resolves', async () => {
-        client.getActiveNamespace.mockReturnValue(null);
-        await expect(write.scaleResource('Deployment', 'web', 3)).rejects.toMatchObject({ kind: 'invalid' });
+    it('refuses to scale without a namespace, never falling back to the active one', async () => {
+        await expect(
+            write.scaleResource({ ...ON_ALPHA, kind: 'Deployment', name: 'web', replicas: 1 }),
+        ).rejects.toMatchObject({ kind: 'invalid', op: 'resources.scale' });
         expect(apps.readNamespacedDeploymentScale).not.toHaveBeenCalled();
     });
 
     it('reports a scale that raced another writer as a conflict', async () => {
-        apps.readNamespacedDeploymentScale.mockResolvedValue({ spec: { replicas: 1 } });
-        apps.replaceNamespacedDeploymentScale.mockRejectedValue(new ApiException(409, 'changed', {}, {}));
-        await expect(write.scaleResource('Deployment', 'web', 3)).rejects.toMatchObject({ kind: 'conflict' });
+        apps.readNamespacedDeploymentScale.mockResolvedValue({ spec: { replicas: 2 } });
+        apps.replaceNamespacedDeploymentScale.mockRejectedValue(new ApiException(409, 'conflict', {}, {}));
+        await expect(write.scaleResource({ ...web, replicas: 1 })).rejects.toMatchObject({ kind: 'conflict' });
     });
 });

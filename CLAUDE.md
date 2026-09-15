@@ -89,7 +89,10 @@ Body: why the change is needed, what a reader of the history cannot learn from t
   cadence from `useRefreshIntervalMs` (the `data.refreshIntervalSec` setting), never a literal. Theme tokens live in `src/renderer/styles/globals.css`; `ThemeProvider` toggles
   the `dark`/`light` root class and persists under `km-theme`. `cn` in `lib/utils.ts` teaches
   tailwind-merge the theme font sizes (`text-body`, `text-meta`, ...) so they are not merged away as
-  colors. `@tanstack/react-table` stays on v8 (v9 is a different API; Dependabot ignores the major).
+  colors. Query keys carry no scope, so a context or namespace switch resets every cluster query
+  (`invalidateClusterQueries` uses `resetQueries`): screens go back to loading instead of showing the
+  previous scope's rows while writes already reach the new one. `namespace.active` reports `name:
+null` under "All namespaces"; the label is the renderer's, never a value handed to a cluster call. `@tanstack/react-table` stays on v8 (v9 is a different API; Dependabot ignores the major).
   Charts use recharts through the shadcn `chart` wrapper; the summary dashboard is the reference.
   The shadcn CLI writes `import { cn } from "cn"`, installs a `cn` package and puts new packages
   under `dependencies`: fix the import to `@/lib/utils`, uninstall `cn` and move the package to
@@ -106,6 +109,12 @@ Body: why the change is needed, what a reader of the history cannot learn from t
   `src/renderer/lib/pod-streams.ts` with the log buffer capped at 2,000 lines. The Logs tab shows a
   one-shot `pods.logSnapshot` read until the user turns Live on, then follows the stream. Object
   events come from `events.forObject` (`src/main/k8s/resources/events.ts`), newest first.
+  **Streams never outlive their connection:** every stream shares the one live `KubeConfig`, which
+  the client library re-reads on each reconnect and each port-forward connection, so a context
+  switch or kubeconfig change ends them all (`endAllStreams`, called from the IPC handlers before
+  the switch) with an error naming the reason and then `end`. The renderer closes a detail page
+  back to its list before switching context (`useSwitchContext` in `src/renderer/lib/scope.ts`),
+  since the object it names belongs to the cluster being left.
 - **Usage metrics** come from metrics-server through an in-memory sampler (`src/main/k8s/sampler.ts`):
   every 12 s it reads pod and node usage plus the node list and keeps bounded ring buffers for the
   cluster aggregate, each node and up to 40 requested pods. Readers start it lazily, a context
@@ -119,13 +128,26 @@ Body: why the change is needed, what a reader of the history cannot learn from t
   `scale`. Create and replace go through `apis().objects`, which derives the API path from the
   manifest's own `apiVersion`/`kind`, so a CRD rides the same call as a Pod; a replace must carry
   the `metadata.resourceVersion` it was read with, which is what turns a concurrent change into a
-  `conflict` instead of a silent overwrite. **Destructive writes fail closed on targeting:** a
-  namespaced kind resolves its namespace explicit → active and is rejected as `invalid` when
-  neither applies, never guessing a same-named object elsewhere. Manifests are serialized by
+  `conflict` instead of a silent overwrite. **Writes fail closed on targeting.** Every write input
+  carries a `context` stamp, the context the screen was rendered under; main compares it with the
+  context it is on and refuses a mismatch as `conflict`, so rows left over from before a context
+  switch can never act on the new cluster (the renderer adds the stamp in `src/renderer/lib/writes.ts`,
+  screens never pass it). A delete or scale of a namespaced kind must name its namespace and a
+  cluster-scoped kind must not (`refineManifestTarget` in `src/shared/k8s/manifest.ts` enforces it
+  at the boundary); the active namespace is never consulted for a destructive write. A create or
+  replace whose manifest names no namespace takes the active one, and with none selected is
+  refused rather than left to the client library's default; an unknown kind is asked of API
+  discovery to learn whether it is namespaced. A replace from the editor carries `expect`, the
+  object the panel was opened on, and a manifest that names any other kind, name or namespace is
+  refused. Single-object reads follow the same rule: `getNamespaced` and `resources.getYaml` answer
+  not found or `invalid` when no namespace is known, never the first same-named object across the
+  cluster. Manifests are serialized by
   `src/main/k8s/yaml.ts` with plain js-yaml, never the client library's typed dump, which drops
   fields it does not know. Renderer side: every write goes through `useIpcMutation`
   (`src/renderer/lib/query.ts`) with per-domain invalidation, never a blanket one, and every
-  rejection surfaces through the shared mutation-error toast.
+  rejection surfaces through the shared mutation-error toast. Deleting a kind in `DANGEROUS_KINDS`
+  (nodes, CRDs, cluster-wide plumbing) asks the user to type the name, and those kinds have no bulk
+  delete.
 - **Kinds go through the generic channels.** `src/shared/k8s/registry.ts` holds one entry per kind;
   `resources.list` and `resources.get` take a `kind` and return a union discriminated on it
   (`src/shared/k8s/resources.ts`), with per-kind fetchers registered in
@@ -141,8 +163,9 @@ Body: why the change is needed, what a reader of the history cannot learn from t
   namespace in their readers and watch paths, and their detail routes use the `list_.$name.tsx`
   naming. A kind whose CRD a cluster need not have (volume snapshots) has no watch source and is
   polled through `usePolledList`; `startResourceWatch` refuses a kind without one.
-  **Secret values never cross the bridge**:
-  `secrets.entries` returns key names with a fixed mask, and no channel ever reads a secret's data. Aggregates that are not a plain
+  **Secret values cross the bridge in one place only**: `secrets.entries` returns key names with a
+  fixed mask, and the Manifest tab (`resources.getYaml`) shows the object as the cluster holds it,
+  values included, because that is what editing it requires. Aggregates that are not a plain
   kind (cluster summary, namespaces with pod counts, nodes, events, quotas, limit ranges) keep
   bespoke channels; quotas and limit ranges flatten to one row per resource. Detail routes
   carry the namespace: `/workloads/pods/$namespace/$name`.

@@ -4,6 +4,7 @@ import {
     useMutation,
     useQuery,
     useQueryClient,
+    type QueryFilters,
     type QueryKey,
     type UseQueryOptions,
 } from '@tanstack/react-query';
@@ -28,8 +29,9 @@ export const queryClient = new QueryClient({
         queries: {
             retry: false,
             refetchOnWindowFocus: false,
-            // Absorbs list-to-detail-and-back navigation without refetching; a context or namespace
-            // switch re-keys queries so a stale scope is never served.
+            // Absorbs list-to-detail-and-back navigation without refetching. Keys carry no scope, so
+            // a context or namespace switch resets cluster queries outright (see
+            // `invalidateClusterQueries`) rather than trusting staleness to hide the old scope.
             staleTime: 5_000,
         },
     },
@@ -53,19 +55,35 @@ export function useIpcQuery<C extends IpcChannel, TData = IpcOutput<C>>(
     });
 }
 
-/** Drop every cluster-scoped query after a context or namespace switch. */
-export async function invalidateClusterQueries(): Promise<void> {
-    await queryClient.invalidateQueries({
-        predicate: ({ queryKey }) => {
-            const channel = String(queryKey[0]);
-            return !channel.startsWith('app.') && !channel.startsWith('update.') && channel !== 'startupChecks';
-        },
-    });
+/** Channels whose data does not come from the cluster, so a scope switch leaves them in place. */
+const APP_LEVEL_CHANNELS = new Set<string>(['startupChecks', 'contexts.list', 'settings.get']);
+
+function isClusterQuery(queryKey: QueryKey): boolean {
+    const channel = String(queryKey[0]);
+    return !channel.startsWith('app.') && !channel.startsWith('update.') && !APP_LEVEL_CHANNELS.has(channel);
 }
 
-export interface IpcMutationOptions<C extends IpcChannel> {
+const CLUSTER_QUERIES: QueryFilters = { predicate: ({ queryKey }) => isClusterQuery(queryKey) };
+
+/**
+ * Forget every cluster-scoped query after a context or namespace switch. Keys do not carry the
+ * scope, so an invalidation alone would keep serving the previous scope's rows until the refetch
+ * landed, and a delete or scale clicked in that window would act on the same-named object in the
+ * new scope. A reset drops the data and puts every mounted screen back into its loading state.
+ * The contexts list only changes its `current` flag, so it is refetched in place.
+ */
+export async function invalidateClusterQueries(): Promise<void> {
+    await Promise.all([
+        queryClient.resetQueries(CLUSTER_QUERIES),
+        queryClient.invalidateQueries({ queryKey: ['contexts.list'] }),
+    ]);
+}
+
+export interface IpcMutationOptions<C extends IpcChannel, TVariables> {
     /** Query keys to refetch once the write succeeds; name only the domains the write touches. */
     invalidates?: (input: IpcInput<C>, data: IpcOutput<C>) => QueryKey[];
+    /** Turn what the caller passes into the channel's input, for fields the caller should not supply itself. */
+    prepare?: (variables: TVariables, client: QueryClient) => Promise<IpcInput<C>>;
 }
 
 /**
@@ -74,13 +92,20 @@ export interface IpcMutationOptions<C extends IpcChannel> {
  * awaits invalidation of the screens it affects and the caller drives its button state from
  * `isPending`. Blanket invalidation stays reserved for a context or namespace switch.
  */
-export function useIpcMutation<C extends IpcChannel>(channel: C, options: IpcMutationOptions<C> = {}) {
+export function useIpcMutation<C extends IpcChannel, TVariables = IpcInput<C>>(
+    channel: C,
+    options: IpcMutationOptions<C, TVariables> = {},
+) {
     const client = useQueryClient();
-    return useMutation<IpcOutput<C>, Error, IpcInput<C>>({
-        mutationFn: (input) => invoke(channel, input),
-        onSuccess: async (data, input) => {
+    return useMutation<IpcOutput<C>, Error, TVariables, IpcInput<C>>({
+        mutationFn: async (variables) => {
+            const input = options.prepare
+                ? await options.prepare(variables, client)
+                : (variables as unknown as IpcInput<C>);
+            const data = await invoke(channel, input);
             const keys = options.invalidates?.(input, data) ?? [];
             await Promise.all(keys.map((queryKey) => client.invalidateQueries({ queryKey })));
+            return data;
         },
     });
 }

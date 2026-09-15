@@ -44,11 +44,10 @@ const client = {
         name: string,
         namespace: string | undefined,
         readOne: (name: string, ns: string) => Promise<T>,
-        listByName: (selector: string) => Promise<{ items: T[] }>,
     ) => {
         const ns = client.resolveObjectNamespace(namespace);
-        if (ns) return client.readOrNull(() => readOne(name, ns));
-        return (await listByName(`metadata.name=${name}`)).items[0];
+        if (!ns) return undefined;
+        return client.readOrNull(() => readOne(name, ns));
     },
 };
 vi.mock('../../../src/main/k8s/client.js', () => client);
@@ -229,13 +228,14 @@ describe('storage readers', () => {
         await expect(storage.listSnapshots()).rejects.toMatchObject({ kind: 'forbidden', op: 'resources.list' });
     });
 
-    it('finds a snapshot by name across namespaces when none is active', async () => {
+    it('answers null for a snapshot when no namespace is known, without searching the cluster', async () => {
         client.getActiveNamespace.mockReturnValue(null);
         customObjects.listClusterCustomObject.mockResolvedValue({
             items: [{ metadata: { name: 'snap', namespace: 'b' } }],
         });
-        await expect(storage.getSnapshot('snap')).resolves.toMatchObject({ namespace: 'b' });
-        await expect(storage.getSnapshot('missing')).resolves.toBeNull();
+        await expect(storage.getSnapshot('snap')).resolves.toBeNull();
+        expect(customObjects.listClusterCustomObject).not.toHaveBeenCalled();
+        expect(customObjects.getNamespacedCustomObject).not.toHaveBeenCalled();
     });
 
     it('classifies failures under the generic ops', async () => {

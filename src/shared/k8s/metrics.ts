@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { namespaceNameSchema } from './names.js';
 
 /** Instantaneous usage of one object: CPU in millicores, memory in MiB. */
 export const usageSchema = z.object({ cpu: z.number(), mem: z.number() });
@@ -32,7 +33,7 @@ export const resourceSeriesSchema = z.object({
     mem: seriesSchema,
 });
 
-export const podSeriesInputSchema = z.object({ namespace: z.string().min(1), name: z.string().min(1) });
+export const podSeriesInputSchema = z.object({ namespace: namespaceNameSchema, name: z.string().min(1) });
 export const nodeSeriesInputSchema = z.object({ name: z.string().min(1) });
 export const deploymentSeriesInputSchema = podSeriesInputSchema;
 
