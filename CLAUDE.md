@@ -96,8 +96,14 @@ updates need the `zip` target next to the dmg. Icons regenerate from `resources/
 - **Coverage** (`npm run test:coverage`, V8) covers `src/main` and `src/shared` except the window
   bootstrap in `src/main/index.ts`. Thresholds in `vitest.config.ts` fail CI when missed and only
   ever go up. Bootstrap, preload and DOM code are covered end to end.
-- **End to end: Playwright** against the built app and an isolated k3s cluster, ubuntu only.
-  Arrives with the Kubernetes client.
+- **No test ever touches a real cluster or the developer's kubeconfig.** Unit tests mock the
+  Kubernetes client at the module boundary and never open a network connection. End-to-end tests
+  run against a disposable k3s container started by Testcontainers, with a kubeconfig written for
+  that container only and a throwaway settings directory that pins it; `~/.kube/config` and
+  `$KUBECONFIG` are never read. A guard in the end-to-end setup fails the whole suite if the active
+  context is anything but the test cluster's.
+- **End to end: Playwright** against the built app and that k3s container, ubuntu only in CI
+  (Docker needed). Arrives with the Kubernetes client.
 - Run one file: `npx vitest run tests/unit/main/updater.test.ts`. Watch: `npm run test:watch`.
 
 ## Code style
