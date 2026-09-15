@@ -15,8 +15,14 @@ import { Route as OverviewNamespacesRouteImport } from './routes/overview/namesp
 import { Route as OverviewNodesRouteImport } from './routes/overview/nodes';
 import { Route as OverviewSummaryRouteImport } from './routes/overview/summary';
 import { Route as OverviewNodesNameRouteImport } from './routes/overview/nodes_.$name';
+import { Route as WorkloadsDaemonsetsIndexRouteImport } from './routes/workloads/daemonsets/index';
+import { Route as WorkloadsDeploymentsIndexRouteImport } from './routes/workloads/deployments/index';
 import { Route as WorkloadsPodsIndexRouteImport } from './routes/workloads/pods/index';
+import { Route as WorkloadsStatefulsetsIndexRouteImport } from './routes/workloads/statefulsets/index';
+import { Route as WorkloadsDaemonsetsNamespaceNameRouteImport } from './routes/workloads/daemonsets/$namespace.$name';
+import { Route as WorkloadsDeploymentsNamespaceNameRouteImport } from './routes/workloads/deployments/$namespace.$name';
 import { Route as WorkloadsPodsNamespaceNameRouteImport } from './routes/workloads/pods/$namespace.$name';
+import { Route as WorkloadsStatefulsetsNamespaceNameRouteImport } from './routes/workloads/statefulsets/$namespace.$name';
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -48,15 +54,51 @@ const OverviewNodesNameRoute = OverviewNodesNameRouteImport.update({
   path: '/overview/nodes/$name',
   getParentRoute: () => rootRouteImport,
 } as any);
+const WorkloadsDaemonsetsIndexRoute =
+  WorkloadsDaemonsetsIndexRouteImport.update({
+    id: '/workloads/daemonsets/',
+    path: '/workloads/daemonsets/',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const WorkloadsDeploymentsIndexRoute =
+  WorkloadsDeploymentsIndexRouteImport.update({
+    id: '/workloads/deployments/',
+    path: '/workloads/deployments/',
+    getParentRoute: () => rootRouteImport,
+  } as any);
 const WorkloadsPodsIndexRoute = WorkloadsPodsIndexRouteImport.update({
   id: '/workloads/pods/',
   path: '/workloads/pods/',
   getParentRoute: () => rootRouteImport,
 } as any);
+const WorkloadsStatefulsetsIndexRoute =
+  WorkloadsStatefulsetsIndexRouteImport.update({
+    id: '/workloads/statefulsets/',
+    path: '/workloads/statefulsets/',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const WorkloadsDaemonsetsNamespaceNameRoute =
+  WorkloadsDaemonsetsNamespaceNameRouteImport.update({
+    id: '/workloads/daemonsets/$namespace/$name',
+    path: '/workloads/daemonsets/$namespace/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const WorkloadsDeploymentsNamespaceNameRoute =
+  WorkloadsDeploymentsNamespaceNameRouteImport.update({
+    id: '/workloads/deployments/$namespace/$name',
+    path: '/workloads/deployments/$namespace/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
 const WorkloadsPodsNamespaceNameRoute =
   WorkloadsPodsNamespaceNameRouteImport.update({
     id: '/workloads/pods/$namespace/$name',
     path: '/workloads/pods/$namespace/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const WorkloadsStatefulsetsNamespaceNameRoute =
+  WorkloadsStatefulsetsNamespaceNameRouteImport.update({
+    id: '/workloads/statefulsets/$namespace/$name',
+    path: '/workloads/statefulsets/$namespace/$name',
     getParentRoute: () => rootRouteImport,
   } as any);
 
@@ -67,8 +109,14 @@ export interface FileRoutesByFullPath {
   '/overview/nodes': typeof OverviewNodesRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
   '/overview/nodes/$name': typeof OverviewNodesNameRoute;
+  '/workloads/daemonsets/': typeof WorkloadsDaemonsetsIndexRoute;
+  '/workloads/deployments/': typeof WorkloadsDeploymentsIndexRoute;
   '/workloads/pods/': typeof WorkloadsPodsIndexRoute;
+  '/workloads/statefulsets/': typeof WorkloadsStatefulsetsIndexRoute;
+  '/workloads/daemonsets/$namespace/$name': typeof WorkloadsDaemonsetsNamespaceNameRoute;
+  '/workloads/deployments/$namespace/$name': typeof WorkloadsDeploymentsNamespaceNameRoute;
   '/workloads/pods/$namespace/$name': typeof WorkloadsPodsNamespaceNameRoute;
+  '/workloads/statefulsets/$namespace/$name': typeof WorkloadsStatefulsetsNamespaceNameRoute;
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute;
@@ -77,8 +125,14 @@ export interface FileRoutesByTo {
   '/overview/nodes': typeof OverviewNodesRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
   '/overview/nodes/$name': typeof OverviewNodesNameRoute;
+  '/workloads/daemonsets': typeof WorkloadsDaemonsetsIndexRoute;
+  '/workloads/deployments': typeof WorkloadsDeploymentsIndexRoute;
   '/workloads/pods': typeof WorkloadsPodsIndexRoute;
+  '/workloads/statefulsets': typeof WorkloadsStatefulsetsIndexRoute;
+  '/workloads/daemonsets/$namespace/$name': typeof WorkloadsDaemonsetsNamespaceNameRoute;
+  '/workloads/deployments/$namespace/$name': typeof WorkloadsDeploymentsNamespaceNameRoute;
   '/workloads/pods/$namespace/$name': typeof WorkloadsPodsNamespaceNameRoute;
+  '/workloads/statefulsets/$namespace/$name': typeof WorkloadsStatefulsetsNamespaceNameRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
@@ -88,8 +142,14 @@ export interface FileRoutesById {
   '/overview/nodes': typeof OverviewNodesRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
   '/overview/nodes_/$name': typeof OverviewNodesNameRoute;
+  '/workloads/daemonsets/': typeof WorkloadsDaemonsetsIndexRoute;
+  '/workloads/deployments/': typeof WorkloadsDeploymentsIndexRoute;
   '/workloads/pods/': typeof WorkloadsPodsIndexRoute;
+  '/workloads/statefulsets/': typeof WorkloadsStatefulsetsIndexRoute;
+  '/workloads/daemonsets/$namespace/$name': typeof WorkloadsDaemonsetsNamespaceNameRoute;
+  '/workloads/deployments/$namespace/$name': typeof WorkloadsDeploymentsNamespaceNameRoute;
   '/workloads/pods/$namespace/$name': typeof WorkloadsPodsNamespaceNameRoute;
+  '/workloads/statefulsets/$namespace/$name': typeof WorkloadsStatefulsetsNamespaceNameRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
@@ -100,8 +160,14 @@ export interface FileRouteTypes {
     | '/overview/nodes'
     | '/overview/summary'
     | '/overview/nodes/$name'
+    | '/workloads/daemonsets/'
+    | '/workloads/deployments/'
     | '/workloads/pods/'
-    | '/workloads/pods/$namespace/$name';
+    | '/workloads/statefulsets/'
+    | '/workloads/daemonsets/$namespace/$name'
+    | '/workloads/deployments/$namespace/$name'
+    | '/workloads/pods/$namespace/$name'
+    | '/workloads/statefulsets/$namespace/$name';
   fileRoutesByTo: FileRoutesByTo;
   to:
     | '/'
@@ -110,8 +176,14 @@ export interface FileRouteTypes {
     | '/overview/nodes'
     | '/overview/summary'
     | '/overview/nodes/$name'
+    | '/workloads/daemonsets'
+    | '/workloads/deployments'
     | '/workloads/pods'
-    | '/workloads/pods/$namespace/$name';
+    | '/workloads/statefulsets'
+    | '/workloads/daemonsets/$namespace/$name'
+    | '/workloads/deployments/$namespace/$name'
+    | '/workloads/pods/$namespace/$name'
+    | '/workloads/statefulsets/$namespace/$name';
   id:
     | '__root__'
     | '/'
@@ -120,8 +192,14 @@ export interface FileRouteTypes {
     | '/overview/nodes'
     | '/overview/summary'
     | '/overview/nodes_/$name'
+    | '/workloads/daemonsets/'
+    | '/workloads/deployments/'
     | '/workloads/pods/'
-    | '/workloads/pods/$namespace/$name';
+    | '/workloads/statefulsets/'
+    | '/workloads/daemonsets/$namespace/$name'
+    | '/workloads/deployments/$namespace/$name'
+    | '/workloads/pods/$namespace/$name'
+    | '/workloads/statefulsets/$namespace/$name';
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
@@ -131,8 +209,14 @@ export interface RootRouteChildren {
   OverviewNodesRoute: typeof OverviewNodesRoute;
   OverviewSummaryRoute: typeof OverviewSummaryRoute;
   OverviewNodesNameRoute: typeof OverviewNodesNameRoute;
+  WorkloadsDaemonsetsIndexRoute: typeof WorkloadsDaemonsetsIndexRoute;
+  WorkloadsDeploymentsIndexRoute: typeof WorkloadsDeploymentsIndexRoute;
   WorkloadsPodsIndexRoute: typeof WorkloadsPodsIndexRoute;
+  WorkloadsStatefulsetsIndexRoute: typeof WorkloadsStatefulsetsIndexRoute;
+  WorkloadsDaemonsetsNamespaceNameRoute: typeof WorkloadsDaemonsetsNamespaceNameRoute;
+  WorkloadsDeploymentsNamespaceNameRoute: typeof WorkloadsDeploymentsNamespaceNameRoute;
   WorkloadsPodsNamespaceNameRoute: typeof WorkloadsPodsNamespaceNameRoute;
+  WorkloadsStatefulsetsNamespaceNameRoute: typeof WorkloadsStatefulsetsNamespaceNameRoute;
 }
 
 declare module '@tanstack/react-router' {
@@ -179,6 +263,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OverviewNodesNameRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/workloads/daemonsets/': {
+      id: '/workloads/daemonsets/';
+      path: '/workloads/daemonsets';
+      fullPath: '/workloads/daemonsets/';
+      preLoaderRoute: typeof WorkloadsDaemonsetsIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/workloads/deployments/': {
+      id: '/workloads/deployments/';
+      path: '/workloads/deployments';
+      fullPath: '/workloads/deployments/';
+      preLoaderRoute: typeof WorkloadsDeploymentsIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/workloads/pods/': {
       id: '/workloads/pods/';
       path: '/workloads/pods';
@@ -186,11 +284,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkloadsPodsIndexRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/workloads/statefulsets/': {
+      id: '/workloads/statefulsets/';
+      path: '/workloads/statefulsets';
+      fullPath: '/workloads/statefulsets/';
+      preLoaderRoute: typeof WorkloadsStatefulsetsIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/workloads/daemonsets/$namespace/$name': {
+      id: '/workloads/daemonsets/$namespace/$name';
+      path: '/workloads/daemonsets/$namespace/$name';
+      fullPath: '/workloads/daemonsets/$namespace/$name';
+      preLoaderRoute: typeof WorkloadsDaemonsetsNamespaceNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/workloads/deployments/$namespace/$name': {
+      id: '/workloads/deployments/$namespace/$name';
+      path: '/workloads/deployments/$namespace/$name';
+      fullPath: '/workloads/deployments/$namespace/$name';
+      preLoaderRoute: typeof WorkloadsDeploymentsNamespaceNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/workloads/pods/$namespace/$name': {
       id: '/workloads/pods/$namespace/$name';
       path: '/workloads/pods/$namespace/$name';
       fullPath: '/workloads/pods/$namespace/$name';
       preLoaderRoute: typeof WorkloadsPodsNamespaceNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/workloads/statefulsets/$namespace/$name': {
+      id: '/workloads/statefulsets/$namespace/$name';
+      path: '/workloads/statefulsets/$namespace/$name';
+      fullPath: '/workloads/statefulsets/$namespace/$name';
+      preLoaderRoute: typeof WorkloadsStatefulsetsNamespaceNameRouteImport;
       parentRoute: typeof rootRouteImport;
     };
   }
@@ -203,8 +329,16 @@ const rootRouteChildren: RootRouteChildren = {
   OverviewNodesRoute: OverviewNodesRoute,
   OverviewSummaryRoute: OverviewSummaryRoute,
   OverviewNodesNameRoute: OverviewNodesNameRoute,
+  WorkloadsDaemonsetsIndexRoute: WorkloadsDaemonsetsIndexRoute,
+  WorkloadsDeploymentsIndexRoute: WorkloadsDeploymentsIndexRoute,
   WorkloadsPodsIndexRoute: WorkloadsPodsIndexRoute,
+  WorkloadsStatefulsetsIndexRoute: WorkloadsStatefulsetsIndexRoute,
+  WorkloadsDaemonsetsNamespaceNameRoute: WorkloadsDaemonsetsNamespaceNameRoute,
+  WorkloadsDeploymentsNamespaceNameRoute:
+    WorkloadsDeploymentsNamespaceNameRoute,
   WorkloadsPodsNamespaceNameRoute: WorkloadsPodsNamespaceNameRoute,
+  WorkloadsStatefulsetsNamespaceNameRoute:
+    WorkloadsStatefulsetsNamespaceNameRoute,
 };
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

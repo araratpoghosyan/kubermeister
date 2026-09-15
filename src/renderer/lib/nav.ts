@@ -1,12 +1,4 @@
-import {
-    BoxesIcon,
-    GaugeIcon,
-    LayersIcon,
-    LayoutDashboardIcon,
-    type LucideIcon,
-    ServerIcon,
-    SettingsIcon,
-} from 'lucide-react';
+import { BoxIcon, BoxesIcon, LayoutDashboardIcon, type LucideIcon, ServerIcon, SettingsIcon } from 'lucide-react';
 import type { RoutePath } from './router';
 
 export interface NavItem {
@@ -41,7 +33,7 @@ export const DOMAINS: Domain[] = [
             {
                 label: null,
                 items: [
-                    { id: 'summary', label: 'Cluster summary', path: '/overview/summary', icon: GaugeIcon },
+                    { id: 'summary', label: 'Cluster summary', path: '/overview/summary', icon: BoxesIcon },
                     { id: 'nodes', label: 'Nodes', path: '/overview/nodes', icon: ServerIcon },
                     { id: 'namespaces', label: 'Namespaces', path: '/overview/namespaces', icon: BoxesIcon },
                 ],
@@ -51,9 +43,19 @@ export const DOMAINS: Domain[] = [
     {
         id: 'workloads',
         label: 'Workloads',
-        icon: LayersIcon,
+        icon: BoxIcon,
         basePath: '/workloads',
-        groups: [{ label: null, items: [{ id: 'pods', label: 'Pods', path: '/workloads/pods', icon: LayersIcon }] }],
+        groups: [
+            {
+                label: 'COMPUTE',
+                items: [
+                    { id: 'pods', label: 'Pods', path: '/workloads/pods', icon: BoxIcon },
+                    { id: 'deployments', label: 'Deployments', path: '/workloads/deployments', icon: BoxesIcon },
+                    { id: 'statefulsets', label: 'StatefulSets', path: '/workloads/statefulsets', icon: BoxesIcon },
+                    { id: 'daemonsets', label: 'DaemonSets', path: '/workloads/daemonsets', icon: BoxesIcon },
+                ],
+            },
+        ],
     },
 ];
 
