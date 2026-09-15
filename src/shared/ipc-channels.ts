@@ -16,6 +16,12 @@ export const IPC_CHANNELS = [
     'settings.set',
     'kubeconfig.pick',
     'kubeconfig.useDefault',
+    'namespaces.list',
+    'namespace.active',
+    'cluster.active',
+    'clusters.list',
+    'nodes.list',
+    'nodes.get',
 ] as const;
 
 export type AllowedChannel = (typeof IPC_CHANNELS)[number];
