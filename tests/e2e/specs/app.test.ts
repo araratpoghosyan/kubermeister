@@ -350,3 +350,28 @@ test('lists the cluster definitions and the seeded helm release', async () => {
     await sidebar.getByRole('link', { name: 'Helm charts' }).click();
     await expect(window.getByTestId('charts-table').locator('[data-chart="demo"]')).toContainText('3.0.0');
 });
+
+test('shows the live manifest of a pod and of a cluster-scoped object', async () => {
+    const { window } = launched;
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Pods' }).click();
+    await window.getByTestId('pods-table').locator('[data-pod^="web-"]').first().getByRole('link').click();
+    const pod = window.getByTestId('pod-page');
+    await window.getByRole('tab', { name: /Manifest/ }).click();
+    const manifest = pod.getByTestId('manifest-panel');
+    await expect(manifest).toContainText('kind: Pod');
+    await expect(manifest).toContainText('apiVersion: v1');
+    // The serializer keeps the fields a writer needs and drops the server's bookkeeping.
+    await expect(manifest).toContainText('resourceVersion');
+    await expect(manifest).not.toContainText('managedFields');
+
+    await window.getByTestId('sidebar').getByRole('link', { name: 'StorageClasses' }).click();
+    await window
+        .getByTestId('storageclasses-table')
+        .locator('[data-storageclass="local-path"]')
+        .getByRole('link')
+        .click();
+    await window.getByRole('tab', { name: /Manifest/ }).click();
+    await expect(window.getByTestId('storageclass-page').getByTestId('manifest-panel')).toContainText(
+        'kind: StorageClass',
+    );
+});

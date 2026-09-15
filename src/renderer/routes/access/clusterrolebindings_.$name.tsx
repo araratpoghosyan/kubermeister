@@ -8,6 +8,7 @@ import {
     ResourceDetail,
     type DetailTabGroup,
 } from '@/components/templates/resource-detail';
+import { manifestTab } from '@/components/templates/manifest-panel';
 import { ipcQueryKey } from '@/lib/query';
 import { useResource } from '@/lib/resources';
 
@@ -33,7 +34,13 @@ function ClusterRoleBindingDetailPage() {
                       eventsTab({ kind: 'ClusterRoleBinding', name }),
                   ],
               },
-              { label: 'INSPECT', items: [labelsTab({ labels: row.labels, annotations: row.annotations })] },
+              {
+                  label: 'INSPECT',
+                  items: [
+                      manifestTab({ kind: 'ClusterRoleBinding', name }),
+                      labelsTab({ labels: row.labels, annotations: row.annotations }),
+                  ],
+              },
           ]
         : [];
 

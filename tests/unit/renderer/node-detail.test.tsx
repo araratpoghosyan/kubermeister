@@ -79,7 +79,7 @@ describe('node detail', () => {
             within(rail)
                 .getAllByRole('tab')
                 .map((t) => t.textContent),
-        ).toEqual(['Overview', 'Events', 'Labels1', 'System info', 'Conditions2']);
+        ).toEqual(['Overview', 'Events', 'ManifestYAML', 'Labels1', 'System info', 'Conditions2']);
         expect(within(page).getByRole('button', { name: 'Cordon' })).toHaveAttribute('aria-disabled', 'true');
         expect(within(page).getByRole('button', { name: 'Drain' })).toHaveAttribute('aria-disabled', 'true');
     });

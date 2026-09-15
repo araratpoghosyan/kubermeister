@@ -8,6 +8,7 @@ import {
     ResourceDetail,
     type DetailTabGroup,
 } from '@/components/templates/resource-detail';
+import { manifestTab } from '@/components/templates/manifest-panel';
 import { ipcQueryKey } from '@/lib/query';
 import { useResource } from '@/lib/resources';
 
@@ -31,7 +32,13 @@ function RoleDetailPage() {
                       eventsTab({ kind: 'Role', name, namespace }),
                   ],
               },
-              { label: 'INSPECT', items: [labelsTab({ labels: row.labels, annotations: row.annotations })] },
+              {
+                  label: 'INSPECT',
+                  items: [
+                      manifestTab({ kind: 'Role', name, namespace }),
+                      labelsTab({ labels: row.labels, annotations: row.annotations }),
+                  ],
+              },
           ]
         : [];
 

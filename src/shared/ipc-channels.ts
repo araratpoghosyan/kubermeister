@@ -48,6 +48,7 @@ export const IPC_CHANNELS = [
     'releases.get',
     'releases.revisions',
     'helmCharts.list',
+    'resources.getYaml',
 ] as const;
 
 export const SUBSCRIPTION_CHANNELS = ['update.state', 'open-settings'] as const;

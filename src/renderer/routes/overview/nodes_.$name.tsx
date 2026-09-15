@@ -5,6 +5,7 @@ import { ComingSoonButton } from '@/components/coming-soon-button';
 import { RefreshButton } from '@/components/refresh-button';
 import { DetailCard, DetailMetrics, PropertyGrid } from '@/components/templates/detail-cards';
 import { eventsTab, labelsTab, ResourceDetail, type DetailTabGroup } from '@/components/templates/resource-detail';
+import { manifestTab } from '@/components/templates/manifest-panel';
 import { ipcQueryKey, useIpcQuery } from '@/lib/query';
 import { useRefreshIntervalMs } from '@/lib/settings';
 import { NODE_TONE } from '@/lib/status';
@@ -59,6 +60,7 @@ function NodeDetailPage() {
         {
             label: 'INSPECT',
             items: [
+                manifestTab({ kind: 'Node', name }),
                 labelsTab(node ? { labels: node.labels, annotations: node.annotations } : undefined),
                 {
                     id: 'system',

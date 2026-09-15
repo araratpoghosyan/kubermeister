@@ -9,6 +9,7 @@ import { readPodLogSnapshot } from '../k8s/logs.js';
 import { getActiveCluster, getActiveNamespaceInfo, listClusters, listNamespaces } from '../k8s/resources/cluster.js';
 import { getConfigMapEntries, getSecretEntries } from '../k8s/resources/config.js';
 import { listEvents, listEventsForObject, listRecentEvents } from '../k8s/resources/events.js';
+import { getObjectYaml } from '../k8s/resources/manifest.js';
 import { getRelease, getReleaseRevisions, listHelmCharts, listReleases } from '../k8s/resources/helm.js';
 import { getIngressRules, getServiceEndpoints, getServicePorts } from '../k8s/resources/network.js';
 import { listLimits, listQuotas } from '../k8s/resources/overview.js';
@@ -98,6 +99,7 @@ const handlers: Handlers = {
     'releases.get': ({ name, namespace }) => getRelease(name, namespace),
     'releases.revisions': ({ name, namespace }) => getReleaseRevisions(name, namespace),
     'helmCharts.list': () => listHelmCharts(),
+    'resources.getYaml': ({ kind, name, namespace }) => getObjectYaml(kind, name, namespace),
     'kubeconfig.useDefault': async () => {
         const settings = updateSettings({ connection: { kubeconfigPath: null } });
         reloadKubeConfig();

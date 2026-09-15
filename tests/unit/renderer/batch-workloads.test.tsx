@@ -138,7 +138,7 @@ describe('batch and autoscaler details', () => {
             within(rail)
                 .getAllByRole('tab')
                 .map((t) => t.textContent),
-        ).toEqual(['Overview', 'Events', 'Labels1']);
+        ).toEqual(['Overview', 'Events', 'ManifestYAML', 'Labels1']);
         await userEvent.click(within(rail).getByRole('tab', { name: 'Events' }));
         expect(invoke).toHaveBeenCalledWith('events.forObject', { kind: 'Job', name: 'import', namespace: 'team-a' });
     });

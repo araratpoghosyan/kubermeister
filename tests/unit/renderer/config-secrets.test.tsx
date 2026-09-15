@@ -75,7 +75,7 @@ describe('config map screens', () => {
             within(rail)
                 .getAllByRole('tab')
                 .map((t) => t.textContent),
-        ).toEqual(['Overview', 'Events', 'Entries2', 'Labels1']);
+        ).toEqual(['Overview', 'Events', 'Entries2', 'ManifestYAML', 'Labels1']);
         await userEvent.click(within(rail).getByRole('tab', { name: /Entries/ }));
         const panel = within(page).getByTestId('configmap-entries');
         expect(panel).toHaveTextContent('greeting');
