@@ -325,3 +325,28 @@ test('lists the identity and role screens for the namespace and the cluster', as
         window.getByTestId('clusterrolebindings-table').locator('[data-clusterrolebinding="cluster-admin"]'),
     ).toContainText('ClusterRole/cluster-admin');
 });
+
+test('lists the cluster definitions and the seeded helm release', async () => {
+    const { window } = launched;
+    const sidebar = window.getByTestId('sidebar');
+    await sidebar.getByRole('link', { name: 'CRDs' }).click();
+    // k3s ships its own Helm controller, so its definitions are always present.
+    await expect(window.getByTestId('crds-table').locator('[data-crd="helmcharts.helm.cattle.io"]')).toContainText(
+        'HelmChart',
+    );
+
+    await sidebar.getByRole('link', { name: 'Releases' }).click();
+    const release = window.getByTestId('releases-table').locator('[data-release="demo"]');
+    await expect(release).toContainText('Deployed');
+    // Two revision Secrets exist; the list shows the current one only.
+    await expect(release).toContainText('demo-1.2.3');
+    await release.getByRole('link').click();
+    const page = window.getByTestId('release-page');
+    await expect(page).toContainText('chart: demo-1.2.3');
+    await expect(page.getByTestId('release-revisions')).toContainText('Install complete');
+    await window.getByRole('tab', { name: /Values/ }).click();
+    await expect(page.getByTestId('release-values')).toContainText('replicaCount: 2');
+
+    await sidebar.getByRole('link', { name: 'Helm charts' }).click();
+    await expect(window.getByTestId('charts-table').locator('[data-chart="demo"]')).toContainText('3.0.0');
+});

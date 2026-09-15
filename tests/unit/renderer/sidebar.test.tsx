@@ -69,6 +69,9 @@ describe('Sidebar', () => {
             'RoleBindings',
             'ClusterRoles',
             'ClusterRoleBindings',
+            'Helm charts',
+            'Releases',
+            'CRDs',
             'Settings',
         ]);
     });

@@ -1,0 +1,126 @@
+import { createFileRoute } from '@tanstack/react-router';
+import { FileTextIcon, HistoryIcon, RefreshCwIcon, RocketIcon, RotateCcwIcon, Trash2Icon } from 'lucide-react';
+import { ComingSoonButton } from '@/components/coming-soon-button';
+import { StatusBadge } from '@/components/data-display/status-badge';
+import { DetailCard } from '@/components/templates/detail-cards';
+import { ResourceDetail, type DetailTabGroup } from '@/components/templates/resource-detail';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useIpcQuery } from '@/lib/query';
+import { useRefreshIntervalMs } from '@/lib/settings';
+import { RELEASE_TONE } from '@/lib/status';
+
+export const Route = createFileRoute('/addons/releases/$namespace/$name')({ component: ReleaseDetailPage });
+
+function ReleaseDetailPage() {
+    const { namespace, name } = Route.useParams();
+    const refetchInterval = useRefreshIntervalMs();
+    const query = useIpcQuery('releases.get', { name, namespace }, { refetchInterval });
+    const release = query.data;
+    const revisions = useIpcQuery('releases.revisions', { name, namespace }, { refetchInterval }).data ?? [];
+
+    // A release is decoded from Secrets rather than being an API object of its own, so it has no events.
+    const groups: DetailTabGroup[] = [
+        {
+            label: 'OBSERVE',
+            items: [
+                {
+                    id: 'revisions',
+                    label: 'Revisions',
+                    icon: HistoryIcon,
+                    count: revisions.length || undefined,
+                    content: (
+                        <DetailCard
+                            title="Revision history"
+                            desc={`${revisions.length} ${revisions.length === 1 ? 'revision' : 'revisions'}`}
+                        >
+                            <Table data-testid="release-revisions">
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[60px]">Rev</TableHead>
+                                        <TableHead className="w-[140px]">Status</TableHead>
+                                        <TableHead className="w-[140px]">Chart version</TableHead>
+                                        <TableHead className="w-[120px]">Updated</TableHead>
+                                        <TableHead>Description</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {revisions.map((revision) => (
+                                        <TableRow key={revision.rev}>
+                                            <TableCell className="font-mono text-primary tabular-nums">
+                                                #{revision.rev}
+                                            </TableCell>
+                                            <TableCell>
+                                                <StatusBadge tone={RELEASE_TONE[revision.status]}>
+                                                    {revision.status}
+                                                </StatusBadge>
+                                            </TableCell>
+                                            <TableCell className="font-mono tabular-nums">
+                                                {revision.chartVersion}
+                                            </TableCell>
+                                            <TableCell className="font-mono text-text-muted tabular-nums">
+                                                {revision.updated}
+                                            </TableCell>
+                                            <TableCell className="text-text-2">{revision.description}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </DetailCard>
+                    ),
+                },
+                {
+                    id: 'values',
+                    label: 'Values',
+                    icon: FileTextIcon,
+                    content: (
+                        <DetailCard title="Values" desc="User-supplied values (helm get values)">
+                            <pre
+                                className="overflow-auto rounded-md bg-code-bg p-4 font-mono text-meta leading-[1.65] text-text-2"
+                                data-testid="release-values"
+                            >
+                                {release?.values ?? '# No user-supplied values — the release uses chart defaults.'}
+                            </pre>
+                        </DetailCard>
+                    ),
+                },
+            ],
+        },
+    ];
+
+    return (
+        <ResourceDetail
+            icon={RocketIcon}
+            eyebrow="Helm release"
+            title={name}
+            kind="Helm release"
+            namespace={namespace}
+            backTo="/addons/releases"
+            query={query}
+            found={!!release}
+            status={release ? { label: release.status, tone: RELEASE_TONE[release.status] } : undefined}
+            actions={
+                <>
+                    <ComingSoonButton variant="outline" size="sm">
+                        <RefreshCwIcon />
+                        Upgrade
+                    </ComingSoonButton>
+                    <ComingSoonButton variant="outline" size="sm">
+                        <RotateCcwIcon />
+                        Roll back
+                    </ComingSoonButton>
+                    <ComingSoonButton variant="ghost" size="sm" className="text-danger">
+                        <Trash2Icon />
+                        Uninstall
+                    </ComingSoonButton>
+                </>
+            }
+            meta={
+                release
+                    ? [`chart: ${release.chart}`, `revision: ${release.revision}`, `namespace: ${release.namespace}`]
+                    : undefined
+            }
+            groups={groups}
+            testId="release-page"
+        />
+    );
+}
