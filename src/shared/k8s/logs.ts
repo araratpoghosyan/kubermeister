@@ -12,3 +12,14 @@ export const logLineSchema = z.object({
 
 export type LogLevel = z.infer<typeof logLevelSchema>;
 export type LogLine = z.infer<typeof logLineSchema>;
+
+/** Input of the one-shot log read: the same target as the follow stream, plus its window. */
+export const podLogSnapshotInputSchema = z.object({
+    name: z.string().min(1),
+    namespace: z.string().min(1),
+    /** Defaults to the pod's first container. */
+    container: z.string().min(1).optional(),
+    sinceSeconds: z.number().int().positive().optional(),
+    tailLines: z.number().int().positive().optional(),
+});
+export type PodLogSnapshotInput = z.infer<typeof podLogSnapshotInputSchema>;

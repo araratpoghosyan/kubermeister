@@ -16,7 +16,9 @@ vi.mock('../../../src/main/k8s/pod-target.js', async () => ({
     )),
     resolvePodTarget: target,
 }));
-vi.mock('../../../src/main/k8s/client.js', () => ({ kubeConfig: () => ({}), apis: vi.fn(), readOrNull: vi.fn() }));
+const readNamespacedPodLog = vi.fn();
+const apis = vi.fn(() => ({ core: { readNamespacedPodLog } }));
+vi.mock('../../../src/main/k8s/client.js', () => ({ kubeConfig: () => ({}), apis, readOrNull: vi.fn() }));
 
 const logs = await import('../../../src/main/k8s/logs.js');
 
@@ -172,3 +174,51 @@ describe('resolvePodTarget', () => {
 
 // Keep EventEmitter referenced for the fake websocket shape used by sibling tests.
 void EventEmitter;
+
+describe('readPodLogSnapshot', () => {
+    beforeEach(() => {
+        target.mockReset();
+        readNamespacedPodLog.mockReset();
+        apis.mockImplementation(() => ({ core: { readNamespacedPodLog } }));
+    });
+
+    it('reads the resolved container with timestamps and parses every non-empty line', async () => {
+        target.mockResolvedValue({ name: 'web-1', namespace: 'team-a', container: 'app' });
+        readNamespacedPodLog.mockResolvedValue('2026-09-15T12:00:00Z started\n\n2026-09-15T12:00:01Z ERROR boom\n');
+        const lines = await logs.readPodLogSnapshot({ name: 'web-1', namespace: 'team-a', sinceSeconds: 300 });
+        expect(target).toHaveBeenCalledWith('web-1', 'team-a', undefined);
+        expect(readNamespacedPodLog).toHaveBeenCalledWith({
+            name: 'web-1',
+            namespace: 'team-a',
+            container: 'app',
+            tailLines: 500,
+            sinceSeconds: 300,
+            timestamps: true,
+        });
+        expect(lines).toEqual([
+            { level: 'INFO', timestamp: '2026-09-15T12:00:00Z', message: 'started' },
+            { level: 'ERROR', timestamp: '2026-09-15T12:00:01Z', message: 'ERROR boom' },
+        ]);
+    });
+
+    it('honours an explicit container and tail size', async () => {
+        target.mockResolvedValue({ name: 'web-1', namespace: 'team-a', container: 'sidecar' });
+        readNamespacedPodLog.mockResolvedValue('');
+        await logs.readPodLogSnapshot({ name: 'web-1', namespace: 'team-a', container: 'sidecar', tailLines: 50 });
+        expect(target).toHaveBeenCalledWith('web-1', 'team-a', 'sidecar');
+        expect(readNamespacedPodLog).toHaveBeenCalledWith(
+            expect.objectContaining({ container: 'sidecar', tailLines: 50 }),
+        );
+    });
+
+    it('returns no lines for a missing pod and classifies API failures', async () => {
+        target.mockResolvedValue(null);
+        await expect(logs.readPodLogSnapshot({ name: 'gone', namespace: 'team-a' })).resolves.toEqual([]);
+        expect(readNamespacedPodLog).not.toHaveBeenCalled();
+        target.mockResolvedValue({ name: 'web-1', namespace: 'team-a', container: 'app' });
+        readNamespacedPodLog.mockRejectedValue(new Error('boom'));
+        await expect(logs.readPodLogSnapshot({ name: 'web-1', namespace: 'team-a' })).rejects.toMatchObject({
+            op: 'pods.logSnapshot',
+        });
+    });
+});

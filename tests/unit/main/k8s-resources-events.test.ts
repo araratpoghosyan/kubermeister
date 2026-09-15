@@ -1,0 +1,126 @@
+import type { CoreV1Event } from '@kubernetes/client-node';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const core = { listNamespacedEvent: vi.fn(), listEventForAllNamespaces: vi.fn() };
+const client = {
+    apis: () => ({ core }),
+    getActiveNamespace: vi.fn<() => string | null>(),
+    resolveObjectNamespace: (explicit?: string) => explicit ?? client.getActiveNamespace(),
+    isSafeSelectorValue: (value: string) => /^[A-Za-z0-9._-]+$/.test(value),
+};
+vi.mock('../../../src/main/k8s/client.js', () => client);
+
+const events = await import('../../../src/main/k8s/resources/events.js');
+
+function event(overrides: Partial<CoreV1Event> = {}): CoreV1Event {
+    return {
+        metadata: { name: 'e', namespace: 'team-a' },
+        involvedObject: { kind: 'Pod', name: 'web-1' },
+        type: 'Normal',
+        reason: 'Scheduled',
+        message: 'Successfully assigned',
+        lastTimestamp: new Date('2026-09-15T12:00:05Z'),
+        ...overrides,
+    };
+}
+
+describe('event transforms', () => {
+    it('picks the most recent timestamp field and tolerates missing or broken ones', () => {
+        expect(events.eventTimestamp(event())).toBe('2026-09-15T12:00:05.000Z');
+        expect(
+            events.eventTimestamp(event({ lastTimestamp: undefined, eventTime: new Date('2026-09-15T11:00:00Z') })),
+        ).toBe('2026-09-15T11:00:00.000Z');
+        expect(
+            events.eventTimestamp(
+                event({ lastTimestamp: undefined, metadata: { creationTimestamp: new Date('2026-09-15T10:00:00Z') } }),
+            ),
+        ).toBe('2026-09-15T10:00:00.000Z');
+        expect(events.eventTimestamp(event({ lastTimestamp: undefined, metadata: {} }))).toBeUndefined();
+        expect(events.eventTimestamp(event({ lastTimestamp: new Date('nope') }))).toBeUndefined();
+    });
+
+    it('renders clock time or a dash', () => {
+        expect(events.clockTime('2026-09-15T12:00:05.000Z')).toMatch(/^\d{2}:\d{2}:\d{2}$/);
+        expect(events.clockTime(undefined)).toBe('—');
+        expect(events.clockTime('garbage')).toBe('—');
+    });
+
+    it('maps an event to the view model with kind/name object and Warning detection', () => {
+        expect(events.toClusterEvent(event())).toEqual({
+            time: expect.stringMatching(/^\d{2}:\d{2}:\d{2}$/),
+            type: 'Normal',
+            reason: 'Scheduled',
+            object: 'pod/web-1',
+            namespace: 'team-a',
+            message: 'Successfully assigned',
+        });
+        expect(events.toClusterEvent(event({ type: 'Warning' })).type).toBe('Warning');
+        expect(events.toClusterEvent(event({ type: undefined })).type).toBe('Normal');
+        expect(
+            events.toClusterEvent(
+                event({ involvedObject: {}, reason: undefined, message: undefined, metadata: { namespace: '' } }),
+            ),
+        ).toMatchObject({ object: '—', reason: '', message: '', namespace: undefined });
+    });
+
+    it('sorts newest first and sinks events without a timestamp', () => {
+        const older = event({ reason: 'older', lastTimestamp: new Date('2026-09-15T11:00:00Z') });
+        const newer = event({ reason: 'newer' });
+        const none = event({ reason: 'none', lastTimestamp: undefined, metadata: {} });
+        expect(events.sortedByTimeDesc([none, older, newer]).map((e) => e.reason)).toEqual(['newer', 'older', 'none']);
+    });
+});
+
+describe('listEventsForObject', () => {
+    beforeEach(() => {
+        core.listNamespacedEvent.mockReset();
+        core.listEventForAllNamespaces.mockReset();
+        client.getActiveNamespace.mockReturnValue('active-ns');
+    });
+
+    it('queries the object namespace with a field selector and returns newest first', async () => {
+        core.listNamespacedEvent.mockResolvedValue({
+            items: [
+                event({ reason: 'older', lastTimestamp: new Date('2026-09-15T11:00:00Z') }),
+                event({ reason: 'newer' }),
+            ],
+        });
+        const result = await events.listEventsForObject({ kind: 'Pod', name: 'web-1', namespace: 'team-a' });
+        expect(core.listNamespacedEvent).toHaveBeenCalledWith({
+            namespace: 'team-a',
+            fieldSelector: 'involvedObject.kind=Pod,involvedObject.name=web-1',
+        });
+        expect(result.map((e) => e.reason)).toEqual(['newer', 'older']);
+    });
+
+    it('falls back to the active namespace when none is given', async () => {
+        core.listNamespacedEvent.mockResolvedValue({ items: [] });
+        await events.listEventsForObject({ kind: 'Pod', name: 'web-1' });
+        expect(core.listNamespacedEvent).toHaveBeenCalledWith(expect.objectContaining({ namespace: 'active-ns' }));
+    });
+
+    it('searches all namespaces for cluster-scoped kinds and when no namespace is known', async () => {
+        core.listEventForAllNamespaces.mockResolvedValue({ items: [] });
+        await events.listEventsForObject({ kind: 'Node', name: 'n1', namespace: 'ignored' });
+        expect(core.listEventForAllNamespaces).toHaveBeenCalledWith({
+            fieldSelector: 'involvedObject.kind=Node,involvedObject.name=n1',
+        });
+        client.getActiveNamespace.mockReturnValue(null);
+        await events.listEventsForObject({ kind: 'Pod', name: 'web-1' });
+        expect(core.listEventForAllNamespaces).toHaveBeenCalledTimes(2);
+        expect(core.listNamespacedEvent).not.toHaveBeenCalled();
+    });
+
+    it('refuses unsafe selector values without touching the cluster', async () => {
+        await expect(events.listEventsForObject({ kind: 'Pod', name: 'a,b=c' })).resolves.toEqual([]);
+        await expect(events.listEventsForObject({ kind: 'Po d', name: 'x' })).resolves.toEqual([]);
+        expect(core.listNamespacedEvent).not.toHaveBeenCalled();
+    });
+
+    it('classifies API failures under the channel op', async () => {
+        core.listNamespacedEvent.mockRejectedValue(new Error('boom'));
+        await expect(
+            events.listEventsForObject({ kind: 'Pod', name: 'web-1', namespace: 'team-a' }),
+        ).rejects.toMatchObject({ op: 'events.forObject' });
+    });
+});

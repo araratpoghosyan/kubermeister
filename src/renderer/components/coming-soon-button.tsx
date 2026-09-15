@@ -1,0 +1,30 @@
+import type { ComponentProps } from 'react';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
+
+/**
+ * A Button for an action whose backing channel does not exist yet. Rendered `aria-disabled` rather
+ * than natively disabled so it stays keyboard-focusable and its reason is announced on focus;
+ * activation is suppressed and the tooltip surfaces the reason on hover and focus.
+ */
+export function ComingSoonButton({
+    tip = 'Coming soon',
+    className,
+    ...props
+}: ComponentProps<typeof Button> & { tip?: string }) {
+    return (
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <Button
+                    type="button"
+                    {...props}
+                    aria-disabled
+                    onClick={(event) => event.preventDefault()}
+                    className={cn('opacity-50', className)}
+                />
+            </TooltipTrigger>
+            <TooltipContent>{tip}</TooltipContent>
+        </Tooltip>
+    );
+}

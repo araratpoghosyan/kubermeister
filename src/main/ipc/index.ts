@@ -4,7 +4,9 @@ import { ipcSchemas } from '../../shared/ipc.js';
 import { reloadKubeConfig } from '../k8s/client.js';
 import { getCurrentContext, listContexts, setContext, setNamespace } from '../k8s/context.js';
 import { K8sError } from '../k8s/errors.js';
+import { readPodLogSnapshot } from '../k8s/logs.js';
 import { getActiveCluster, getActiveNamespaceInfo, listClusters, listNamespaces } from '../k8s/resources/cluster.js';
+import { listEventsForObject } from '../k8s/resources/events.js';
 import { getResource, listResources } from '../k8s/resources/index.js';
 import { getNode, listNodes } from '../k8s/resources/nodes.js';
 import { getSettings, updateSettings } from '../settings/store.js';
@@ -60,6 +62,8 @@ const handlers: Handlers = {
     'nodes.get': ({ name }) => getNode(name),
     'resources.list': (input) => listResources(input),
     'resources.get': (input) => getResource(input),
+    'pods.logSnapshot': (input) => readPodLogSnapshot(input),
+    'events.forObject': (input) => listEventsForObject(input),
     'kubeconfig.useDefault': async () => {
         const settings = updateSettings({ connection: { kubeconfigPath: null } });
         reloadKubeConfig();

@@ -1,8 +1,9 @@
 import { Writable } from 'node:stream';
 import { Log } from '@kubernetes/client-node';
-import type { LogLevel, LogLine } from '../../shared/k8s/logs.js';
+import type { LogLevel, LogLine, PodLogSnapshotInput } from '../../shared/k8s/logs.js';
 import { streamSchemas, type StreamController, type StreamSend } from '../../shared/streams.js';
-import { kubeConfig } from './client.js';
+import { apis, kubeConfig } from './client.js';
+import { withK8s } from './errors.js';
 import { reportMissingPod, resolvePodTarget } from './pod-target.js';
 
 const DEFAULT_TAIL_LINES = 500;
@@ -75,4 +76,27 @@ export async function startPodLogStream(rawInput: unknown, send: StreamSend): Pr
         timestamps: true,
     });
     return { stop: () => controller.abort() };
+}
+
+/**
+ * A one-shot read of a container's recent logs, the view shown before the user asks to follow.
+ * A pod or container that does not exist yields no lines; the detail page already reports the pod.
+ */
+export function readPodLogSnapshot(input: PodLogSnapshotInput): Promise<LogLine[]> {
+    return withK8s('pods.logSnapshot', async () => {
+        const target = await resolvePodTarget(input.name, input.namespace, input.container);
+        if (!target) return [];
+        const raw = await apis().core.readNamespacedPodLog({
+            name: target.name,
+            namespace: target.namespace,
+            container: target.container,
+            tailLines: input.tailLines ?? DEFAULT_TAIL_LINES,
+            sinceSeconds: input.sinceSeconds,
+            timestamps: true,
+        });
+        return String(raw)
+            .split('\n')
+            .filter((line) => line.length > 0)
+            .map(parseLogLine);
+    });
 }
