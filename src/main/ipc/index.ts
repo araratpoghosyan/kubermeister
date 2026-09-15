@@ -4,9 +4,11 @@ import { ipcSchemas } from '../../shared/ipc.js';
 import { reloadKubeConfig } from '../k8s/client.js';
 import { getCurrentContext, listContexts, setContext, setNamespace } from '../k8s/context.js';
 import { K8sError } from '../k8s/errors.js';
+import { listAlerts } from '../k8s/alerts.js';
 import { readPodLogSnapshot } from '../k8s/logs.js';
 import { getActiveCluster, getActiveNamespaceInfo, listClusters, listNamespaces } from '../k8s/resources/cluster.js';
 import { listEventsForObject } from '../k8s/resources/events.js';
+import { getNodeSeries, getPodSeries, getSparklines, getWorkloadHealth } from '../k8s/resources/metrics.js';
 import { getResource, listResources } from '../k8s/resources/index.js';
 import { getNode, listNodes } from '../k8s/resources/nodes.js';
 import { getSettings, updateSettings } from '../settings/store.js';
@@ -64,6 +66,11 @@ const handlers: Handlers = {
     'resources.get': (input) => getResource(input),
     'pods.logSnapshot': (input) => readPodLogSnapshot(input),
     'events.forObject': (input) => listEventsForObject(input),
+    'metrics.sparklines': () => getSparklines(),
+    'metrics.workloadHealth': () => getWorkloadHealth(),
+    'metrics.alerts': () => listAlerts(),
+    'metrics.podSeries': ({ namespace, name }) => getPodSeries(namespace, name),
+    'metrics.nodeSeries': ({ name }) => getNodeSeries(name),
     'kubeconfig.useDefault': async () => {
         const settings = updateSettings({ connection: { kubeconfigPath: null } });
         reloadKubeConfig();

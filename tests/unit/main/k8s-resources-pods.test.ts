@@ -24,6 +24,8 @@ const client = {
     },
 };
 vi.mock('../../../src/main/k8s/client.js', () => client);
+const sampler = { ensureSampler: vi.fn(), podUsage: vi.fn() };
+vi.mock('../../../src/main/k8s/sampler.js', () => sampler);
 
 const pods = await import('../../../src/main/k8s/resources/pods.js');
 
@@ -120,6 +122,8 @@ describe('toPod', () => {
             restarts: 0,
             age: '3d',
             node: 'n1',
+            cpu: 0,
+            mem: 0,
             cpuLimit: 500,
             memLimit: 128,
         });
@@ -252,6 +256,19 @@ describe('readers', () => {
         listPodForAllNamespaces.mockResolvedValue({
             items: [pod(), pod({ metadata: { name: 'other', namespace: 'kube-system' } })],
         });
+    });
+
+    it('merges the latest sampled usage into rows and starts the sampler', async () => {
+        sampler.podUsage.mockImplementation((ns: string, name: string) =>
+            ns === 'team-a' && name === 'web-1' ? { cpu: 250, mem: 64 } : undefined,
+        );
+        const [row] = await pods.listPods('team-a');
+        expect(row).toMatchObject({ cpu: 250, mem: 64, cpuLimit: 500, memLimit: 128 });
+        expect(sampler.ensureSampler).toHaveBeenCalled();
+        readNamespacedPod.mockResolvedValue(pod());
+        await expect(pods.getPod('web-1', 'team-a')).resolves.toMatchObject({ cpu: 250, mem: 64 });
+        sampler.podUsage.mockReturnValue(undefined);
+        expect((await pods.listPods('team-a'))[0]).toMatchObject({ cpu: 0, mem: 0 });
     });
 
     it('lists the explicit or active namespace, or everything when none is selected', async () => {

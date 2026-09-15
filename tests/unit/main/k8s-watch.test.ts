@@ -20,6 +20,8 @@ const client = {
     resolveNamespace: (explicit?: string) => explicit ?? 'team-a',
 };
 vi.mock('../../../src/main/k8s/client.js', () => client);
+const sampler = { ensureSampler: vi.fn(), podUsage: vi.fn(() => ({ cpu: 7, mem: 9 })) };
+vi.mock('../../../src/main/k8s/sampler.js', () => sampler);
 
 const { startResourceWatch, WATCH_RETRY_MS } = await import('../../../src/main/k8s/watch.js');
 

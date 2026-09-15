@@ -3,6 +3,14 @@ import type { AllowedChannel } from './ipc-channels.js';
 import { kubeContextSchema } from './k8s/contexts.js';
 import { clusterEventSchema, objectEventsInputSchema } from './k8s/events.js';
 import { logLineSchema, podLogSnapshotInputSchema } from './k8s/logs.js';
+import {
+    alertSchema,
+    clusterSparklinesSchema,
+    healthPointSchema,
+    nodeSeriesInputSchema,
+    podSeriesInputSchema,
+    resourceSeriesSchema,
+} from './k8s/metrics.js';
 import { ipcErrorSchema } from './k8s/errors.js';
 import { clusterSchema, namespaceSchema } from './k8s/cluster.js';
 import { nodeDetailSchema, nodeSchema } from './k8s/nodes.js';
@@ -85,6 +93,11 @@ export const ipcSchemas = {
     'resources.get': { input: resourceGetInputSchema, output: resourceGetOutputSchema },
     'pods.logSnapshot': { input: podLogSnapshotInputSchema, output: z.array(logLineSchema) },
     'events.forObject': { input: objectEventsInputSchema, output: z.array(clusterEventSchema) },
+    'metrics.sparklines': { input: noInput, output: clusterSparklinesSchema },
+    'metrics.workloadHealth': { input: noInput, output: z.array(healthPointSchema) },
+    'metrics.alerts': { input: noInput, output: z.array(alertSchema) },
+    'metrics.podSeries': { input: podSeriesInputSchema, output: resourceSeriesSchema },
+    'metrics.nodeSeries': { input: nodeSeriesInputSchema, output: resourceSeriesSchema },
 } as const;
 
 /**

@@ -3,6 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const client = { apis: vi.fn(), getActiveNamespace: vi.fn() };
 vi.mock('../../../src/main/k8s/client.js', () => client);
+const sampler = {
+    ensureSampler: vi.fn(),
+    nodeUsage: vi.fn(),
+    percent: (used: number, total: number) => (total > 0 ? Math.round((used / total) * 100) : 0),
+};
+vi.mock('../../../src/main/k8s/sampler.js', () => sampler);
 vi.mock('../../../src/main/k8s/context.js', () => ({ getCurrentContext: vi.fn(), listContexts: vi.fn() }));
 
 const nodes = await import('../../../src/main/k8s/resources/nodes.js');
@@ -73,6 +79,8 @@ describe('node transforms', () => {
             version: 'v1.36.4+k3s1',
             cpu: 4,
             memory: 7.8,
+            cpuUsed: null,
+            memUsed: null,
             pods: 7,
             age: '3d',
             instanceType: 'k3s',
@@ -125,12 +133,14 @@ describe('node readers', () => {
         });
     });
 
-    it('lists nodes with pods counted per node', async () => {
+    it('lists nodes with pods counted per node and usage as percent of allocatable', async () => {
+        sampler.nodeUsage.mockImplementation((name: string) => (name === 'n1' ? { cpu: 1000, mem: 3970 } : undefined));
         const list = await nodes.listNodes();
-        expect(list.map((n) => [n.name, n.pods])).toEqual([
-            ['n1', 2],
-            ['n2', 0],
+        expect(list.map((n) => [n.name, n.pods, n.cpuUsed, n.memUsed])).toEqual([
+            ['n1', 2, 25, 50],
+            ['n2', 0, null, null],
         ]);
+        expect(sampler.ensureSampler).toHaveBeenCalled();
     });
 
     it('gets one node by name or null', async () => {
