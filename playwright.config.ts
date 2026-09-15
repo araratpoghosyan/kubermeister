@@ -6,7 +6,7 @@ export default defineConfig({
     testDir: 'tests/e2e/specs',
     globalSetup: './tests/e2e/harness/global-setup.ts',
     globalTeardown: './tests/e2e/harness/global-teardown.ts',
-    timeout: 60_000,
+    timeout: 120_000,
     retries: 0,
     workers: 1,
     reporter: [['list']],

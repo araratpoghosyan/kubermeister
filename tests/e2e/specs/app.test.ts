@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { CONTEXT_NAME, NAMESPACE } from '../harness/cluster';
+import { CONTEXT_NAME, NAMESPACE, clusterKubectl } from '../harness/cluster';
 import { launchApp, type LaunchedApp } from '../harness/launch';
 
 let launched: LaunchedApp;
@@ -81,4 +81,23 @@ test('lists the seeded pod, opens its detail, and rescopes by namespace', async 
     await expect(window.getByTestId('active-namespace')).toContainText('kube-system');
     await expect(window.getByTestId('pods-table').locator('[data-pod^="web-"]')).toHaveCount(0);
     await expect(window.getByTestId('pods-table').locator('[data-pod^="coredns-"]')).toHaveCount(1);
+});
+
+test('keeps the pod list live: a deleted pod disappears and its replacement appears', async () => {
+    const { window } = launched;
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Pods' }).click();
+    const page = window.getByTestId('pods-page');
+    const rows = page.locator('[data-pod^="web-"]');
+    await expect(rows).toHaveCount(1);
+    await expect(page).toHaveAttribute('data-live', 'true');
+    const victim = await rows.first().getAttribute('data-pod');
+    expect(victim).toBeTruthy();
+
+    clusterKubectl(['-n', NAMESPACE, 'delete', 'pod', victim!, '--wait=false']);
+
+    await expect(page.locator(`[data-pod="${victim}"]`)).toHaveCount(0, { timeout: 45_000 });
+    const replacement = page.locator('[data-pod^="web-"]');
+    await expect(replacement).toHaveCount(1, { timeout: 45_000 });
+    await expect(replacement).toContainText('Running', { timeout: 60_000 });
+    expect(await replacement.getAttribute('data-pod')).not.toBe(victim);
 });

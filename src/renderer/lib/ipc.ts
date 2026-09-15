@@ -1,6 +1,7 @@
 import type { IpcChannel, IpcInput, IpcOutput, IpcResult } from '../../shared/ipc';
 import type { IpcError as IpcErrorShape, K8sErrorKind } from '../../shared/k8s/errors';
 import type { SubChannel, SubPayload } from '../../shared/ipc-subscriptions';
+import type { StreamChannel, StreamData, StreamInput, StreamMessage } from '../../shared/streams';
 
 /** A classified failure returned by the main process, rethrown with its structure intact. */
 export class IpcError extends Error {
@@ -31,4 +32,19 @@ export async function invoke<C extends IpcChannel>(channel: C, input: IpcInput<C
 /** Listen to a main-to-renderer push channel with its payload typed; returns the unsubscribe function. */
 export function subscribe<C extends SubChannel>(channel: C, handler: (payload: SubPayload<C>) => void): () => void {
     return window.km.subscribe(channel, handler as (payload: unknown) => void);
+}
+
+export interface StreamHandle {
+    stop: () => void;
+    /** Feed input to a bidirectional stream; a no-op for one-directional ones. */
+    send: (data: unknown) => void;
+}
+
+/** Open a typed stream over the bridge; messages carry the channel's data type. */
+export function stream<C extends StreamChannel>(
+    channel: C,
+    input: StreamInput<C>,
+    onMessage: (message: StreamMessage<StreamData<C>>) => void,
+): StreamHandle {
+    return window.km.stream(channel, input, onMessage as (message: unknown) => void);
 }

@@ -22,7 +22,7 @@
   "scripts": {
     "postinstall": "node node_modules/electron/install.js",
     "dev": "electron-vite dev",
-    "build": "electron-vite build",
+    "build": "electron-vite build && node scripts/check-preload.mjs",
     "preview": "electron-vite preview",
     "package": "node scripts/check-electron-notices.mjs && electron-builder --config electron-builder.yml --publish never",
     "package:dir": "node scripts/check-electron-notices.mjs && electron-builder --config electron-builder.yml --publish never --dir",

@@ -11,3 +11,4 @@ coverage/
 tests/e2e/.kubeconfig
 test-results/
 playwright-report/
+tests/e2e/.cluster.json

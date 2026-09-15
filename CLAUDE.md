@@ -52,6 +52,10 @@ Body: why the change is needed, what a reader of the history cannot learn from t
   Node-side relative imports (`src/main`, `src/shared`) carry explicit `.js` extensions; renderer
   imports omit them. `src/shared` is compiled by both tsconfig projects, so it must not touch DOM
   or Node APIs.
+- **The preload imports only `src/shared/ipc-channels.ts`**, which stays import-free. A sandboxed
+  preload cannot `require` anything but Electron built-ins; one stray import chain (zod, a schema
+  file) makes the bridge fail to load and leaves `window.km` undefined. `npm run build` runs
+  `scripts/check-preload.mjs`, which fails on any other `require` in the preload bundle.
 - `dependencies` holds only what the main process imports at runtime (it is externalized and
   shipped as `node_modules`). Everything renderer-side is a devDependency, bundled by Vite.
 - **Renderer hardening is never relaxed:** `sandbox`, `contextIsolation` on, `nodeIntegration`
@@ -69,6 +73,13 @@ Body: why the change is needed, what a reader of the history cannot learn from t
   with shadcn primitives in `src/renderer/components/ui` (add them with the shadcn CLI, do not hand
   roll). `@/` aliases `src/renderer`. Main-to-renderer pushes go through `subscribe` on the bridge,
   allowlisted in `src/shared/ipc-channels.ts` with payload schemas in `ipc-subscriptions.ts`.
+- **Streams** (`src/shared/streams.ts`, `src/main/ipc/streams.ts`) push many messages over time:
+  the preload's `stream()` mints a `sub.<subId>` event and drives `stream.start/send/stop`; main
+  keys every stream by window so one window can never address another's, and sweeps them on
+  reload or destroy. Lists stay live through `resources.watch` (`src/main/k8s/watch.ts`, the
+  client's informer, same row transforms as the list) and `useWatchedList` in
+  `src/renderer/lib/watch.ts`, which applies events into the list query's cache. Prefer a watch
+  over polling for anything that changes on its own.
 - **Resource reads** (`src/main/k8s/resources/*`) are pure transforms from Kubernetes objects to
   view models, exported and unit tested on their own, plus thin readers that fetch and delegate.
   Keep it that way so a watch stream can feed the same transforms later.
