@@ -87,9 +87,42 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      # Presence flag only; the token itself is used solely by the tap checkout below.
+      HAS_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
     steps:
       - name: Make the release public and latest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false --latest
+
+      # Homebrew cask: render the template with this version and the dmg checksums, push to the
+      # tap. Skipped when HOMEBREW_TAP_TOKEN is not configured so the release itself never blocks.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: env.HAS_TAP_TOKEN == 'true'
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: env.HAS_TAP_TOKEN == 'true'
+        with:
+          repository: araratpoghosyan/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+      - name: Render and push the cask
+        if: env.HAS_TAP_TOKEN == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          gh release download "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --pattern '*-mac-*.dmg' --dir dmgs
+          SHA_ARM=$(sha256sum "dmgs/Kubermeister-$VERSION-mac-arm64.dmg" | cut -d' ' -f1)
+          SHA_INTEL=$(sha256sum "dmgs/Kubermeister-$VERSION-mac-x64.dmg" | cut -d' ' -f1)
+          mkdir -p homebrew-tap/Casks
+          sed -e "s/__VERSION__/$VERSION/g" -e "s/__SHA_ARM__/$SHA_ARM/g" -e "s/__SHA_INTEL__/$SHA_INTEL/g" \
+            packaging/homebrew/kubermeister.rb.tmpl > homebrew-tap/Casks/kubermeister.rb
+          cd homebrew-tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/kubermeister.rb
+          git diff --cached --quiet && { echo "cask unchanged"; exit 0; }
+          git commit -m "kubermeister $VERSION"
+          git push

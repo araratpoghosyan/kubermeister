@@ -20,6 +20,13 @@ Download the `.dmg` for your Mac: `mac-arm64` for Apple silicon, `mac-x64` for I
 drag the app into Applications. Builds are signed and notarized, so the app opens without any
 security prompt.
 
+Or install with [Homebrew](https://brew.sh):
+
+```sh
+brew install --cask araratpoghosyan/tap/kubermeister        # stable
+brew install --cask araratpoghosyan/tap/kubermeister@tip    # tip
+```
+
 ### Windows
 
 Download the `win-x64.exe` installer and run it. The installer is not code-signed yet, so Windows
@@ -43,6 +50,7 @@ sudo apt install ./Kubermeister-*-linux-amd64.deb
 
 ### Updating
 
-Download the newer build and install it over the existing one; settings are kept. Tip assets are
-replaced in place on every rebuild, so the Tip download link always points at the latest build.
-In-app updates are coming.
+The app checks for updates on launch and every few hours, downloads them in the background, and
+installs on restart. Stable follows stable releases; Tip follows the nightly build. Installing a
+newer download over the existing app also works; settings are kept. Homebrew users can run
+`brew upgrade` as well.
