@@ -1,5 +1,6 @@
 import type { IpcChannel, IpcInput, IpcOutput, IpcResult } from '../../shared/ipc';
 import type { IpcError as IpcErrorShape, K8sErrorKind } from '../../shared/k8s/errors';
+import type { SubChannel, SubPayload } from '../../shared/ipc-subscriptions';
 
 /** A classified failure returned by the main process, rethrown with its structure intact. */
 export class IpcError extends Error {
@@ -25,4 +26,9 @@ export async function invoke<C extends IpcChannel>(channel: C, input: IpcInput<C
     const result = (await window.km.invoke(channel, input)) as IpcResult<IpcOutput<C>>;
     if (!result.ok) throw new IpcError(result.error);
     return result.data;
+}
+
+/** Listen to a main-to-renderer push channel with its payload typed; returns the unsubscribe function. */
+export function subscribe<C extends SubChannel>(channel: C, handler: (payload: SubPayload<C>) => void): () => void {
+    return window.km.subscribe(channel, handler as (payload: unknown) => void);
 }

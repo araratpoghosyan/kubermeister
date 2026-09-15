@@ -2,6 +2,7 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
 import globals from 'globals';
+import reactHooks from 'eslint-plugin-react-hooks';
 
 export default tseslint.config(
     js.configs.recommended,
@@ -10,6 +11,11 @@ export default tseslint.config(
         // Plain Node scripts and root config files run under Node, not the browser.
         files: ['scripts/**/*.mjs', '*.config.{mjs,ts}', 'eslint.config.mjs'],
         languageOptions: { globals: globals.node },
+    },
+    {
+        files: ['src/renderer/**/*.{ts,tsx}', 'tests/unit/renderer/**/*.{ts,tsx}'],
+        plugins: { 'react-hooks': reactHooks },
+        rules: { ...reactHooks.configs.recommended.rules },
     },
     {
         rules: {
@@ -24,7 +30,7 @@ export default tseslint.config(
         // async handlers passed where a sync callback is expected, the two IPC-heavy Electron bugs
         // that survive `strict`. The full type-checked preset fights the deliberate `unknown` at
         // the bridge boundary.
-        files: ['src/**/*.ts'],
+        files: ['src/**/*.{ts,tsx}'],
         languageOptions: {
             parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
         },
@@ -36,7 +42,7 @@ export default tseslint.config(
     {
         // The untyped `window.km` bridge is reachable only through the typed wrapper in lib/ipc.ts,
         // so a wrong channel name or payload shape fails at compile time, at one seam.
-        files: ['src/renderer/**/*.ts'],
+        files: ['src/renderer/**/*.{ts,tsx}'],
         ignores: ['src/renderer/lib/ipc.ts'],
         rules: {
             'no-restricted-syntax': [
@@ -49,5 +55,5 @@ export default tseslint.config(
         },
     },
     prettier,
-    { ignores: ['out/**', 'dist/**', 'release/**'] },
+    { ignores: ['out/**', 'dist/**', 'release/**', 'coverage/**', 'src/renderer/routeTree.gen.ts'] },
 );

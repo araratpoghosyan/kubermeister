@@ -1,0 +1,15 @@
+import { z } from 'zod';
+import type { AllowedSubscription } from './ipc-channels.js';
+import { updateStateSchema } from './ipc.js';
+
+/**
+ * Main-to-renderer push channels. Each id names a `sub.<id>` event the preload lets the renderer
+ * listen to; the payload schema is validated in main before sending. Kept separate from the
+ * request channels so the preload allowlist stays a plain string array.
+ */
+export const subSchemas = {
+    'update.state': updateStateSchema,
+} as const satisfies Record<AllowedSubscription, z.ZodType>;
+
+export type SubChannel = AllowedSubscription;
+export type SubPayload<C extends SubChannel> = z.infer<(typeof subSchemas)[C]>;
