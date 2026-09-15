@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { AllowedChannel } from './ipc-channels.js';
 import { kubeContextSchema } from './k8s/contexts.js';
 import { clusterEventSchema, objectEventsInputSchema } from './k8s/events.js';
+import { limitRangeSchema, resourceQuotaSchema } from './k8s/overview.js';
 import { logLineSchema, podLogSnapshotInputSchema } from './k8s/logs.js';
 import {
     alertSchema,
@@ -73,6 +74,9 @@ const startupReportSchema = z.object({
 
 const namespaceSelectionSchema = z.object({ namespace: z.string().nullable() });
 
+/** Reads scoped to one namespace, or to the active selection when omitted. */
+const namespacedListSchema = z.object({ namespace: z.string().min(1).optional() });
+
 /**
  * The renderer-to-main contract. Every channel declares its input and output schema; main validates
  * both at the boundary and the renderer recovers the types through `lib/ipc.ts`.
@@ -102,6 +106,9 @@ export const ipcSchemas = {
     'pods.logSnapshot': { input: podLogSnapshotInputSchema, output: z.array(logLineSchema) },
     'events.forObject': { input: objectEventsInputSchema, output: z.array(clusterEventSchema) },
     'events.recent': { input: noInput, output: z.array(clusterEventSchema) },
+    'events.list': { input: namespacedListSchema, output: z.array(clusterEventSchema) },
+    'quotas.list': { input: namespacedListSchema, output: z.array(resourceQuotaSchema) },
+    'limits.list': { input: namespacedListSchema, output: z.array(limitRangeSchema) },
     'metrics.sparklines': { input: noInput, output: clusterSparklinesSchema },
     'metrics.workloadHealth': { input: noInput, output: z.array(healthPointSchema) },
     'metrics.alerts': { input: noInput, output: z.array(alertSchema) },

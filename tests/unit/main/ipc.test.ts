@@ -28,7 +28,8 @@ const resources = {
 const nodesMod = { listNodes: vi.fn(), getNode: vi.fn() };
 const generic = { listResources: vi.fn(), getResource: vi.fn() };
 const logsMod = { readPodLogSnapshot: vi.fn() };
-const eventsMod = { listEventsForObject: vi.fn(), listRecentEvents: vi.fn() };
+const eventsMod = { listEventsForObject: vi.fn(), listRecentEvents: vi.fn(), listEvents: vi.fn() };
+const overviewMod = { listQuotas: vi.fn(), listLimits: vi.fn() };
 const metricsMod = {
     getSparklines: vi.fn(),
     getWorkloadHealth: vi.fn(),
@@ -53,6 +54,7 @@ vi.mock('../../../src/main/k8s/resources/metrics.js', () => metricsMod);
 vi.mock('../../../src/main/k8s/alerts.js', () => alertsMod);
 vi.mock('../../../src/main/k8s/resources/workloads.js', () => workloadsMod);
 vi.mock('../../../src/main/k8s/resources/config.js', () => configMod);
+vi.mock('../../../src/main/k8s/resources/overview.js', () => overviewMod);
 
 const { registerHandlers } = await import('../../../src/main/ipc/index.js');
 const { ipcSchemas } = await import('../../../src/shared/ipc.js');
@@ -318,6 +320,19 @@ describe('registerHandlers', () => {
             { key: 'password', masked: '••••••••' },
         ]);
         await expect(invoke('secrets.entries', { name: 'app-secret' })).rejects.toThrow();
+    });
+
+    it('forwards the overview list channels with their namespace scope', async () => {
+        const ev = { time: '12:00:00', type: 'Normal', reason: 'r', object: 'pod/x', message: 'm' };
+        eventsMod.listEvents.mockResolvedValue([ev]);
+        overviewMod.listQuotas.mockResolvedValue([]);
+        overviewMod.listLimits.mockResolvedValue([]);
+        await expect(invoke('events.list', { namespace: 'team-a' })).resolves.toEqual([ev]);
+        expect(eventsMod.listEvents).toHaveBeenCalledWith('team-a');
+        await expect(invoke('quotas.list', {})).resolves.toEqual([]);
+        expect(overviewMod.listQuotas).toHaveBeenCalledWith(undefined);
+        await expect(invoke('limits.list', {})).resolves.toEqual([]);
+        await expect(invoke('quotas.list', { namespace: '' })).rejects.toThrow();
     });
 
     it('resets to the default kubeconfig and reloads', async () => {

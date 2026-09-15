@@ -4,6 +4,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const core = { listNamespacedEvent: vi.fn(), listEventForAllNamespaces: vi.fn() };
 const client = {
     apis: () => ({ core }),
+    listItems: async <T>(
+        ns: string | undefined,
+        namespaced: (ns: string) => Promise<{ items: T[] }>,
+        all: () => Promise<{ items: T[] }>,
+    ) => {
+        const resolved = ns ?? client.getActiveNamespace() ?? undefined;
+        return resolved ? namespaced(resolved) : all();
+    },
     getActiveNamespace: vi.fn<() => string | null>(),
     resolveObjectNamespace: (explicit?: string) => explicit ?? client.getActiveNamespace(),
     isSafeSelectorValue: (value: string) => /^[A-Za-z0-9._-]+$/.test(value),
@@ -145,5 +153,35 @@ describe('listRecentEvents', () => {
     it('classifies failures under its channel op', async () => {
         core.listEventForAllNamespaces.mockRejectedValue(new Error('boom'));
         await expect(events.listRecentEvents()).rejects.toMatchObject({ op: 'events.recent' });
+    });
+});
+
+describe('listEvents', () => {
+    beforeEach(() => {
+        core.listNamespacedEvent.mockReset();
+        core.listEventForAllNamespaces.mockReset();
+        client.getActiveNamespace.mockReturnValue('team-a');
+    });
+
+    it('reads a bounded page in the active or explicit namespace, newest first', async () => {
+        core.listNamespacedEvent.mockResolvedValue({
+            items: [
+                event({ reason: 'older', lastTimestamp: new Date('2026-09-15T11:00:00Z') }),
+                event({ reason: 'newer' }),
+            ],
+        });
+        expect((await events.listEvents()).map((e) => e.reason)).toEqual(['newer', 'older']);
+        expect(core.listNamespacedEvent).toHaveBeenCalledWith({ namespace: 'team-a', limit: 500 });
+        await events.listEvents('explicit');
+        expect(core.listNamespacedEvent).toHaveBeenLastCalledWith({ namespace: 'explicit', limit: 500 });
+    });
+
+    it('falls back to every namespace and classifies failures', async () => {
+        client.getActiveNamespace.mockReturnValue(null);
+        core.listEventForAllNamespaces.mockResolvedValue({ items: [] });
+        await expect(events.listEvents()).resolves.toEqual([]);
+        expect(core.listEventForAllNamespaces).toHaveBeenCalledWith({ limit: 500 });
+        core.listEventForAllNamespaces.mockRejectedValue(new Error('boom'));
+        await expect(events.listEvents()).rejects.toMatchObject({ op: 'events.list' });
     });
 });

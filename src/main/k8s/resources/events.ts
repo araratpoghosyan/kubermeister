@@ -1,6 +1,6 @@
 import type { CoreV1Event } from '@kubernetes/client-node';
 import type { ClusterEvent, EventType, ObjectEventsInput } from '../../../shared/k8s/events.js';
-import { apis, isSafeSelectorValue, resolveObjectNamespace } from '../client.js';
+import { apis, isSafeSelectorValue, listItems, resolveObjectNamespace } from '../client.js';
 import { withK8s } from '../errors.js';
 
 /** The most recent of the timestamps an event may carry, as ISO; undefined when it has none. */
@@ -49,6 +49,18 @@ export function listRecentEvents(): Promise<ClusterEvent[]> {
     return withK8s('events.recent', async () => {
         const result = await apis().core.listEventForAllNamespaces({ limit: EVENT_LIST_LIMIT });
         return sortedByTimeDesc(result.items).slice(0, RECENT_EVENTS).map(toClusterEvent);
+    });
+}
+
+/** Every event in the explicit, active or all namespaces, newest first. */
+export function listEvents(namespace?: string): Promise<ClusterEvent[]> {
+    return withK8s('events.list', async () => {
+        const { items } = await listItems(
+            namespace,
+            (ns) => apis().core.listNamespacedEvent({ namespace: ns, limit: EVENT_LIST_LIMIT }),
+            () => apis().core.listEventForAllNamespaces({ limit: EVENT_LIST_LIMIT }),
+        );
+        return sortedByTimeDesc(items).map(toClusterEvent);
     });
 }
 

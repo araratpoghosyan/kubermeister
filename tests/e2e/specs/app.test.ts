@@ -239,3 +239,23 @@ test('shows config map entries and masks secret values', async () => {
     await expect(secret.getByTestId('secret-keys').getByRole('cell', { name: 'password' })).toBeVisible();
     await expect(window.getByText(/super-secret-value/)).toHaveCount(0);
 });
+
+test('shows the events stream, the namespace quota and its limit range', async () => {
+    const { window } = launched;
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Events stream' }).click();
+    const events = window.getByTestId('events-table');
+    await expect(events.getByRole('row')).not.toHaveCount(1, { timeout: 30_000 });
+    await expect(events).toContainText('pod/');
+
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Quotas' }).click();
+    const quotas = window.getByTestId('quotas-table');
+    await expect(quotas).toContainText('team-quota');
+    await expect(quotas).toContainText('requests.cpu');
+    await expect(quotas.getByRole('progressbar').first()).toBeVisible();
+
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Limits' }).click();
+    const limits = window.getByTestId('limits-table');
+    await expect(limits).toContainText('team-limits');
+    await expect(limits).toContainText('Container');
+    await expect(limits).toContainText('500m');
+});

@@ -11,8 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root';
 import { Route as IndexRouteImport } from './routes/index';
 import { Route as SettingsRouteImport } from './routes/settings';
+import { Route as OverviewEventsRouteImport } from './routes/overview/events';
+import { Route as OverviewLimitsRouteImport } from './routes/overview/limits';
 import { Route as OverviewNamespacesRouteImport } from './routes/overview/namespaces';
 import { Route as OverviewNodesRouteImport } from './routes/overview/nodes';
+import { Route as OverviewQuotasRouteImport } from './routes/overview/quotas';
 import { Route as OverviewSummaryRouteImport } from './routes/overview/summary';
 import { Route as OverviewNodesNameRouteImport } from './routes/overview/nodes_.$name';
 import { Route as WorkloadsAutoscalersIndexRouteImport } from './routes/workloads/autoscalers/index';
@@ -44,6 +47,16 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any);
+const OverviewEventsRoute = OverviewEventsRouteImport.update({
+  id: '/overview/events',
+  path: '/overview/events',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const OverviewLimitsRoute = OverviewLimitsRouteImport.update({
+  id: '/overview/limits',
+  path: '/overview/limits',
+  getParentRoute: () => rootRouteImport,
+} as any);
 const OverviewNamespacesRoute = OverviewNamespacesRouteImport.update({
   id: '/overview/namespaces',
   path: '/overview/namespaces',
@@ -52,6 +65,11 @@ const OverviewNamespacesRoute = OverviewNamespacesRouteImport.update({
 const OverviewNodesRoute = OverviewNodesRouteImport.update({
   id: '/overview/nodes',
   path: '/overview/nodes',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const OverviewQuotasRoute = OverviewQuotasRouteImport.update({
+  id: '/overview/quotas',
+  path: '/overview/quotas',
   getParentRoute: () => rootRouteImport,
 } as any);
 const OverviewSummaryRoute = OverviewSummaryRouteImport.update({
@@ -172,8 +190,11 @@ const WorkloadsStatefulsetsNamespaceNameRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute;
   '/settings': typeof SettingsRoute;
+  '/overview/events': typeof OverviewEventsRoute;
+  '/overview/limits': typeof OverviewLimitsRoute;
   '/overview/namespaces': typeof OverviewNamespacesRoute;
   '/overview/nodes': typeof OverviewNodesRoute;
+  '/overview/quotas': typeof OverviewQuotasRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
   '/overview/nodes/$name': typeof OverviewNodesNameRoute;
   '/workloads/autoscalers/': typeof WorkloadsAutoscalersIndexRoute;
@@ -198,8 +219,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute;
   '/settings': typeof SettingsRoute;
+  '/overview/events': typeof OverviewEventsRoute;
+  '/overview/limits': typeof OverviewLimitsRoute;
   '/overview/namespaces': typeof OverviewNamespacesRoute;
   '/overview/nodes': typeof OverviewNodesRoute;
+  '/overview/quotas': typeof OverviewQuotasRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
   '/overview/nodes/$name': typeof OverviewNodesNameRoute;
   '/workloads/autoscalers': typeof WorkloadsAutoscalersIndexRoute;
@@ -225,8 +249,11 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   '/': typeof IndexRoute;
   '/settings': typeof SettingsRoute;
+  '/overview/events': typeof OverviewEventsRoute;
+  '/overview/limits': typeof OverviewLimitsRoute;
   '/overview/namespaces': typeof OverviewNamespacesRoute;
   '/overview/nodes': typeof OverviewNodesRoute;
+  '/overview/quotas': typeof OverviewQuotasRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
   '/overview/nodes_/$name': typeof OverviewNodesNameRoute;
   '/workloads/autoscalers/': typeof WorkloadsAutoscalersIndexRoute;
@@ -253,8 +280,11 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/settings'
+    | '/overview/events'
+    | '/overview/limits'
     | '/overview/namespaces'
     | '/overview/nodes'
+    | '/overview/quotas'
     | '/overview/summary'
     | '/overview/nodes/$name'
     | '/workloads/autoscalers/'
@@ -279,8 +309,11 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/settings'
+    | '/overview/events'
+    | '/overview/limits'
     | '/overview/namespaces'
     | '/overview/nodes'
+    | '/overview/quotas'
     | '/overview/summary'
     | '/overview/nodes/$name'
     | '/workloads/autoscalers'
@@ -305,8 +338,11 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/settings'
+    | '/overview/events'
+    | '/overview/limits'
     | '/overview/namespaces'
     | '/overview/nodes'
+    | '/overview/quotas'
     | '/overview/summary'
     | '/overview/nodes_/$name'
     | '/workloads/autoscalers/'
@@ -332,8 +368,11 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
   SettingsRoute: typeof SettingsRoute;
+  OverviewEventsRoute: typeof OverviewEventsRoute;
+  OverviewLimitsRoute: typeof OverviewLimitsRoute;
   OverviewNamespacesRoute: typeof OverviewNamespacesRoute;
   OverviewNodesRoute: typeof OverviewNodesRoute;
+  OverviewQuotasRoute: typeof OverviewQuotasRoute;
   OverviewSummaryRoute: typeof OverviewSummaryRoute;
   OverviewNodesNameRoute: typeof OverviewNodesNameRoute;
   WorkloadsAutoscalersIndexRoute: typeof WorkloadsAutoscalersIndexRoute;
@@ -372,6 +411,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/overview/events': {
+      id: '/overview/events';
+      path: '/overview/events';
+      fullPath: '/overview/events';
+      preLoaderRoute: typeof OverviewEventsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/overview/limits': {
+      id: '/overview/limits';
+      path: '/overview/limits';
+      fullPath: '/overview/limits';
+      preLoaderRoute: typeof OverviewLimitsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/overview/namespaces': {
       id: '/overview/namespaces';
       path: '/overview/namespaces';
@@ -384,6 +437,13 @@ declare module '@tanstack/react-router' {
       path: '/overview/nodes';
       fullPath: '/overview/nodes';
       preLoaderRoute: typeof OverviewNodesRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/overview/quotas': {
+      id: '/overview/quotas';
+      path: '/overview/quotas';
+      fullPath: '/overview/quotas';
+      preLoaderRoute: typeof OverviewQuotasRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/overview/summary': {
@@ -532,8 +592,11 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SettingsRoute: SettingsRoute,
+  OverviewEventsRoute: OverviewEventsRoute,
+  OverviewLimitsRoute: OverviewLimitsRoute,
   OverviewNamespacesRoute: OverviewNamespacesRoute,
   OverviewNodesRoute: OverviewNodesRoute,
+  OverviewQuotasRoute: OverviewQuotasRoute,
   OverviewSummaryRoute: OverviewSummaryRoute,
   OverviewNodesNameRoute: OverviewNodesNameRoute,
   WorkloadsAutoscalersIndexRoute: WorkloadsAutoscalersIndexRoute,
