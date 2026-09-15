@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
     CLUSTER_TONE,
     CONTAINER_TONE,
+    DEPLOYMENT_TONE,
     NAMESPACE_TONE,
     NODE_TONE,
     POD_TONE,
+    ROLLOUT_TONE,
     usageTone,
 } from '../../../src/renderer/lib/status';
 
@@ -33,6 +35,8 @@ describe('status tones', () => {
             'Running',
             'Unknown',
         ]);
+        expect(DEPLOYMENT_TONE).toEqual({ Healthy: 'ok', Available: 'ok', Progressing: 'warn' });
+        expect(ROLLOUT_TONE).toEqual({ Current: 'ok', Superseded: 'neutral' });
     });
 
     it('grades usage percentages', () => {

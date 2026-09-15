@@ -4,6 +4,7 @@ import type { LogLine } from './k8s/logs.js';
 import { podSchema } from './k8s/pods.js';
 import type { Kind } from './k8s/registry.js';
 import { resourceListInputSchema, type ResourceListInput } from './k8s/resources.js';
+import { daemonSetSchema, deploymentSchema, statefulSetSchema } from './k8s/workloads.js';
 
 /**
  * Streaming contract, separate from the one-shot `invoke` channels. A stream pushes many messages
@@ -25,8 +26,12 @@ export interface StreamController {
 }
 
 /** One change to a watched list. `added` also replays the current objects when a watch starts. */
+const watchType = z.enum(['added', 'modified', 'deleted']);
 export const watchEventSchema = z.discriminatedUnion('kind', [
-    z.object({ kind: z.literal('Pod'), type: z.enum(['added', 'modified', 'deleted']), item: podSchema }),
+    z.object({ kind: z.literal('Pod'), type: watchType, item: podSchema }),
+    z.object({ kind: z.literal('Deployment'), type: watchType, item: deploymentSchema }),
+    z.object({ kind: z.literal('StatefulSet'), type: watchType, item: statefulSetSchema }),
+    z.object({ kind: z.literal('DaemonSet'), type: watchType, item: daemonSetSchema }),
 ]);
 
 export type WatchEvent = z.infer<typeof watchEventSchema>;

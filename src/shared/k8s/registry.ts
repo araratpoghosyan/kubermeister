@@ -18,6 +18,27 @@ export interface KindInfo {
 
 export const KIND_REGISTRY = {
     Pod: { kind: 'Pod', apiVersion: 'v1', clusterScoped: false, scalable: false, listPath: '/workloads/pods' },
+    Deployment: {
+        kind: 'Deployment',
+        apiVersion: 'apps/v1',
+        clusterScoped: false,
+        scalable: true,
+        listPath: '/workloads/deployments',
+    },
+    StatefulSet: {
+        kind: 'StatefulSet',
+        apiVersion: 'apps/v1',
+        clusterScoped: false,
+        scalable: true,
+        listPath: '/workloads/statefulsets',
+    },
+    DaemonSet: {
+        kind: 'DaemonSet',
+        apiVersion: 'apps/v1',
+        clusterScoped: false,
+        scalable: false,
+        listPath: '/workloads/daemonsets',
+    },
 } as const satisfies Record<string, KindInfo>;
 
 export type Kind = keyof typeof KIND_REGISTRY;

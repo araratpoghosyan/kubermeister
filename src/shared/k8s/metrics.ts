@@ -34,6 +34,7 @@ export const resourceSeriesSchema = z.object({
 
 export const podSeriesInputSchema = z.object({ namespace: z.string().min(1), name: z.string().min(1) });
 export const nodeSeriesInputSchema = z.object({ name: z.string().min(1) });
+export const deploymentSeriesInputSchema = podSeriesInputSchema;
 
 export type Usage = z.infer<typeof usageSchema>;
 export type ClusterSparklines = z.infer<typeof clusterSparklinesSchema>;

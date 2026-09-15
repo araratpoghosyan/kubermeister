@@ -23,7 +23,13 @@ const podRow = {
 
 describe('kind registry', () => {
     it('knows every kind with its API facts and list path', () => {
-        expect(KINDS).toEqual(['Pod']);
+        expect(KINDS).toEqual(['Pod', 'Deployment', 'StatefulSet', 'DaemonSet']);
+        expect(kindInfo('Deployment')).toMatchObject({
+            apiVersion: 'apps/v1',
+            scalable: true,
+            listPath: '/workloads/deployments',
+        });
+        expect(kindInfo('DaemonSet').scalable).toBe(false);
         expect(kindInfo('Pod')).toEqual({
             kind: 'Pod',
             apiVersion: 'v1',
@@ -37,7 +43,8 @@ describe('kind registry', () => {
     it('rejects unknown kinds at the schema boundary', () => {
         expect(kindSchema.safeParse('Pod').success).toBe(true);
         expect(kindSchema.safeParse('pod').success).toBe(false);
-        expect(kindSchema.safeParse('Deployment').success).toBe(false);
+        expect(kindSchema.safeParse('Deployment').success).toBe(true);
+        expect(kindSchema.safeParse('ReplicaSet').success).toBe(false);
     });
 });
 
@@ -57,5 +64,46 @@ describe('generic resource channels', () => {
         ).toBe(false);
         expect(resourceGetOutputSchema.safeParse({ kind: 'Pod', item: null }).success).toBe(true);
         expect(resourceGetOutputSchema.safeParse({ kind: 'Node', item: null }).success).toBe(false);
+        const deployment = {
+            name: 'web',
+            namespace: 'a',
+            status: 'Healthy',
+            ready: '1/1',
+            replicas: 1,
+            updated: 1,
+            available: 1,
+            strategy: 'RollingUpdate',
+            image: 'x',
+            age: '1h',
+        };
+        expect(resourceListOutputSchema.safeParse({ kind: 'Deployment', items: [deployment] }).success).toBe(true);
+        expect(
+            resourceListOutputSchema.safeParse({ kind: 'Deployment', items: [{ ...deployment, status: 'Odd' }] })
+                .success,
+        ).toBe(false);
+        expect(resourceGetOutputSchema.safeParse({ kind: 'Deployment', item: deployment }).success).toBe(false);
+        expect(
+            resourceGetOutputSchema.safeParse({
+                kind: 'Deployment',
+                item: { ...deployment, labels: [], annotations: [] },
+            }).success,
+        ).toBe(true);
+        expect(
+            resourceListOutputSchema.safeParse({
+                kind: 'DaemonSet',
+                items: [
+                    {
+                        name: 'a',
+                        namespace: 'b',
+                        desired: 1,
+                        current: 1,
+                        ready: 1,
+                        upToDate: 1,
+                        nodeSelector: '<none>',
+                        age: '1h',
+                    },
+                ],
+            }).success,
+        ).toBe(true);
     });
 });

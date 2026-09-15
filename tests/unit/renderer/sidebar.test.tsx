@@ -34,6 +34,21 @@ describe('Sidebar', () => {
         expect(within(sidebar).getByRole('link', { name: 'Nodes' })).not.toHaveAttribute('aria-current');
         expect(within(sidebar).getByRole('button', { name: 'Workloads' })).toHaveAttribute('aria-expanded', 'true');
         expect(within(sidebar).getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-expanded', 'true');
+        expect(sidebar).toHaveTextContent('COMPUTE');
+        expect(
+            within(sidebar)
+                .getAllByRole('link')
+                .map((l) => l.textContent),
+        ).toEqual([
+            'Cluster summary',
+            'Nodes',
+            'Namespaces',
+            'Pods',
+            'Deployments',
+            'StatefulSets',
+            'DaemonSets',
+            'Settings',
+        ]);
     });
 
     it('collapses and expands a domain on demand and keeps the choice across navigation', async () => {

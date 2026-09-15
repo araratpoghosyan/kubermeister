@@ -118,8 +118,12 @@ Body: why the change is needed, what a reader of the history cannot learn from t
 - **Kinds go through the generic channels.** `src/shared/k8s/registry.ts` holds one entry per kind;
   `resources.list` and `resources.get` take a `kind` and return a union discriminated on it
   (`src/shared/k8s/resources.ts`), with per-kind fetchers registered in
-  `src/main/k8s/resources/index.ts`. Adding a kind: registry entry, view-model schema, transforms
-  plus readers, union member, fetcher entry, renderer hook usage. Aggregates that are not a plain
+  `src/main/k8s/resources/index.ts`. Adding a kind: registry entry, view-model schema (a row and,
+  when the detail shows more, a detail extension with label pairs), transforms plus readers, union
+  members in `resources.ts` and `streams.ts`, fetcher entry, watch source in `watch.ts`, a
+  `list/index.tsx` plus `list/$namespace.$name.tsx` route pair, a navigation item and a tone map.
+  Deployments also have `deployments.replicaSets`, `deployments.rollouts` and
+  `metrics.deploymentSeries` (the sum of the selected pods' tracked series). Aggregates that are not a plain
   kind (cluster summary, namespaces with pod counts, nodes) keep bespoke channels. Detail routes
   carry the namespace: `/workloads/pods/$namespace/$name`.
 - **Kubernetes access** lives in `src/main/k8s`. The kubeconfig is read-only: switching context
@@ -178,8 +182,9 @@ updates need the `zip` target next to the dmg. Icons regenerate from `resources/
 - **End to end: Playwright** (`playwright.config.ts`, `tests/e2e/`) drives the built app, so run
   `npm run build` before `npm run test:e2e`. `harness/cluster.ts` starts the k3s container,
   `harness/isolation.ts` is the guard, `harness/launch.ts` launches the app with a throwaway
-  `KUBERMEISTER_USER_DATA`. Needs Docker; ubuntu only in CI. `KM_E2E_KEEP_CLUSTER=1` keeps the
-  container between local runs.
+  `KUBERMEISTER_USER_DATA` and `KUBERMEISTER_SHOW_INACTIVE`, so the window never takes focus and
+  keystrokes typed during a local run stay in the terminal. Needs Docker; ubuntu only in CI.
+  `KM_E2E_KEEP_CLUSTER=1` keeps the container between local runs.
 - **Component tests** (`tests/unit/renderer`, jsdom project) use Testing Library; mock `@/lib/ipc`
   at the module boundary and render through `renderWithQuery`, or `renderRoutes` for anything that
   needs the router or the shell (both wrap the theme, query and tooltip providers). Radix menus and

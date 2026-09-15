@@ -34,6 +34,22 @@ describe('stream contract', () => {
         expect(watchEventSchema.safeParse({ kind: 'Pod', type: 'added', item: row }).success).toBe(true);
         expect(watchEventSchema.safeParse({ kind: 'Pod', type: 'renamed', item: row }).success).toBe(false);
         expect(watchEventSchema.safeParse({ kind: 'Node', type: 'added', item: row }).success).toBe(false);
+        const deployment = {
+            name: 'web',
+            namespace: 'a',
+            status: 'Healthy',
+            ready: '1/1',
+            replicas: 1,
+            updated: 1,
+            available: 1,
+            strategy: 'RollingUpdate',
+            image: 'x',
+            age: '1h',
+        };
+        expect(watchEventSchema.safeParse({ kind: 'Deployment', type: 'modified', item: deployment }).success).toBe(
+            true,
+        );
+        expect(watchEventSchema.safeParse({ kind: 'Deployment', type: 'modified', item: row }).success).toBe(false);
     });
 
     it('accepts only known channels and safe subscription ids in control envelopes', () => {

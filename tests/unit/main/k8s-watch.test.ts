@@ -14,9 +14,25 @@ vi.mock('@kubernetes/client-node', async () => ({
 
 const listNamespacedPod = vi.fn(async () => ({ items: [] }));
 const listPodForAllNamespaces = vi.fn(async () => ({ items: [] }));
+const listNamespacedDeployment = vi.fn(async () => ({ items: [] }));
+const listDeploymentForAllNamespaces = vi.fn(async () => ({ items: [] }));
+const listNamespacedStatefulSet = vi.fn(async () => ({ items: [] }));
+const listStatefulSetForAllNamespaces = vi.fn(async () => ({ items: [] }));
+const listNamespacedDaemonSet = vi.fn(async () => ({ items: [] }));
+const listDaemonSetForAllNamespaces = vi.fn(async () => ({ items: [] }));
 const client = {
     kubeConfig: () => ({ fake: true }),
-    apis: () => ({ core: { listNamespacedPod, listPodForAllNamespaces } }),
+    apis: () => ({
+        core: { listNamespacedPod, listPodForAllNamespaces },
+        apps: {
+            listNamespacedDeployment,
+            listDeploymentForAllNamespaces,
+            listNamespacedStatefulSet,
+            listStatefulSetForAllNamespaces,
+            listNamespacedDaemonSet,
+            listDaemonSetForAllNamespaces,
+        },
+    }),
     resolveNamespace: (explicit?: string) => explicit ?? 'team-a',
 };
 vi.mock('../../../src/main/k8s/client.js', () => client);
@@ -107,8 +123,89 @@ describe('startResourceWatch', () => {
         expect(send.mock.calls.filter((c) => c[0].type === 'data')).toHaveLength(0);
     });
 
+    it('watches the workload kinds on their apps paths with their row transforms', async () => {
+        const send = vi.fn();
+        await startResourceWatch({ kind: 'Deployment', namespace: 'team-a' }, send);
+        expect(makeInformer).toHaveBeenLastCalledWith(
+            expect.anything(),
+            '/apis/apps/v1/namespaces/team-a/deployments',
+            expect.any(Function),
+        );
+        await (makeInformer.mock.calls[0] as unknown[])[2]!();
+        expect(listNamespacedDeployment).toHaveBeenCalledWith({ namespace: 'team-a' });
+        informer.emit('add', {
+            metadata: { name: 'web', namespace: 'team-a' },
+            spec: { replicas: 1 },
+            status: { availableReplicas: 1 },
+        });
+        expect(send.mock.calls[0]![0]).toMatchObject({
+            data: { kind: 'Deployment', type: 'added', item: { name: 'web', status: 'Healthy', ready: '0/1' } },
+        });
+
+        client.resolveNamespace = () => undefined;
+        await startResourceWatch({ kind: 'DaemonSet' }, vi.fn());
+        expect(makeInformer).toHaveBeenLastCalledWith(
+            expect.anything(),
+            '/apis/apps/v1/daemonsets',
+            expect.any(Function),
+        );
+        await (makeInformer.mock.calls[1] as unknown[])[2]!();
+        expect(listDaemonSetForAllNamespaces).toHaveBeenCalled();
+        client.resolveNamespace = (explicit?: string) => explicit ?? 'team-a';
+        await startResourceWatch({ kind: 'StatefulSet' }, vi.fn());
+        expect(makeInformer).toHaveBeenLastCalledWith(
+            expect.anything(),
+            '/apis/apps/v1/namespaces/team-a/statefulsets',
+            expect.any(Function),
+        );
+    });
+
+    it('uses the namespaced or cluster-wide list for every workload kind', async () => {
+        const listOf = async (index: number) =>
+            (makeInformer.mock.calls[index] as unknown[])[2] as () => Promise<unknown>;
+        await startResourceWatch({ kind: 'StatefulSet', namespace: 'team-a' }, vi.fn());
+        await (
+            await listOf(0)
+        )();
+        expect(listNamespacedStatefulSet).toHaveBeenCalledWith({ namespace: 'team-a' });
+        await startResourceWatch({ kind: 'DaemonSet', namespace: 'team-a' }, vi.fn());
+        await (
+            await listOf(1)
+        )();
+        expect(listNamespacedDaemonSet).toHaveBeenCalledWith({ namespace: 'team-a' });
+        client.resolveNamespace = () => undefined;
+        await startResourceWatch({ kind: 'Deployment' }, vi.fn());
+        await (
+            await listOf(2)
+        )();
+        expect(listDeploymentForAllNamespaces).toHaveBeenCalled();
+        await startResourceWatch({ kind: 'StatefulSet' }, vi.fn());
+        await (
+            await listOf(3)
+        )();
+        expect(listStatefulSetForAllNamespaces).toHaveBeenCalled();
+        client.resolveNamespace = (explicit?: string) => explicit ?? 'team-a';
+
+        const send = vi.fn();
+        await startResourceWatch({ kind: 'StatefulSet' }, send);
+        informer.emit('add', {
+            metadata: { name: 'db', namespace: 'team-a' },
+            spec: { replicas: 1, serviceName: 'db' },
+        });
+        expect(send.mock.calls[0]![0]).toMatchObject({
+            data: { kind: 'StatefulSet', item: { name: 'db', service: 'db' } },
+        });
+        await startResourceWatch({ kind: 'DaemonSet' }, send);
+        informer.emit('add', { metadata: { name: 'agent', namespace: 'team-a' }, status: { numberReady: 2 } });
+        // Both watches share the fake informer, so the second emit reaches both listeners; the
+        // DaemonSet's send is the last one.
+        expect(send.mock.calls.at(-1)![0]).toMatchObject({
+            data: { kind: 'DaemonSet', item: { name: 'agent', ready: 2 } },
+        });
+    });
+
     it('rejects an invalid input before touching the cluster', async () => {
-        await expect(startResourceWatch({ kind: 'Deployment' }, vi.fn())).rejects.toThrow();
+        await expect(startResourceWatch({ kind: 'Nope' }, vi.fn())).rejects.toThrow();
         expect(makeInformer).not.toHaveBeenCalled();
     });
 });
