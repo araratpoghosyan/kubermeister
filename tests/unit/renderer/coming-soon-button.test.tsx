@@ -5,7 +5,7 @@ import { ComingSoonButton } from '@/components/coming-soon-button';
 import { renderWithQuery } from './helpers';
 
 describe('ComingSoonButton', () => {
-    it('stays focusable, blocks activation, and explains itself on hover', async () => {
+    it('stays focusable, blocks activation, and explains itself on focus', async () => {
         const onClick = vi.fn((event: React.MouseEvent) => event.defaultPrevented);
         renderWithQuery(
             <form onSubmit={onClick}>
@@ -18,7 +18,9 @@ describe('ComingSoonButton', () => {
         expect(button).toHaveClass('opacity-50');
         await userEvent.click(button);
         expect(onClick).not.toHaveBeenCalled();
-        await userEvent.hover(button);
-        expect((await screen.findAllByText('Restart arrives later')).length).toBeGreaterThan(0);
+        // The reason is announced on focus, which is why the button is aria-disabled instead of disabled.
+        await userEvent.tab();
+        expect(button).toHaveFocus();
+        expect(await screen.findByRole('tooltip', {}, { timeout: 3000 })).toHaveTextContent('Restart arrives later');
     });
 });
