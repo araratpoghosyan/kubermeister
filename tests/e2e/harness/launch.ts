@@ -17,14 +17,15 @@ export interface LaunchedApp {
  * so every spec starts from the same deterministic state. `KUBECONFIG` is set as well so even a
  * code path that ignored settings could only reach the test cluster.
  */
-export async function launchApp(): Promise<LaunchedApp> {
+export async function launchApp(options: { kubeconfigPath?: string } = {}): Promise<LaunchedApp> {
+    const kubeconfigPath = options.kubeconfigPath ?? KUBECONFIG_PATH;
     const userData = mkdtempSync(join(tmpdir(), 'km-e2e-'));
     writeFileSync(
         join(userData, 'settings.json'),
         JSON.stringify({
             version: 1,
             session: { lastContext: CONTEXT_NAME, lastNamespace: NAMESPACE, restoreOnLaunch: true },
-            connection: { kubeconfigPath: KUBECONFIG_PATH },
+            connection: { kubeconfigPath },
         }),
     );
     const app = await electron.launch({
@@ -32,7 +33,7 @@ export async function launchApp(): Promise<LaunchedApp> {
         env: {
             ...process.env,
             KUBERMEISTER_USER_DATA: userData,
-            KUBECONFIG: KUBECONFIG_PATH,
+            KUBECONFIG: kubeconfigPath,
             // Never steal focus: a developer typing during a local run must not drive the app.
             KUBERMEISTER_SHOW_INACTIVE: '1',
         },
@@ -41,6 +42,7 @@ export async function launchApp(): Promise<LaunchedApp> {
     // The first window is handed over while index.html may still be loading; a spec that evaluates
     // or clicks before the load settles would hit a destroyed execution context.
     await window.waitForLoadState('domcontentloaded');
-    await window.getByTestId('app-shell').waitFor();
+    // A launch pointed at an unusable kubeconfig stops at the startup screen instead of the shell.
+    if (!options.kubeconfigPath) await window.getByTestId('app-shell').waitFor();
     return { app, window, userData };
 }
