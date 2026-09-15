@@ -112,6 +112,23 @@ describe('node transforms', () => {
             kubeletVersion: 'v1.36.4+k3s1',
             architecture: 'arm64',
         });
+        expect(detail.labels).toEqual([
+            ['node-role.kubernetes.io/control-plane', 'true'],
+            ['node.kubernetes.io/instance-type', 'k3s'],
+        ]);
+        expect(detail.annotations).toEqual([]);
+        expect(
+            nodes.toNodeDetail(
+                node({
+                    metadata: {
+                        name: 'n1',
+                        annotations: { note: 'x', 'kubectl.kubernetes.io/last-applied-configuration': '{}' },
+                    },
+                }),
+                new Map(),
+                NOW,
+            ).annotations,
+        ).toEqual([['note', 'x']]);
         expect(
             nodes.toNodeDetail(
                 node({ status: { conditions: [{ type: 'Ready', status: 'True', reason: '' }] } }),
