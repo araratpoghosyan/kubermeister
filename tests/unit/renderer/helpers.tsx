@@ -14,7 +14,7 @@ export function renderWithQuery(ui: ReactElement): RenderResult {
     return render(
         <ThemeProvider>
             <QueryClientProvider client={testQueryClient()}>
-                <TooltipProvider>{ui}</TooltipProvider>
+                <TooltipProvider delayDuration={0}>{ui}</TooltipProvider>
             </QueryClientProvider>
         </ThemeProvider>,
     );
@@ -26,7 +26,7 @@ export function renderRoutes(routeTree: AnyRoute, path: string) {
     const result = render(
         <ThemeProvider>
             <QueryClientProvider client={testQueryClient()}>
-                <TooltipProvider>
+                <TooltipProvider delayDuration={0}>
                     <RouterProvider router={router} />
                 </TooltipProvider>
             </QueryClientProvider>
