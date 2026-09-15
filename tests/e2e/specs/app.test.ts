@@ -259,3 +259,20 @@ test('shows the events stream, the namespace quota and its limit range', async (
     await expect(limits).toContainText('Container');
     await expect(limits).toContainText('500m');
 });
+
+test('lists the seeded service and opens its ports and endpoints', async () => {
+    const { window } = launched;
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Services' }).click();
+    const row = window.getByTestId('services-table').locator('[data-service="web"]');
+    await expect(row).toContainText('ClusterIP');
+    await expect(row).toContainText('80/TCP');
+    await row.getByRole('link').click();
+    const page = window.getByTestId('service-page');
+    await expect(page).toContainText('type: ClusterIP');
+    await window.getByRole('tab', { name: /Ports/ }).click();
+    await expect(page.getByTestId('service-ports')).toContainText('8080');
+    await window.getByRole('tab', { name: /^Endpoints/ }).click();
+    await expect(page.getByTestId('service-endpoints')).toContainText('Ready', { timeout: 30_000 });
+    await window.getByRole('tab', { name: /Selector/ }).click();
+    await expect(page).toContainText('app');
+});

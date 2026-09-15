@@ -6,13 +6,17 @@ import {
     type LucideIcon,
     FileTextIcon,
     GaugeIcon,
+    GlobeIcon,
     LayersIcon,
     LockIcon,
     PlayIcon,
+    RouteIcon,
     ServerIcon,
     SettingsIcon,
+    ShieldIcon,
     TimerIcon,
     TrendingUpIcon,
+    WaypointsIcon,
 } from 'lucide-react';
 import type { RoutePath } from './router';
 
@@ -86,6 +90,33 @@ export const DOMAINS: Domain[] = [
                     { id: 'configmaps', label: 'ConfigMaps', path: '/workloads/configmaps', icon: FileTextIcon },
                     { id: 'secrets', label: 'Secrets', path: '/workloads/secrets', icon: LockIcon },
                     { id: 'autoscalers', label: 'Autoscalers', path: '/workloads/autoscalers', icon: TrendingUpIcon },
+                ],
+            },
+        ],
+    },
+    {
+        id: 'network',
+        label: 'Network',
+        icon: GlobeIcon,
+        basePath: '/network',
+        groups: [
+            {
+                label: 'TRAFFIC',
+                items: [
+                    { id: 'services', label: 'Services', path: '/network/services', icon: GlobeIcon },
+                    { id: 'ingresses', label: 'Ingresses', path: '/network/ingresses', icon: RouteIcon },
+                    { id: 'endpoints', label: 'Endpoints', path: '/network/endpoints', icon: WaypointsIcon },
+                ],
+            },
+            {
+                label: 'POLICY',
+                items: [
+                    {
+                        id: 'networkpolicies',
+                        label: 'NetworkPolicies',
+                        path: '/network/networkpolicies',
+                        icon: ShieldIcon,
+                    },
                 ],
             },
         ],
