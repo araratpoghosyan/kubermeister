@@ -15,6 +15,17 @@ const networkMod = {
     getNetworkPolicy: vi.fn(),
 };
 vi.mock('../../../src/main/k8s/resources/network.js', () => networkMod);
+const storageMod = {
+    listVolumes: vi.fn(),
+    getVolume: vi.fn(),
+    listClaims: vi.fn(),
+    getClaim: vi.fn(),
+    listStorageClasses: vi.fn(),
+    getStorageClass: vi.fn(),
+    listSnapshots: vi.fn(),
+    getSnapshot: vi.fn(),
+};
+vi.mock('../../../src/main/k8s/resources/storage.js', () => storageMod);
 const workloadsMod = {
     listDeployments: vi.fn(),
     getDeployment: vi.fn(),
@@ -131,6 +142,47 @@ describe('generic resource dispatch', () => {
         await expect(getResource({ kind: 'Endpoints', name: 'e' })).resolves.toEqual({ kind: 'Endpoints', item: null });
         await expect(getResource({ kind: 'NetworkPolicy', name: 'n' })).resolves.toEqual({
             kind: 'NetworkPolicy',
+            item: null,
+        });
+    });
+
+    it('routes the storage kinds, passing no namespace to the cluster-scoped ones', async () => {
+        for (const fn of Object.values(storageMod)) fn.mockResolvedValue([]);
+        storageMod.getVolume.mockResolvedValue(null);
+        storageMod.getClaim.mockResolvedValue(null);
+        storageMod.getStorageClass.mockResolvedValue(null);
+        storageMod.getSnapshot.mockResolvedValue(null);
+        await expect(listResources({ kind: 'PersistentVolume', namespace: 'ignored' })).resolves.toEqual({
+            kind: 'PersistentVolume',
+            items: [],
+        });
+        expect(storageMod.listVolumes).toHaveBeenCalledWith();
+        await expect(listResources({ kind: 'StorageClass', namespace: 'ignored' })).resolves.toEqual({
+            kind: 'StorageClass',
+            items: [],
+        });
+        expect(storageMod.listStorageClasses).toHaveBeenCalledWith();
+        await expect(listResources({ kind: 'PersistentVolumeClaim', namespace: 'a' })).resolves.toEqual({
+            kind: 'PersistentVolumeClaim',
+            items: [],
+        });
+        expect(storageMod.listClaims).toHaveBeenCalledWith('a');
+        await expect(listResources({ kind: 'VolumeSnapshot' })).resolves.toEqual({ kind: 'VolumeSnapshot', items: [] });
+        await expect(getResource({ kind: 'PersistentVolume', name: 'pv' })).resolves.toEqual({
+            kind: 'PersistentVolume',
+            item: null,
+        });
+        expect(storageMod.getVolume).toHaveBeenCalledWith('pv');
+        await expect(getResource({ kind: 'StorageClass', name: 'sc' })).resolves.toEqual({
+            kind: 'StorageClass',
+            item: null,
+        });
+        await expect(getResource({ kind: 'PersistentVolumeClaim', name: 'c' })).resolves.toEqual({
+            kind: 'PersistentVolumeClaim',
+            item: null,
+        });
+        await expect(getResource({ kind: 'VolumeSnapshot', name: 's' })).resolves.toEqual({
+            kind: 'VolumeSnapshot',
             item: null,
         });
     });

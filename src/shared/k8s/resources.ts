@@ -12,6 +12,16 @@ import {
 } from './network.js';
 import { kindSchema } from './registry.js';
 import {
+    claimDetailSchema,
+    claimSchema,
+    snapshotDetailSchema,
+    snapshotSchema,
+    storageClassDetailSchema,
+    storageClassSchema,
+    volumeDetailSchema,
+    volumeSchema,
+} from './storage.js';
+import {
     autoscalerDetailSchema,
     autoscalerSchema,
     configMapDetailSchema,
@@ -61,6 +71,10 @@ export const resourceListOutputSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('Ingress'), items: z.array(ingressSchema) }),
     z.object({ kind: z.literal('Endpoints'), items: z.array(endpointsSchema) }),
     z.object({ kind: z.literal('NetworkPolicy'), items: z.array(networkPolicySchema) }),
+    z.object({ kind: z.literal('PersistentVolume'), items: z.array(volumeSchema) }),
+    z.object({ kind: z.literal('PersistentVolumeClaim'), items: z.array(claimSchema) }),
+    z.object({ kind: z.literal('StorageClass'), items: z.array(storageClassSchema) }),
+    z.object({ kind: z.literal('VolumeSnapshot'), items: z.array(snapshotSchema) }),
 ]);
 
 export const resourceGetOutputSchema = z.discriminatedUnion('kind', [
@@ -77,6 +91,10 @@ export const resourceGetOutputSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('Ingress'), item: ingressDetailSchema.nullable() }),
     z.object({ kind: z.literal('Endpoints'), item: endpointsDetailSchema.nullable() }),
     z.object({ kind: z.literal('NetworkPolicy'), item: networkPolicyDetailSchema.nullable() }),
+    z.object({ kind: z.literal('PersistentVolume'), item: volumeDetailSchema.nullable() }),
+    z.object({ kind: z.literal('PersistentVolumeClaim'), item: claimDetailSchema.nullable() }),
+    z.object({ kind: z.literal('StorageClass'), item: storageClassDetailSchema.nullable() }),
+    z.object({ kind: z.literal('VolumeSnapshot'), item: snapshotDetailSchema.nullable() }),
 ]);
 
 export type ResourceListInput = z.infer<typeof resourceListInputSchema>;

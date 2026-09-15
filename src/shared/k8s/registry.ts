@@ -90,6 +90,34 @@ export const KIND_REGISTRY = {
         scalable: false,
         listPath: '/network/networkpolicies',
     },
+    PersistentVolume: {
+        kind: 'PersistentVolume',
+        apiVersion: 'v1',
+        clusterScoped: true,
+        scalable: false,
+        listPath: '/storage/volumes',
+    },
+    PersistentVolumeClaim: {
+        kind: 'PersistentVolumeClaim',
+        apiVersion: 'v1',
+        clusterScoped: false,
+        scalable: false,
+        listPath: '/storage/claims',
+    },
+    StorageClass: {
+        kind: 'StorageClass',
+        apiVersion: 'storage.k8s.io/v1',
+        clusterScoped: true,
+        scalable: false,
+        listPath: '/storage/storageclasses',
+    },
+    VolumeSnapshot: {
+        kind: 'VolumeSnapshot',
+        apiVersion: 'snapshot.storage.k8s.io/v1',
+        clusterScoped: false,
+        scalable: false,
+        listPath: '/storage/snapshots',
+    },
 } as const satisfies Record<string, KindInfo>;
 
 export type Kind = keyof typeof KIND_REGISTRY;

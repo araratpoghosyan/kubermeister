@@ -1,6 +1,7 @@
 import type { Alert } from '../../shared/k8s/metrics.js';
 import { apis } from './client.js';
 import { toPod } from './resources/pods.js';
+import { toClaim } from './resources/storage.js';
 import { toJob } from './resources/workloads.js';
 import { nodeReady } from './resources/cluster.js';
 
@@ -74,11 +75,23 @@ export async function jobAlerts(): Promise<Alert[]> {
         }));
 }
 
+export async function claimAlerts(): Promise<Alert[]> {
+    const res = await safe(() => apis().core.listPersistentVolumeClaimForAllNamespaces(), { items: [] });
+    return res.items
+        .map((item) => toClaim(item))
+        .filter((claim) => claim.status === 'Pending' || claim.status === 'Lost')
+        .map((claim) => ({
+            tone: claim.status === 'Lost' ? ('danger' as const) : ('warn' as const),
+            title: `PVC ${claim.status}: ${claim.name}`,
+            detail: `${claim.storageClass} — ${claim.namespace}/${claim.name}`,
+        }));
+}
+
 export const MAX_ALERTS = 20;
 
 /** Danger first, then warnings, capped so the panel stays bounded. */
 export async function listAlerts(): Promise<Alert[]> {
-    const groups = await Promise.all([podAlerts(), nodeAlerts(), jobAlerts()]);
+    const groups = await Promise.all([podAlerts(), nodeAlerts(), jobAlerts(), claimAlerts()]);
     const all = groups.flat();
     all.sort((a, b) => (a.tone === b.tone ? 0 : a.tone === 'danger' ? -1 : 1));
     return all.slice(0, MAX_ALERTS);

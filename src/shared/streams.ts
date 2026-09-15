@@ -4,6 +4,7 @@ import type { LogLine } from './k8s/logs.js';
 import { podSchema } from './k8s/pods.js';
 import { endpointsSchema, ingressSchema, networkPolicySchema, serviceSchema } from './k8s/network.js';
 import type { Kind } from './k8s/registry.js';
+import { claimSchema, storageClassSchema, volumeSchema } from './k8s/storage.js';
 import { resourceListInputSchema, type ResourceListInput } from './k8s/resources.js';
 import {
     autoscalerSchema,
@@ -51,6 +52,9 @@ export const watchEventSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('Ingress'), type: watchType, item: ingressSchema }),
     z.object({ kind: z.literal('Endpoints'), type: watchType, item: endpointsSchema }),
     z.object({ kind: z.literal('NetworkPolicy'), type: watchType, item: networkPolicySchema }),
+    z.object({ kind: z.literal('PersistentVolume'), type: watchType, item: volumeSchema }),
+    z.object({ kind: z.literal('PersistentVolumeClaim'), type: watchType, item: claimSchema }),
+    z.object({ kind: z.literal('StorageClass'), type: watchType, item: storageClassSchema }),
 ]);
 
 export type WatchEvent = z.infer<typeof watchEventSchema>;

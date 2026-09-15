@@ -28,6 +28,9 @@ const client = {
     kubeConfig: () => ({ fake: true }),
     apis: () => ({
         core: {
+            listPersistentVolume: listAny,
+            listNamespacedPersistentVolumeClaim: listAny,
+            listPersistentVolumeClaimForAllNamespaces: listAny,
             listNamespacedPod,
             listPodForAllNamespaces,
             listNamespacedConfigMap: listAny,
@@ -57,6 +60,7 @@ const client = {
             listNamespacedHorizontalPodAutoscaler,
             listHorizontalPodAutoscalerForAllNamespaces: listAny,
         },
+        storage: { listStorageClass: listAny },
         net: {
             listNamespacedIngress: listAny,
             listIngressForAllNamespaces: listAny,
@@ -276,9 +280,12 @@ describe('startResourceWatch', () => {
     });
 
     it('gives every registered kind a namespaced path, a cluster-wide path and a row transform', async () => {
-        const { KINDS } = await import('../../../src/shared/k8s/registry.js');
+        const { KINDS, kindInfo } = await import('../../../src/shared/k8s/registry.js');
+        // VolumeSnapshot is polled: a cluster need not have its CRD, so it has no watch source.
+        const watched = KINDS.filter((kind) => kind !== 'VolumeSnapshot');
         const object = { metadata: { name: 'x', namespace: 'team-a' }, spec: {}, status: {} };
-        for (const [index, kind] of KINDS.entries()) {
+        for (const [index, kind] of watched.entries()) {
+            const clusterScoped = kindInfo(kind).clusterScoped;
             const send = vi.fn();
             await startResourceWatch({ kind, namespace: 'team-a' }, send);
             const [, namespacedPath, list] = makeInformer.mock.calls[index * 2] as [
@@ -286,7 +293,7 @@ describe('startResourceWatch', () => {
                 string,
                 () => Promise<unknown>,
             ];
-            expect(namespacedPath).toContain('/namespaces/team-a/');
+            expect(clusterScoped ? true : namespacedPath.includes('/namespaces/team-a/')).toBe(true);
             await expect(list()).resolves.toEqual({ items: [] });
             informer.emit('add', object);
             expect(send.mock.calls.at(-1)![0]).toMatchObject({ data: { kind, type: 'added', item: { name: 'x' } } });
@@ -302,6 +309,14 @@ describe('startResourceWatch', () => {
             await expect(listAll()).resolves.toEqual({ items: [] });
             client.resolveNamespace = (explicit?: string) => explicit ?? 'team-a';
         }
+    });
+
+    it('refuses to watch a kind that has no watch source', async () => {
+        await expect(startResourceWatch({ kind: 'VolumeSnapshot' }, vi.fn())).rejects.toMatchObject({
+            kind: 'invalid',
+            op: 'resources.watch',
+        });
+        expect(makeInformer).not.toHaveBeenCalled();
     });
 
     it('rejects an invalid input before touching the cluster', async () => {
