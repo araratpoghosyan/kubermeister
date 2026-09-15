@@ -1,7 +1,7 @@
 import { app, BrowserWindow, screen, shell } from 'electron';
 import { join } from 'node:path';
 import { registerHandlers } from './ipc/index.js';
-import { registerStreamHandlers } from './ipc/streams.js';
+import { registerStreamHandlers, stopAllStreams } from './ipc/streams.js';
 import { stopSampler } from './k8s/sampler.js';
 import { installApplicationMenu } from './menu.js';
 import { isExternalWebUrl, isInternalNavigation } from './security.js';
@@ -76,7 +76,10 @@ void app.whenReady().then(() => {
     });
 });
 
-app.on('will-quit', () => stopSampler());
+app.on('will-quit', () => {
+    stopAllStreams();
+    stopSampler();
+});
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
