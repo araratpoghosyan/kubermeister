@@ -27,11 +27,24 @@ const dataSchema = z.object({
     refreshIntervalSec: z.number().int().positive(),
 });
 
+const windowBoundsSchema = z.object({
+    x: z.number(),
+    y: z.number(),
+    width: z.number().int().positive(),
+    height: z.number().int().positive(),
+});
+
+const windowSchema = z.object({
+    /** Where the window last stood; null until it has been closed once. */
+    bounds: windowBoundsSchema.nullable(),
+});
+
 export const settingsSchema = z.object({
     version: z.literal(1),
     session: sessionSchema,
     connection: connectionSchema,
     data: dataSchema,
+    window: windowSchema,
 });
 
 /** A partial patch the main process may apply: any subset of sections, each a partial of its shape. */
@@ -39,6 +52,7 @@ export const settingsPatchSchema = z.object({
     session: sessionSchema.partial().optional(),
     connection: connectionSchema.partial().optional(),
     data: dataSchema.partial().optional(),
+    window: windowSchema.partial().optional(),
 });
 
 /**
@@ -46,17 +60,19 @@ export const settingsPatchSchema = z.object({
  * pointing the app at an arbitrary file is a native-dialog action (`kubeconfig.pick`), never a raw
  * renderer-supplied string, so a compromised renderer cannot probe files or trigger exec plugins.
  */
-export const settingsInputSchema = settingsPatchSchema.omit({ connection: true });
+export const settingsInputSchema = settingsPatchSchema.omit({ connection: true, window: true });
 
 export type Settings = z.infer<typeof settingsSchema>;
 export type SettingsPatch = z.infer<typeof settingsPatchSchema>;
 export type SettingsInput = z.infer<typeof settingsInputSchema>;
+export type WindowBounds = z.infer<typeof windowBoundsSchema>;
 
 export const DEFAULT_SETTINGS: Settings = {
     version: 1,
     session: { lastContext: null, lastNamespace: null, restoreOnLaunch: true },
     connection: { kubeconfigPath: null },
     data: { refreshIntervalSec: 12 },
+    window: { bounds: null },
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -82,6 +98,7 @@ export function parseSettings(raw: unknown): Settings {
         session: parseSection(sessionSchema, file.session, DEFAULT_SETTINGS.session),
         connection: parseSection(connectionSchema, file.connection, DEFAULT_SETTINGS.connection),
         data: parseSection(dataSchema, file.data, DEFAULT_SETTINGS.data),
+        window: parseSection(windowSchema, file.window, DEFAULT_SETTINGS.window),
     };
 }
 
@@ -92,5 +109,6 @@ export function mergeSettings(current: Settings, patch: SettingsPatch): Settings
         session: { ...current.session, ...patch.session },
         connection: { ...current.connection, ...patch.connection },
         data: { ...current.data, ...patch.data },
+        window: { ...current.window, ...patch.window },
     };
 }

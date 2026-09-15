@@ -1,11 +1,13 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, screen, shell } from 'electron';
 import { join } from 'node:path';
 import { registerHandlers } from './ipc/index.js';
 import { registerStreamHandlers } from './ipc/streams.js';
 import { stopSampler } from './k8s/sampler.js';
 import { installApplicationMenu } from './menu.js';
 import { isExternalWebUrl, isInternalNavigation } from './security.js';
+import { getSettings, updateSettings } from './settings/store.js';
 import { startUpdater } from './updater.js';
+import { usableBounds } from './window-bounds.js';
 
 // Tests redirect all per-user state (settings, caches) into a throwaway directory so the real
 // installation is never read or written.
@@ -17,10 +19,14 @@ if (process.env.KUBERMEISTER_USER_DATA) app.setPath('userData', process.env.KUBE
 if (!app.isPackaged) app.setName('Kubermeister');
 
 function createWindow(): BrowserWindow {
+    // Reading the screen needs the app to be ready, which it is by the time a window is created.
+    const saved = getSettings().window.bounds;
+    const bounds = saved ? usableBounds(saved, screen.getDisplayMatching(saved).workArea) : undefined;
     const window = new BrowserWindow({
         width: 1200,
         height: 800,
         show: false,
+        ...(bounds ?? {}),
         webPreferences: {
             preload: join(__dirname, '../preload/index.cjs'),
             sandbox: true,
@@ -31,6 +37,9 @@ function createWindow(): BrowserWindow {
 
     // End-to-end runs on a developer machine show the window without taking focus, so keystrokes
     // meant for the terminal never land in the app under test.
+    // Remember where the window stood, so the next launch opens it in the same place.
+    window.on('close', () => updateSettings({ window: { bounds: window.getBounds() } }));
+
     window.on('ready-to-show', () => (process.env.KUBERMEISTER_SHOW_INACTIVE ? window.showInactive() : window.show()));
 
     window.webContents.setWindowOpenHandler(({ url }) => {
