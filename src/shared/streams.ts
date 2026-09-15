@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { STREAM_CHANNELS, type AllowedStream } from './ipc-channels.js';
 import type { LogLine } from './k8s/logs.js';
+import { namespaceNameSchema } from './k8s/names.js';
 import { podSchema } from './k8s/pods.js';
 import { endpointsSchema, ingressSchema, networkPolicySchema, serviceSchema } from './k8s/network.js';
 import { customResourceSchema } from './k8s/addons.js';
@@ -76,7 +77,7 @@ export type WatchEventOf<K extends Kind> = Extract<WatchEvent, { kind: K }>;
 
 const podTargetSchema = z.object({
     name: z.string().min(1),
-    namespace: z.string().min(1),
+    namespace: namespaceNameSchema,
     /** Container to address; defaults to the pod's first container. */
     container: z.string().min(1).optional(),
 });

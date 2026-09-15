@@ -1,10 +1,40 @@
+import type { QueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { IpcInput } from '../../shared/ipc';
+import type { KubeContext } from '../../shared/k8s/contexts';
 import type { ManifestKind } from '../../shared/k8s/manifest';
 import type { Kind } from '../../shared/k8s/registry';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { mapWithConcurrency, type BulkDeleteResult, type BulkDeleteTarget } from './bulk-delete';
-import { invoke } from './ipc';
+import { invoke, IpcError } from './ipc';
 import { describeError } from './k8s-error';
-import { useIpcMutation } from './query';
+import { ipcQueryKey, useIpcMutation } from './query';
+
+type WriteChannel = 'resources.create' | 'resources.replace' | 'resources.delete' | 'resources.scale';
+
+/** What a screen passes to a write: the input minus the context stamp, which is added here. */
+export type WriteVariables<C extends WriteChannel> = Omit<IpcInput<C>, 'context'>;
+
+/**
+ * The context the renderer believes it is on, from the cache the top bar renders from. Every write
+ * carries it and main refuses a write whose stamp does not match the context it is really on, so a
+ * screen still showing the previous cluster's rows can never act on the new one.
+ */
+export async function activeContextName(client: QueryClient, op: string): Promise<string> {
+    const key = ipcQueryKey('context.current', {});
+    const cached = client.getQueryData<KubeContext | null>(key);
+    const context =
+        cached ?? (await client.fetchQuery({ queryKey: key, queryFn: () => invoke('context.current', {}) }));
+    if (!context) throw new IpcError({ kind: 'invalid', detail: 'No context is active.', op });
+    return context.name;
+}
+
+async function stamp<C extends WriteChannel>(
+    channel: C,
+    variables: WriteVariables<C>,
+    client: QueryClient,
+): Promise<IpcInput<C>> {
+    return { ...variables, context: await activeContextName(client, channel) } as IpcInput<C>;
+}
 
 /**
  * Which queries a write invalidates: the kind's own list and reads, plus the object's events. Keys
@@ -21,23 +51,29 @@ function resourceKeys(kind: ManifestKind, name: string, namespace?: string) {
 }
 
 export function useCreateResource() {
-    return useIpcMutation('resources.create', { invalidates: () => [['resources.list'], ['metrics.alerts']] });
+    return useIpcMutation<'resources.create', WriteVariables<'resources.create'>>('resources.create', {
+        prepare: (variables, client) => stamp('resources.create', variables, client),
+        invalidates: () => [['resources.list'], ['metrics.alerts']],
+    });
 }
 
 export function useReplaceResource() {
-    return useIpcMutation('resources.replace', {
+    return useIpcMutation<'resources.replace', WriteVariables<'resources.replace'>>('resources.replace', {
+        prepare: (variables, client) => stamp('resources.replace', variables, client),
         invalidates: (_input, data) => resourceKeys(data.kind as ManifestKind, data.name, data.namespace),
     });
 }
 
 export function useDeleteResource() {
-    return useIpcMutation('resources.delete', {
+    return useIpcMutation<'resources.delete', WriteVariables<'resources.delete'>>('resources.delete', {
+        prepare: (variables, client) => stamp('resources.delete', variables, client),
         invalidates: (input) => resourceKeys(input.kind, input.name, input.namespace),
     });
 }
 
 export function useScaleResource() {
-    return useIpcMutation('resources.scale', {
+    return useIpcMutation<'resources.scale', WriteVariables<'resources.scale'>>('resources.scale', {
+        prepare: (variables, client) => stamp('resources.scale', variables, client),
         invalidates: (input) => resourceKeys(input.kind as Kind, input.name, input.namespace),
     });
 }
@@ -47,15 +83,17 @@ const BULK_DELETE_CONCURRENCY = 4;
 
 /**
  * Delete several objects of one kind. Each is deleted on its own and a failure does not stop the
- * rest, so the caller can report exactly what went and what did not.
+ * rest, so the caller can report exactly what went and what did not. The context is read once for
+ * the whole batch, so every delete in it is aimed at the same cluster.
  */
 export function useBulkDeleteResources() {
     const client = useQueryClient();
     return useMutation<BulkDeleteResult, Error, { kind: ManifestKind; targets: BulkDeleteTarget[] }>({
         mutationFn: async ({ kind, targets }) => {
+            const context = await activeContextName(client, 'resources.delete');
             const settled = await mapWithConcurrency(targets, BULK_DELETE_CONCURRENCY, async (target) => {
                 try {
-                    await invoke('resources.delete', { kind, name: target.name, namespace: target.namespace });
+                    await invoke('resources.delete', { kind, name: target.name, namespace: target.namespace, context });
                     return { target, message: null };
                 } catch (error) {
                     return { target, message: describeError(error).detail };

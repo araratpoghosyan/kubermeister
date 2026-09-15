@@ -14,6 +14,7 @@ import {
     VersionApi,
 } from '@kubernetes/client-node';
 import { existsSync } from 'node:fs';
+import { isNamespaceName } from '../../shared/k8s/names.js';
 import { getSettings } from '../settings/store.js';
 
 /**
@@ -53,10 +54,19 @@ function applyStartupSelection(next: KubeConfig): string | null {
         const remembered = next.getContextObject(session.lastContext);
         if (remembered) {
             next.setCurrentContext(session.lastContext);
-            return session.lastNamespace ?? remembered.namespace ?? null;
+            return namespaceOrNull(session.lastNamespace ?? remembered.namespace);
         }
     }
-    return next.getContextObject(next.getCurrentContext())?.namespace ?? null;
+    return namespaceOrNull(next.getContextObject(next.getCurrentContext())?.namespace);
+}
+
+/**
+ * Only a well-formed namespace name may become the active selection. The settings file and a
+ * kubeconfig are both hand-editable; an empty or malformed value would read as "all namespaces"
+ * in every fallback and be persisted again on the next switch.
+ */
+function namespaceOrNull(value: string | null | undefined): string | null {
+    return value && isNamespaceName(value) ? value : null;
 }
 
 function loadKubeConfig(): KubeConfig {
@@ -141,7 +151,7 @@ export function getActiveNamespace(): string | null {
 
 export function setActiveNamespace(namespace: string | null): void {
     kubeConfig(); // load first, or the lazy load would overwrite this selection with the context default
-    activeNamespace = namespace;
+    activeNamespace = namespaceOrNull(namespace);
 }
 
 /** Namespace a list call targets: explicit argument, else the active selection, else all (undefined). */
@@ -166,7 +176,7 @@ export async function listItems<T>(
 
 /**
  * Namespace a single-object read targets: explicit, else the active selection, else null, which
- * means the caller must disambiguate by name across namespaces.
+ * every reader treats as "not found" rather than searching the cluster for a same-named object.
  */
 export function resolveObjectNamespace(explicit?: string): string | null {
     return explicit ?? getActiveNamespace();
@@ -183,6 +193,21 @@ export function isSafeSelectorValue(value: string): boolean {
     return FIELD_SELECTOR_SAFE.test(value);
 }
 
+/**
+ * Label keys may carry a DNS prefix (`app.kubernetes.io/name`), values may be empty; neither may
+ * hold the `,`, `=` or `!` a labelSelector uses as syntax.
+ */
+const LABEL_KEY_SAFE = /^[A-Za-z0-9._/-]+$/;
+const LABEL_VALUE_SAFE = /^[A-Za-z0-9._-]*$/;
+
+export function isSafeLabelKey(key: string): boolean {
+    return LABEL_KEY_SAFE.test(key);
+}
+
+export function isSafeLabelValue(value: string): boolean {
+    return LABEL_VALUE_SAFE.test(value);
+}
+
 /** Run a single-object GET, mapping a 404 to `undefined` so a deleted object reads as "not found". */
 export async function readOrNull<T>(read: () => Promise<T>): Promise<T | undefined> {
     try {
@@ -194,18 +219,21 @@ export async function readOrNull<T>(read: () => Promise<T>): Promise<T | undefin
 }
 
 /**
- * Resolve one namespaced object by name: a direct GET when the namespace is known, else a
- * server-filtered list by `metadata.name` whose first match wins, gated by
- * {@link isSafeSelectorValue}. Returns `undefined` when nothing matches.
+ * Resolve one namespaced object by name with a direct GET in the explicit or active namespace.
+ * With neither the read fails closed and answers "not found": guessing which same-named object
+ * across the cluster was meant would hand the editor, and so a later replace, the wrong object.
  */
 export async function getNamespaced<T>(
     name: string,
     namespace: string | undefined,
     readOne: (name: string, namespace: string) => Promise<T>,
-    listByName: (fieldSelector: string) => Promise<{ items: T[] }>,
 ): Promise<T | undefined> {
     const ns = resolveObjectNamespace(namespace);
-    if (ns) return readOrNull(() => readOne(name, ns));
-    if (!isSafeSelectorValue(name)) return undefined;
-    return (await listByName(`metadata.name=${name}`)).items[0];
+    if (!ns) return undefined;
+    return readOrNull(() => readOne(name, ns));
+}
+
+/** The kube-context every call currently goes to; the stamp a write must match. */
+export function activeContextName(): string {
+    return kubeConfig().getCurrentContext();
 }

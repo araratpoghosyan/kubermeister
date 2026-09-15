@@ -107,15 +107,16 @@ describe('listEventsForObject', () => {
         expect(core.listNamespacedEvent).toHaveBeenCalledWith(expect.objectContaining({ namespace: 'active-ns' }));
     });
 
-    it('searches all namespaces for cluster-scoped kinds and when no namespace is known', async () => {
+    it('searches all namespaces for cluster-scoped kinds and none for a namespaced kind without one', async () => {
         core.listEventForAllNamespaces.mockResolvedValue({ items: [] });
         await events.listEventsForObject({ kind: 'Node', name: 'n1', namespace: 'ignored' });
         expect(core.listEventForAllNamespaces).toHaveBeenCalledWith({
             fieldSelector: 'involvedObject.kind=Node,involvedObject.name=n1',
         });
+        // Events of same-named pods elsewhere are not this pod's, so nothing is listed.
         client.getActiveNamespace.mockReturnValue(null);
-        await events.listEventsForObject({ kind: 'Pod', name: 'web-1' });
-        expect(core.listEventForAllNamespaces).toHaveBeenCalledTimes(2);
+        await expect(events.listEventsForObject({ kind: 'Pod', name: 'web-1' })).resolves.toEqual([]);
+        expect(core.listEventForAllNamespaces).toHaveBeenCalledTimes(1);
         expect(core.listNamespacedEvent).not.toHaveBeenCalled();
     });
 

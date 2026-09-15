@@ -5,6 +5,8 @@ import { reloadKubeConfig } from '../k8s/client.js';
 import { getCurrentContext, listContexts, setContext, setNamespace } from '../k8s/context.js';
 import { K8sError } from '../k8s/errors.js';
 import { listAlerts } from '../k8s/alerts.js';
+import { resetHistory } from '../k8s/sampler.js';
+import { endAllStreams } from './streams.js';
 import { readPodLogSnapshot } from '../k8s/logs.js';
 import { getActiveCluster, getActiveNamespaceInfo, listClusters, listNamespaces } from '../k8s/resources/cluster.js';
 import { getConfigMapEntries, getSecretEntries } from '../k8s/resources/config.js';
@@ -46,8 +48,19 @@ async function pickKubeconfig(): Promise<string | null> {
     const path = result.canceled ? undefined : result.filePaths[0];
     if (!path) return null;
     updateSettings({ connection: { kubeconfigPath: path } });
+    leaveConnection('The kubeconfig changed');
     reloadKubeConfig();
     return path;
+}
+
+/**
+ * Everything that must not outlive the connection it was made on: live streams, which the client
+ * library would silently re-point at the next cluster, and sampled usage, which belongs to the
+ * previous one. Runs before a context switch or a kubeconfig change takes effect.
+ */
+function leaveConnection(reason: string): void {
+    endAllStreams(reason);
+    resetHistory();
 }
 
 const handlers: Handlers = {
@@ -64,7 +77,10 @@ const handlers: Handlers = {
     startupChecks: () => runStartupChecks(),
     'contexts.list': async () => listContexts(),
     'context.current': async () => getCurrentContext(),
-    'context.set': async ({ name }) => setContext(name),
+    'context.set': async ({ name }) => {
+        leaveConnection(`The context changed to "${name}"`);
+        return setContext(name);
+    },
     'namespace.set': async ({ namespace }) => setNamespace(namespace),
     'settings.get': async () => getSettings(),
     'settings.set': async (patch) => updateSettings(patch),
@@ -101,12 +117,13 @@ const handlers: Handlers = {
     'releases.revisions': ({ name, namespace }) => getReleaseRevisions(name, namespace),
     'helmCharts.list': () => listHelmCharts(),
     'resources.getYaml': ({ kind, name, namespace }) => getObjectYaml(kind, name, namespace),
-    'resources.create': ({ manifest, dryRun }) => createResource(manifest, dryRun),
-    'resources.replace': ({ manifest, dryRun }) => replaceResource(manifest, dryRun),
-    'resources.delete': ({ kind, name, namespace }) => deleteResource(kind, name, namespace),
-    'resources.scale': ({ kind, name, namespace, replicas }) => scaleResource(kind, name, replicas, namespace),
+    'resources.create': (input) => createResource(input),
+    'resources.replace': (input) => replaceResource(input),
+    'resources.delete': (input) => deleteResource(input),
+    'resources.scale': (input) => scaleResource(input),
     'kubeconfig.useDefault': async () => {
         const settings = updateSettings({ connection: { kubeconfigPath: null } });
+        leaveConnection('The kubeconfig changed');
         reloadKubeConfig();
         return settings;
     },

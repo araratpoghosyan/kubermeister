@@ -205,6 +205,8 @@ function DeploymentDetailPage() {
                             ipcQueryKey('resources.get', { kind: 'Deployment', name, namespace }),
                             ipcQueryKey('deployments.rollouts', target),
                             ipcQueryKey('deployments.replicaSets', target),
+                            ipcQueryKey('metrics.deploymentSeries', target),
+                            ipcQueryKey('resources.getYaml', { kind: 'Deployment', name, namespace }),
                         ]}
                     />
                     <ComingSoonButton variant="outline" size="sm" tip="Restart arrives with write actions">

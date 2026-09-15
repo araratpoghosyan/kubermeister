@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { renderRoutes, renderWithQuery } from './helpers';
+import { renderInRouter, renderRoutes, renderWithQuery } from './helpers';
 
 const invoke = vi.fn();
 const subscribe = vi.fn(() => () => {});
@@ -83,16 +83,16 @@ describe('ContextSelector', () => {
 
     it('shows the current context and a neutral dot until the cluster is known', async () => {
         invoke.mockImplementation(async (channel: string) => (channel === 'cluster.active' ? null : data[channel]));
-        renderWithQuery(<ContextSelector />);
-        const trigger = screen.getByTestId('context-selector');
+        renderInRouter(<ContextSelector />);
+        const trigger = await screen.findByTestId('context-selector');
         expect(trigger).toHaveTextContent('No cluster');
         await waitFor(() => expect(trigger).toHaveTextContent('alpha'));
         expect(trigger.querySelector('[title]')).toHaveAttribute('title', 'No active cluster');
     });
 
     it('lists every context and switches through the bridge', async () => {
-        renderWithQuery(<ContextSelector />);
-        const trigger = screen.getByTestId('context-selector');
+        renderInRouter(<ContextSelector />);
+        const trigger = await screen.findByTestId('context-selector');
         await waitFor(() => expect(trigger).toHaveTextContent('alpha'));
         await userEvent.click(trigger);
         const menu = await screen.findByRole('menu');
@@ -101,9 +101,22 @@ describe('ContextSelector', () => {
         await waitFor(() => expect(invoke).toHaveBeenCalledWith('context.set', { name: 'beta' }));
     });
 
+    it('closes a detail page before switching, since its object belongs to the cluster being left', async () => {
+        const { router } = renderRoutes(routeTree, '/workloads/pods/team-a/web-1');
+        const trigger = await screen.findByTestId('context-selector');
+        await waitFor(() => expect(trigger).toHaveTextContent('alpha'));
+        await userEvent.click(trigger);
+        await userEvent.click(within(await screen.findByRole('menu')).getByRole('menuitem', { name: /beta/ }));
+        await waitFor(() => expect(router.state.location.pathname).toBe('/workloads/pods'));
+        await waitFor(() => expect(invoke).toHaveBeenCalledWith('context.set', { name: 'beta' }));
+        // The navigation happened first, so no detail read could race the switch.
+        const setIndex = invoke.mock.calls.findIndex(([channel]) => channel === 'context.set');
+        expect(setIndex).toBeGreaterThan(-1);
+    });
+
     it('does not switch when the current context is chosen again', async () => {
-        renderWithQuery(<ContextSelector />);
-        const trigger = screen.getByTestId('context-selector');
+        renderInRouter(<ContextSelector />);
+        const trigger = await screen.findByTestId('context-selector');
         await waitFor(() => expect(trigger).toHaveTextContent('alpha'));
         await userEvent.click(trigger);
         await userEvent.click(await screen.findByRole('menuitem', { name: /alpha/ }));
@@ -125,12 +138,22 @@ describe('NamespaceSelector', () => {
 
     it('shows All namespaces when nothing is selected', async () => {
         invoke.mockImplementation(async (channel: string) =>
-            channel === 'namespace.active' ? { name: 'All namespaces', pods: 12, tone: 'accent' } : data[channel],
+            channel === 'namespace.active' ? { name: null, pods: 12, tone: 'accent' } : data[channel],
         );
         renderWithQuery(<NamespaceSelector />);
         await waitFor(() =>
             expect(screen.getByTestId('active-namespace')).toHaveTextContent('All namespaces · 12 pods'),
         );
+        // The check mark sits on the All namespaces entry, not on any real namespace.
+        await userEvent.click(screen.getByTestId('namespace-selector'));
+        const list = await screen.findByRole('listbox');
+        const all = within(list).getByRole('option', { name: /All namespaces/ });
+        expect(all.querySelector('svg')).not.toHaveClass('invisible');
+        expect(
+            within(list)
+                .getByRole('option', { name: /team-a/ })
+                .querySelector('svg'),
+        ).toHaveClass('invisible');
     });
 
     it('filters the list and selects a namespace through the bridge', async () => {

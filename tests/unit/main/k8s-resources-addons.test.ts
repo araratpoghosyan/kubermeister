@@ -182,26 +182,46 @@ describe('helm releases', () => {
         expect(core.listSecretForAllNamespaces).toHaveBeenCalledWith({ fieldSelector: 'type=helm.sh/release.v1' });
     });
 
-    it('reads the current release of one name with its values, and null when absent', async () => {
-        core.listSecretForAllNamespaces.mockResolvedValue({
+    it('reads the current release of one name in its namespace with its values, and null when absent', async () => {
+        core.listNamespacedSecret.mockResolvedValue({
             items: [releaseSecret(superseded), releaseSecret(deployed)],
         });
-        expect(await helm.getRelease('traefik')).toMatchObject({
+        expect(await helm.getRelease('traefik', 'kube-system')).toMatchObject({
             revision: 2,
             values: 'service:\n  type: LoadBalancer\n',
         });
+        expect(core.listNamespacedSecret).toHaveBeenCalledWith({
+            namespace: 'kube-system',
+            fieldSelector: 'type=helm.sh/release.v1',
+        });
+        // Secrets listed in a namespace that holds no such release, and a name nothing carries.
         expect(await helm.getRelease('traefik', 'other')).toBeNull();
-        expect(await helm.getRelease('nothing')).toBeNull();
+        expect(await helm.getRelease('nothing', 'kube-system')).toBeNull();
+        expect(core.listSecretForAllNamespaces).not.toHaveBeenCalled();
+    });
+
+    it('reads a release in the namespace its screen names even when another namespace is active', async () => {
+        client.getActiveNamespace.mockReturnValue('default');
+        core.listNamespacedSecret.mockResolvedValue({ items: [releaseSecret(deployed)] });
+        expect(await helm.getRelease('traefik', 'kube-system')).toMatchObject({ revision: 2 });
+        expect(core.listNamespacedSecret).toHaveBeenCalledWith(expect.objectContaining({ namespace: 'kube-system' }));
     });
 
     it('lists the revisions of a release newest first', async () => {
-        core.listSecretForAllNamespaces.mockResolvedValue({
+        core.listNamespacedSecret.mockResolvedValue({
             items: [releaseSecret(superseded), releaseSecret(deployed)],
         });
         expect(await helm.getReleaseRevisions('traefik', 'kube-system')).toMatchObject([
             { rev: '2', status: 'Deployed', chartVersion: '28.0.0', description: 'Upgrade complete' },
             { rev: '1', status: 'Superseded', chartVersion: '28.0.0', description: 'Install' },
         ]);
+    });
+
+    it('skips a release whose payload inflates past the ceiling instead of decoding it', () => {
+        // A tiny gzip stream that expands to far more than any real release.
+        const bomb = gzipSync(Buffer.alloc(48 * 1024 * 1024, 0x20));
+        const secret = { data: { release: Buffer.from(bomb.toString('base64')).toString('base64') } } as V1Secret;
+        expect(helm.decodeRelease(secret)).toBeNull();
     });
 
     it('derives the chart list from the installed releases, one row per chart', async () => {
@@ -241,9 +261,12 @@ describe('helm releases', () => {
 
     it('classifies a failed read as a Kubernetes error carrying the operation', async () => {
         core.listSecretForAllNamespaces.mockRejectedValue(new ApiException(403, 'forbidden', {}, {}));
+        core.listNamespacedSecret.mockRejectedValue(new ApiException(403, 'forbidden', {}, {}));
         await expect(helm.listReleases()).rejects.toMatchObject({ kind: 'forbidden', op: 'releases.list' });
         await expect(helm.listHelmCharts()).rejects.toMatchObject({ op: 'helmCharts.list' });
-        await expect(helm.getRelease('traefik')).rejects.toMatchObject({ op: 'releases.get' });
-        await expect(helm.getReleaseRevisions('traefik')).rejects.toMatchObject({ op: 'releases.revisions' });
+        await expect(helm.getRelease('traefik', 'kube-system')).rejects.toMatchObject({ op: 'releases.get' });
+        await expect(helm.getReleaseRevisions('traefik', 'kube-system')).rejects.toMatchObject({
+            op: 'releases.revisions',
+        });
     });
 });

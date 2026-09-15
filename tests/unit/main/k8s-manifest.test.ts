@@ -23,6 +23,7 @@ const client = {
         apiextensions: rest,
     }),
     getActiveNamespace: vi.fn<() => string | null>(),
+    resolveObjectNamespace: (explicit?: string) => explicit ?? client.getActiveNamespace(),
     listItems: async <T>(
         ns: string | undefined,
         namespaced: (ns: string) => Promise<{ items: T[] }>,
@@ -106,11 +107,25 @@ describe('getObjectYaml', () => {
         expect((await getObjectYaml('Pod', 'web-1')).yaml).toContain('apiVersion: v1beta1');
     });
 
-    it('searches every namespace when none is active', async () => {
+    it('refuses to read a namespaced object when no namespace is known, rather than searching', async () => {
         client.getActiveNamespace.mockReturnValue(null);
         core.listPodForAllNamespaces.mockResolvedValue({ items: [pod] });
-        expect(await getObjectYaml('Pod', 'web-1')).toMatchObject({ namespace: 'team-a' });
+        // What this read returns is what the editor writes back, so a guess here would seed a wrong replace.
+        await expect(getObjectYaml('Pod', 'web-1')).rejects.toMatchObject({
+            kind: 'invalid',
+            op: 'resources.getYaml',
+            detail: 'A namespace is required to read Pod "web-1".',
+        });
+        expect(core.listPodForAllNamespaces).not.toHaveBeenCalled();
         expect(core.listNamespacedPod).not.toHaveBeenCalled();
+    });
+
+    it('reads in the explicit namespace even when another one is active', async () => {
+        core.listNamespacedPod.mockResolvedValue({
+            items: [{ ...pod, metadata: { ...pod.metadata, namespace: 'b' } }],
+        });
+        expect(await getObjectYaml('Pod', 'web-1', 'b')).toMatchObject({ namespace: 'b' });
+        expect(core.listNamespacedPod).toHaveBeenCalledWith({ namespace: 'b' });
     });
 
     it('reads a cluster-scoped object without a namespace', async () => {
@@ -137,15 +152,15 @@ describe('getObjectYaml', () => {
         for (const kind of manifestKindSchema.options) {
             const clusterScoped = kind === 'Node' || KIND_REGISTRY[kind].clusterScoped;
             // Nothing is listed, so every kind must report the object as missing rather than throw
-            // for want of a list function. Namespaced kinds are read both ways, since the scoped and
-            // the cluster-wide list are separate calls.
+            // for want of a list function. A namespaced kind with no namespace to read in is refused
+            // before any list is made.
             client.getActiveNamespace.mockReturnValue('team-a');
             await expect(getObjectYaml(kind, 'absent', clusterScoped ? undefined : 'team-a')).rejects.toMatchObject({
                 kind: 'notFound',
             });
             if (clusterScoped) continue;
             client.getActiveNamespace.mockReturnValue(null);
-            await expect(getObjectYaml(kind, 'absent')).rejects.toMatchObject({ kind: 'notFound' });
+            await expect(getObjectYaml(kind, 'absent')).rejects.toMatchObject({ kind: 'invalid' });
         }
     });
 

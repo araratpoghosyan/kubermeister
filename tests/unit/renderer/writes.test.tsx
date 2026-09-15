@@ -91,7 +91,14 @@ describe('manifest editing', () => {
         await userEvent.click(screen.getByRole('button', { name: 'Edit' }));
         const save = await screen.findByRole('button', { name: 'Save' });
         await userEvent.click(save);
-        await waitFor(() => expect(invoke).toHaveBeenCalledWith('resources.replace', { manifest: YAML }));
+        // The write names the context the screen is on and the object the editor was opened for.
+        await waitFor(() =>
+            expect(invoke).toHaveBeenCalledWith('resources.replace', {
+                context: 'alpha',
+                manifest: YAML,
+                expect: { kind: 'ConfigMap', name: 'app-config', namespace: 'team-a' },
+            }),
+        );
         expect(toasts.success).toHaveBeenCalledWith('ConfigMap “app-config” updated');
         expect(await screen.findByRole('button', { name: 'Edit' })).toBeInTheDocument();
     });
@@ -101,7 +108,14 @@ describe('manifest editing', () => {
         await screen.findByTestId('manifest-panel');
         await userEvent.click(screen.getByRole('button', { name: 'Edit' }));
         await userEvent.click(await screen.findByRole('button', { name: 'Dry run' }));
-        await waitFor(() => expect(invoke).toHaveBeenCalledWith('resources.replace', { manifest: YAML, dryRun: true }));
+        await waitFor(() =>
+            expect(invoke).toHaveBeenCalledWith('resources.replace', {
+                context: 'alpha',
+                manifest: YAML,
+                dryRun: true,
+                expect: { kind: 'ConfigMap', name: 'app-config', namespace: 'team-a' },
+            }),
+        );
         expect(toasts.success).toHaveBeenCalledWith('Dry run passed', expect.anything());
     });
 
@@ -146,12 +160,53 @@ describe('delete action', () => {
         await userEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
         await waitFor(() =>
             expect(invoke).toHaveBeenCalledWith('resources.delete', {
+                context: 'alpha',
                 kind: 'ConfigMap',
                 name: 'app-config',
                 namespace: 'team-a',
             }),
         );
         expect(toasts.success).toHaveBeenCalledWith('ConfigMap “app-config” deleted');
+    });
+
+    it('asks for the name of a far-reaching kind before its delete is armed', async () => {
+        invoke.mockImplementation(async (channel: string) =>
+            channel === 'resources.delete' ? { kind: 'Node', name: 'node-1' } : data[channel],
+        );
+        renderInRouter(<DeleteResourceButton kind="Node" name="node-1" backTo="/overview/nodes" />);
+        await userEvent.click(await screen.findByRole('button', { name: 'Delete' }));
+        const dialog = await screen.findByRole('alertdialog');
+        expect(dialog).toHaveTextContent('Every pod scheduled on it is lost.');
+        const confirm = within(dialog).getByRole('button', { name: 'Delete' });
+        expect(confirm).toBeDisabled();
+        await userEvent.type(within(dialog).getByLabelText(/Type .* to confirm/), 'node-2');
+        expect(confirm).toBeDisabled();
+        await userEvent.clear(within(dialog).getByLabelText(/Type .* to confirm/));
+        await userEvent.type(within(dialog).getByLabelText(/Type .* to confirm/), 'node-1');
+        expect(confirm).toBeEnabled();
+        await userEvent.click(confirm);
+        await waitFor(() =>
+            expect(invoke).toHaveBeenCalledWith('resources.delete', { context: 'alpha', kind: 'Node', name: 'node-1' }),
+        );
+    });
+
+    it('refuses to write when no context is active', async () => {
+        invoke.mockImplementation(async (channel: string) => (channel === 'context.current' ? null : data[channel]));
+        renderInRouter(
+            <DeleteResourceButton
+                kind="ConfigMap"
+                name="app-config"
+                namespace="team-a"
+                backTo="/workloads/configmaps"
+            />,
+        );
+        await userEvent.click(await screen.findByRole('button', { name: 'Delete' }));
+        await userEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Delete' }));
+        // The write is refused before it reaches the bridge; the dialog closes on the failure.
+        await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+        expect(invoke).toHaveBeenCalledWith('context.current', {});
+        expect(invoke).not.toHaveBeenCalledWith('resources.delete', expect.anything());
+        expect(toasts.success).not.toHaveBeenCalled();
     });
 
     it('can be dismissed without deleting anything', async () => {
@@ -171,6 +226,7 @@ describe('scale control', () => {
         await userEvent.click(await screen.findByRole('button', { name: 'Scale up' }));
         await waitFor(() =>
             expect(invoke).toHaveBeenCalledWith('resources.scale', {
+                context: 'alpha',
                 kind: 'Deployment',
                 name: 'web',
                 namespace: 'team-a',
@@ -194,6 +250,7 @@ describe('scale control', () => {
         await userEvent.click(screen.getByRole('button', { name: 'Scale' }));
         await waitFor(() =>
             expect(invoke).toHaveBeenCalledWith('resources.scale', {
+                context: 'alpha',
                 kind: 'StatefulSet',
                 name: 'db',
                 namespace: 'team-a',
@@ -213,8 +270,24 @@ describe('create screen', () => {
         await waitFor(() => expect(page.textContent).toContain('kind: ConfigMap'));
 
         await userEvent.click(within(page).getByRole('button', { name: 'Create' }));
-        await waitFor(() => expect(invoke).toHaveBeenCalledWith('resources.create', { manifest: expect.any(String) }));
-        expect(toasts.success).toHaveBeenCalledWith('ConfigMap “my-config” created');
+        await waitFor(() =>
+            expect(invoke).toHaveBeenCalledWith('resources.create', {
+                context: 'alpha',
+                manifest: expect.any(String),
+            }),
+        );
+        expect(toasts.success).toHaveBeenCalledWith('ConfigMap “my-config” created', {
+            description: 'in namespace team-a',
+        });
+    });
+
+    it('says that each manifest must name its namespace when none is selected', async () => {
+        invoke.mockImplementation(async (channel: string) =>
+            channel === 'namespace.active' ? { name: null, pods: 3, tone: 'accent' } : data[channel],
+        );
+        renderRoutes(routeTree, '/create');
+        const page = await screen.findByTestId('create-page');
+        await waitFor(() => expect(page).toHaveTextContent('alpha / the namespace each manifest names'));
     });
 
     it('warns before a template would discard an edited manifest', async () => {
@@ -246,6 +319,7 @@ describe('bulk delete', () => {
         await userEvent.click(within(dialog).getByRole('button', { name: 'Delete 2' }));
         await waitFor(() => expect(toasts.success).toHaveBeenCalledWith('2 ConfigMaps deleted'));
         expect(invoke).toHaveBeenCalledWith('resources.delete', {
+            context: 'alpha',
             kind: 'ConfigMap',
             name: 'other-config',
             namespace: 'team-a',

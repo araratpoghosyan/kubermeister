@@ -199,11 +199,8 @@ export function listClaims(namespace?: string): Promise<Claim[]> {
 
 export function getClaim(name: string, namespace?: string): Promise<ClaimDetail | null> {
     return withK8s('resources.get', async () => {
-        const claim = await getNamespaced(
-            name,
-            namespace,
-            (n, ns) => apis().core.readNamespacedPersistentVolumeClaim({ name: n, namespace: ns }),
-            (fieldSelector) => apis().core.listPersistentVolumeClaimForAllNamespaces({ fieldSelector }),
+        const claim = await getNamespaced(name, namespace, (n, ns) =>
+            apis().core.readNamespacedPersistentVolumeClaim({ name: n, namespace: ns }),
         );
         return claim ? toClaimDetail(claim) : null;
     });
@@ -232,18 +229,17 @@ export function listSnapshots(namespace?: string): Promise<Snapshot[]> {
 
 export function getSnapshot(name: string, namespace?: string): Promise<SnapshotDetail | null> {
     return withK8s('resources.get', async () => {
+        // No namespace means not found rather than the first same-named snapshot across the cluster.
         const ns = resolveObjectNamespace(namespace);
-        // Without a namespace the CRD API has no clean name filter, so fall back to the 404-safe list.
-        const object = ns
-            ? await readOrNull(
-                  () =>
-                      apis().customObjects.getNamespacedCustomObject({
-                          ...SNAPSHOT_GROUP,
-                          namespace: ns,
-                          name,
-                      }) as Promise<VolumeSnapshotObject>,
-              )
-            : (await listSnapshotObjects()).find((object) => object.metadata?.name === name);
+        if (!ns) return null;
+        const object = await readOrNull(
+            () =>
+                apis().customObjects.getNamespacedCustomObject({
+                    ...SNAPSHOT_GROUP,
+                    namespace: ns,
+                    name,
+                }) as Promise<VolumeSnapshotObject>,
+        );
         return object ? toSnapshotDetail(object) : null;
     });
 }

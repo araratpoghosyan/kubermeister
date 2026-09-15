@@ -30,7 +30,13 @@ const HANDLERS: Record<StreamChannel, StreamHandler> = {
  */
 const streamKey = (senderId: number, subId: string): string => `${senderId}:${subId}`;
 
-const active = new Map<string, StreamController>();
+interface LiveStream {
+    controller: StreamController;
+    /** Kept so main can end a stream on its own initiative and tell the renderer why. */
+    send: StreamSend;
+}
+
+const active = new Map<string, LiveStream>();
 /** Keys whose handler is still setting up (connecting, listing). */
 const starting = new Set<string>();
 /** Keys stopped while still starting; torn down the moment setup resolves. */
@@ -39,9 +45,9 @@ const senderSubs = new Map<WebContents, Set<string>>();
 const wiredSenders = new WeakSet<WebContents>();
 
 function stop(key: string): void {
-    const controller = active.get(key);
-    if (controller) {
-        controller.stop();
+    const live = active.get(key);
+    if (live) {
+        live.controller.stop();
         active.delete(key);
         for (const subs of senderSubs.values()) subs.delete(key);
         return;
@@ -84,6 +90,23 @@ export function stopAllStreams(): void {
     senderSubs.clear();
 }
 
+/**
+ * End every stream because the connection it was opened on is gone: a context switch or a new
+ * kubeconfig. Each stream is told why and then ended, so a terminal prints the reason instead of
+ * going quiet, and a port-forward stops listening rather than forwarding new connections to the
+ * same-named pod in the next cluster. The streams all share the one live `KubeConfig`, which the
+ * client library re-reads on every reconnect, so letting them run would re-target them.
+ */
+export function endAllStreams(reason: string): void {
+    for (const [key, live] of [...active.entries()]) {
+        stop(key);
+        live.send({ type: 'error', message: reason });
+        live.send({ type: 'end' });
+    }
+    for (const key of starting) cancelled.add(key);
+    senderSubs.clear();
+}
+
 export function registerStreamHandlers(): void {
     ipcMain.handle('stream.start', async (event, arg: unknown) => {
         const parsed = streamStartSchema.safeParse(arg);
@@ -107,7 +130,7 @@ export function registerStreamHandlers(): void {
                 controller.stop();
                 return;
             }
-            active.set(key, controller);
+            active.set(key, { controller, send });
             track(sender, key);
         } catch (error) {
             starting.delete(key);
@@ -120,7 +143,7 @@ export function registerStreamHandlers(): void {
     ipcMain.handle('stream.send', (event, arg: unknown) => {
         const parsed = streamSendSchema.safeParse(arg);
         if (!parsed.success) return;
-        active.get(streamKey(event.sender.id, parsed.data.subId))?.write?.(parsed.data.data);
+        active.get(streamKey(event.sender.id, parsed.data.subId))?.controller.write?.(parsed.data.data);
     });
 
     ipcMain.handle('stream.stop', (event, arg: unknown) => {

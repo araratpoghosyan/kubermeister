@@ -97,12 +97,7 @@ export function listConfigMaps(namespace?: string): Promise<ConfigMap[]> {
 }
 
 function readConfigMap(name: string, namespace?: string): Promise<V1ConfigMap | undefined> {
-    return getNamespaced(
-        name,
-        namespace,
-        (n, ns) => apis().core.readNamespacedConfigMap({ name: n, namespace: ns }),
-        (fieldSelector) => apis().core.listConfigMapForAllNamespaces({ fieldSelector }),
-    );
+    return getNamespaced(name, namespace, (n, ns) => apis().core.readNamespacedConfigMap({ name: n, namespace: ns }));
 }
 
 export function getConfigMap(name: string, namespace?: string): Promise<ConfigMapDetail | null> {
@@ -131,12 +126,7 @@ export function listSecrets(namespace?: string): Promise<Secret[]> {
 }
 
 function readSecret(name: string, namespace?: string): Promise<V1Secret | undefined> {
-    return getNamespaced(
-        name,
-        namespace,
-        (n, ns) => apis().core.readNamespacedSecret({ name: n, namespace: ns }),
-        (fieldSelector) => apis().core.listSecretForAllNamespaces({ fieldSelector }),
-    );
+    return getNamespaced(name, namespace, (n, ns) => apis().core.readNamespacedSecret({ name: n, namespace: ns }));
 }
 
 export function getSecret(name: string, namespace?: string): Promise<SecretDetail | null> {

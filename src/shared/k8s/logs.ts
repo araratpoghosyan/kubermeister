@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { namespaceNameSchema } from './names.js';
 
 export const logLevelSchema = z.enum(['INFO', 'DEBUG', 'WARN', 'ERROR']);
 
@@ -16,7 +17,7 @@ export type LogLine = z.infer<typeof logLineSchema>;
 /** Input of the one-shot log read: the same target as the follow stream, plus its window. */
 export const podLogSnapshotInputSchema = z.object({
     name: z.string().min(1),
-    namespace: z.string().min(1),
+    namespace: namespaceNameSchema,
     /** Defaults to the pod's first container. */
     container: z.string().min(1).optional(),
     sinceSeconds: z.number().int().positive().optional(),

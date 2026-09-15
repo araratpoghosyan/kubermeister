@@ -13,7 +13,8 @@ vi.mock('../../../src/main/k8s/watch.js', () => ({
     startResourceWatch: (input: unknown, send: StreamSend) => handler(input, send),
 }));
 
-const { registerStreamHandlers, activeStreamCount, stopAllStreams } = await import('../../../src/main/ipc/streams.js');
+const { registerStreamHandlers, activeStreamCount, stopAllStreams, endAllStreams } =
+    await import('../../../src/main/ipc/streams.js');
 
 class FakeSender extends EventEmitter {
     constructor(public readonly id: number) {
@@ -164,6 +165,48 @@ describe('stream registry', () => {
         const pending = start(sender, 'stream:resources.watch:9');
 
         stopAllStreams();
+        resolveHandler(ctl);
+        await pending;
+        expect(ctl.stop).toHaveBeenCalledOnce();
+        expect(activeStreamCount()).toBe(0);
+    });
+
+    it('ends every stream with the reason when the connection they were opened on is left', async () => {
+        const first = new FakeSender(1);
+        const second = new FakeSender(2);
+        const controllers = [controller(), controller()];
+        let next = 0;
+        handler.mockImplementation(async () => controllers[next++]!);
+        await start(first, 'stream:pods.portForward:1');
+        await start(second, 'stream:resources.watch:1');
+        first.send.mockClear();
+        second.send.mockClear();
+
+        endAllStreams('The context changed to "beta"');
+        for (const ctl of controllers) expect(ctl.stop).toHaveBeenCalledOnce();
+        expect(activeStreamCount()).toBe(0);
+        for (const [sender, subId] of [
+            [first, 'stream:pods.portForward:1'],
+            [second, 'stream:resources.watch:1'],
+        ] as const) {
+            expect(sender.send).toHaveBeenNthCalledWith(1, `sub.${subId}`, {
+                type: 'error',
+                message: 'The context changed to "beta"',
+            });
+            expect(sender.send).toHaveBeenNthCalledWith(2, `sub.${subId}`, { type: 'end' });
+        }
+        // A later stop from the renderer for an ended stream is a no-op.
+        await call('stream.stop', first, { subId: 'stream:pods.portForward:1' });
+        expect(controllers[0]!.stop).toHaveBeenCalledOnce();
+    });
+
+    it('cancels a stream still connecting when the connection is left', async () => {
+        const sender = new FakeSender(1);
+        const ctl = controller();
+        let resolveHandler: (value: StreamController) => void = () => {};
+        handler.mockImplementation(() => new Promise<StreamController>((resolve) => (resolveHandler = resolve)));
+        const pending = start(sender, 'stream:pods.exec:1');
+        endAllStreams('The kubeconfig changed');
         resolveHandler(ctl);
         await pending;
         expect(ctl.stop).toHaveBeenCalledOnce();
