@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import type { Writable } from 'node:stream';
+import { PassThrough, type Writable } from 'node:stream';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const log = vi.fn();
@@ -71,6 +71,8 @@ describe('log line parsing', () => {
 describe('startPodLogStream', () => {
     const controller = { abort: vi.fn() };
     let sink: Writable | undefined;
+    // The client pipes the response body into the sink; the fake does the same so `pipe` fires.
+    let source: PassThrough | undefined;
 
     beforeEach(() => {
         log.mockReset();
@@ -79,6 +81,8 @@ describe('startPodLogStream', () => {
         target.mockResolvedValue({ name: 'web-1', namespace: 'team-a', container: 'web' });
         log.mockImplementation(async (_ns: string, _pod: string, _c: string, stream: Writable) => {
             sink = stream;
+            source = new PassThrough();
+            source.pipe(stream);
             return controller;
         });
     });
@@ -117,6 +121,28 @@ describe('startPodLogStream', () => {
             data: { level: 'INFO', timestamp: '2026-09-15T12:00:02Z', message: 'tail' },
         });
         expect(send).toHaveBeenLastCalledWith({ type: 'end' });
+    });
+
+    it('treats the failure an abort raises on the body as the follow ending, not an error', async () => {
+        const send = vi.fn();
+        const ctl = await logs.startPodLogStream({ name: 'web-1', namespace: 'team-a' }, send);
+        ctl.stop();
+        expect(controller.abort).toHaveBeenCalledOnce();
+        // Aborting the fetch fails the piped body; unheard, that is an uncaught exception.
+        source!.destroy(new Error('This operation was aborted'));
+        await new Promise((resolve) => setImmediate(resolve));
+        expect(send).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }));
+    });
+
+    it('reports a body that fails mid-follow as an error followed by end', async () => {
+        const send = vi.fn();
+        await logs.startPodLogStream({ name: 'web-1', namespace: 'team-a' }, send);
+        source!.destroy(new Error('connection reset'));
+        await new Promise((resolve) => setImmediate(resolve));
+        expect(send.mock.calls.map((c) => c[0])).toEqual([
+            { type: 'error', message: 'connection reset' },
+            { type: 'end' },
+        ]);
     });
 
     it('reports a sink error instead of throwing', async () => {

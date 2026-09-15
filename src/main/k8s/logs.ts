@@ -1,4 +1,4 @@
-import { Writable } from 'node:stream';
+import { Writable, type Readable } from 'node:stream';
 import { Log } from '@kubernetes/client-node';
 import type { LogLevel, LogLine, PodLogSnapshotInput } from '../../shared/k8s/logs.js';
 import { streamSchemas, type StreamController, type StreamSend } from '../../shared/streams.js';
@@ -69,13 +69,34 @@ export async function startPodLogStream(rawInput: unknown, send: StreamSend): Pr
     // A Writable that errors with no listener throws at the process level; report it instead.
     sink.on('error', (error) => send({ type: 'error', message: error.message }));
 
+    // The client pipes the response body into the sink and keeps that source to itself. `pipe`
+    // hands it over, and it needs an error listener: aborting the follow fails the source, and an
+    // unheard failure is an uncaught exception in the main process, which stalls quitting behind
+    // Electron's error dialog. An abort we asked for is the stream ending as intended.
+    let stopped = false;
+    let source: Readable | undefined;
+    sink.on('pipe', (piped: Readable) => {
+        source = piped;
+        piped.on('error', (error) => {
+            if (stopped) return;
+            send({ type: 'error', message: error.message });
+            send({ type: 'end' });
+        });
+    });
+
     const controller = await new Log(kubeConfig()).log(target.namespace, target.name, target.container, sink, {
         follow: true,
         tailLines: input.tailLines ?? DEFAULT_TAIL_LINES,
         sinceSeconds: input.sinceSeconds,
         timestamps: true,
     });
-    return { stop: () => controller.abort() };
+    return {
+        stop: () => {
+            stopped = true;
+            controller.abort();
+            source?.destroy();
+        },
+    };
 }
 
 /**
