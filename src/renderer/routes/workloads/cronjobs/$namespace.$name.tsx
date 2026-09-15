@@ -9,6 +9,8 @@ import {
     type DetailTabGroup,
 } from '@/components/templates/resource-detail';
 import { manifestTab } from '@/components/templates/manifest-panel';
+import { EditResourceButton } from '@/components/templates/edit-resource-button';
+import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
 import { ipcQueryKey } from '@/lib/query';
 import { useResource } from '@/lib/resources';
 
@@ -54,7 +56,18 @@ function CronJobDetailPage() {
             backTo="/workloads/cronjobs"
             query={query}
             found={!!row}
-            actions={<RefreshButton queryKeys={[ipcQueryKey('resources.get', { kind: 'CronJob', name, namespace })]} />}
+            actions={
+                <>
+                    <RefreshButton queryKeys={[ipcQueryKey('resources.get', { kind: 'CronJob', name, namespace })]} />
+                    <EditResourceButton />
+                    <DeleteResourceButton
+                        kind="CronJob"
+                        name={name}
+                        namespace={namespace}
+                        backTo="/workloads/cronjobs"
+                    />
+                </>
+            }
             meta={row ? [`schedule: ${row.schedule}`, `suspended: ${row.suspend}`] : undefined}
             groups={groups}
             testId="cronjob-page"

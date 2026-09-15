@@ -9,6 +9,8 @@ import {
     type DetailTabGroup,
 } from '@/components/templates/resource-detail';
 import { manifestTab } from '@/components/templates/manifest-panel';
+import { EditResourceButton } from '@/components/templates/edit-resource-button';
+import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
 import { ipcQueryKey } from '@/lib/query';
 import { useResource } from '@/lib/resources';
 
@@ -55,7 +57,18 @@ function NetworkPolicyDetailPage() {
             query={query}
             found={!!row}
             actions={
-                <RefreshButton queryKeys={[ipcQueryKey('resources.get', { kind: 'NetworkPolicy', name, namespace })]} />
+                <>
+                    <RefreshButton
+                        queryKeys={[ipcQueryKey('resources.get', { kind: 'NetworkPolicy', name, namespace })]}
+                    />
+                    <EditResourceButton />
+                    <DeleteResourceButton
+                        kind="NetworkPolicy"
+                        name={name}
+                        namespace={namespace}
+                        backTo="/network/networkpolicies"
+                    />
+                </>
             }
             meta={row ? [`namespace: ${row.namespace}`, `selector: ${row.podSelector}`] : undefined}
             groups={groups}

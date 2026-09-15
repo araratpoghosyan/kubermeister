@@ -9,6 +9,8 @@ import {
     type DetailTabGroup,
 } from '@/components/templates/resource-detail';
 import { manifestTab } from '@/components/templates/manifest-panel';
+import { EditResourceButton } from '@/components/templates/edit-resource-button';
+import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
 import { ipcQueryKey } from '@/lib/query';
 import { useResource } from '@/lib/resources';
 
@@ -52,7 +54,13 @@ function RoleDetailPage() {
             backTo="/access/roles"
             query={query}
             found={!!row}
-            actions={<RefreshButton queryKeys={[ipcQueryKey('resources.get', { kind: 'Role', name, namespace })]} />}
+            actions={
+                <>
+                    <RefreshButton queryKeys={[ipcQueryKey('resources.get', { kind: 'Role', name, namespace })]} />
+                    <EditResourceButton />
+                    <DeleteResourceButton kind="Role" name={name} namespace={namespace} backTo="/access/roles" />
+                </>
+            }
             meta={row ? [`namespace: ${row.namespace}`, `rules: ${row.rules}`] : undefined}
             groups={groups}
             testId="role-page"

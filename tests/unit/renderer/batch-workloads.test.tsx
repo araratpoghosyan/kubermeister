@@ -111,7 +111,17 @@ describe('batch and autoscaler lists', () => {
             within(table)
                 .getAllByRole('columnheader')
                 .map((h) => h.textContent),
-        ).toEqual(['Name', 'Reference', 'Min', 'Max', 'Replicas', 'Targets', 'Age']);
+        ).toEqual([
+            // The blank leading header belongs to the selection checkbox column.
+            '',
+            'Name',
+            'Reference',
+            'Min',
+            'Max',
+            'Replicas',
+            'Targets',
+            'Age',
+        ]);
         const row = table.querySelector('[data-autoscaler="web"]') as HTMLElement;
         expect(row).toHaveTextContent('Deployment/web');
         expect(row).toHaveTextContent('42% / 80%');

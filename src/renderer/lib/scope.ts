@@ -1,5 +1,5 @@
 import { invoke } from './ipc';
-import { invalidateClusterQueries, queryClient } from './query';
+import { invalidateClusterQueries, queryClient, useIpcQuery } from './query';
 
 /** Switch kube-context and refetch everything cluster-scoped. */
 export async function switchContext(name: string): Promise<void> {
@@ -13,4 +13,11 @@ export async function selectNamespace(namespace: string | null): Promise<void> {
     await invoke('namespace.set', { namespace });
     await queryClient.invalidateQueries({ queryKey: ['namespace.active'] });
     await invalidateClusterQueries();
+}
+
+/** The active context and namespace, for anything that must reset when either changes. */
+export function useScope(): { context: string | undefined; namespace: string | undefined } {
+    const context = useIpcQuery('context.current', {});
+    const namespace = useIpcQuery('namespace.active', {});
+    return { context: context.data?.name, namespace: namespace.data?.name };
 }

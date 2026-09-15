@@ -6,6 +6,8 @@ import { RefreshButton } from '@/components/refresh-button';
 import { DetailCard, DetailMetrics, PropertyGrid } from '@/components/templates/detail-cards';
 import { eventsTab, labelsTab, ResourceDetail, type DetailTabGroup } from '@/components/templates/resource-detail';
 import { manifestTab } from '@/components/templates/manifest-panel';
+import { EditResourceButton } from '@/components/templates/edit-resource-button';
+import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
 import { ipcQueryKey, useIpcQuery } from '@/lib/query';
 import { useRefreshIntervalMs } from '@/lib/settings';
 import { NODE_TONE } from '@/lib/status';
@@ -128,6 +130,8 @@ function NodeDetailPage() {
                     <ComingSoonButton variant="outline" size="sm" tip="Draining arrives with node actions">
                         Drain
                     </ComingSoonButton>
+                    <EditResourceButton />
+                    <DeleteResourceButton kind="Node" name={name} backTo="/overview/nodes" />
                 </>
             }
             groups={groups}

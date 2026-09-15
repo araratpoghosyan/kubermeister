@@ -9,6 +9,8 @@ import {
     type DetailTabGroup,
 } from '@/components/templates/resource-detail';
 import { manifestTab } from '@/components/templates/manifest-panel';
+import { EditResourceButton } from '@/components/templates/edit-resource-button';
+import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
 import { ipcQueryKey } from '@/lib/query';
 import { useResource } from '@/lib/resources';
 
@@ -53,7 +55,13 @@ function ClusterRoleBindingDetailPage() {
             backTo="/access/clusterrolebindings"
             query={query}
             found={!!row}
-            actions={<RefreshButton queryKeys={[ipcQueryKey('resources.get', { kind: 'ClusterRoleBinding', name })]} />}
+            actions={
+                <>
+                    <RefreshButton queryKeys={[ipcQueryKey('resources.get', { kind: 'ClusterRoleBinding', name })]} />
+                    <EditResourceButton />
+                    <DeleteResourceButton kind="ClusterRoleBinding" name={name} backTo="/access/clusterrolebindings" />
+                </>
+            }
             meta={row ? [`role: ${row.role}`, `subjects: ${row.subjects}`] : undefined}
             groups={groups}
             testId="clusterrolebinding-page"

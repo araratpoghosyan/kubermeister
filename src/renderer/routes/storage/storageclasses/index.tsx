@@ -44,6 +44,7 @@ function StorageClassesPage() {
             query={classes}
             detailPath={detailPath}
             rowProps={(storageClass) => ({ 'data-storageclass': storageClass.name })}
+            bulkDelete={{ kind: 'StorageClass' }}
             testId="storageclasses-table"
             footerNote={classes.live ? 'live' : undefined}
         />

@@ -9,6 +9,8 @@ import {
     type DetailTabGroup,
 } from '@/components/templates/resource-detail';
 import { manifestTab } from '@/components/templates/manifest-panel';
+import { EditResourceButton } from '@/components/templates/edit-resource-button';
+import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
 import { ipcQueryKey } from '@/lib/query';
 import { useResource } from '@/lib/resources';
 
@@ -52,7 +54,16 @@ function EndpointsDetailPage() {
             query={query}
             found={!!row}
             actions={
-                <RefreshButton queryKeys={[ipcQueryKey('resources.get', { kind: 'Endpoints', name, namespace })]} />
+                <>
+                    <RefreshButton queryKeys={[ipcQueryKey('resources.get', { kind: 'Endpoints', name, namespace })]} />
+                    <EditResourceButton />
+                    <DeleteResourceButton
+                        kind="Endpoints"
+                        name={name}
+                        namespace={namespace}
+                        backTo="/network/endpoints"
+                    />
+                </>
             }
             meta={row ? [`namespace: ${row.namespace}`, `endpoints: ${row.endpoints}`] : undefined}
             groups={groups}

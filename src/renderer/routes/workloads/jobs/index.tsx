@@ -30,6 +30,7 @@ function JobsPage() {
             query={jobs}
             detailPath={detailPath}
             rowProps={(job) => ({ 'data-job': job.name })}
+            bulkDelete={{ kind: 'Job' }}
             testId="jobs-table"
             footerNote={jobs.live ? 'live' : undefined}
         />

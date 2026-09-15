@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root';
 import { Route as IndexRouteImport } from './routes/index';
+import { Route as CreateRouteImport } from './routes/create';
 import { Route as SettingsRouteImport } from './routes/settings';
 import { Route as AddonsChartsRouteImport } from './routes/addons/charts';
 import { Route as OverviewEventsRouteImport } from './routes/overview/events';
@@ -71,6 +72,11 @@ import { Route as WorkloadsStatefulsetsNamespaceNameRouteImport } from './routes
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const CreateRoute = CreateRouteImport.update({
+  id: '/create',
+  path: '/create',
   getParentRoute: () => rootRouteImport,
 } as any);
 const SettingsRoute = SettingsRouteImport.update({
@@ -391,6 +397,7 @@ const WorkloadsStatefulsetsNamespaceNameRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute;
+  '/create': typeof CreateRoute;
   '/settings': typeof SettingsRoute;
   '/addons/charts': typeof AddonsChartsRoute;
   '/overview/events': typeof OverviewEventsRoute;
@@ -451,6 +458,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute;
+  '/create': typeof CreateRoute;
   '/settings': typeof SettingsRoute;
   '/addons/charts': typeof AddonsChartsRoute;
   '/overview/events': typeof OverviewEventsRoute;
@@ -512,6 +520,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   '/': typeof IndexRoute;
+  '/create': typeof CreateRoute;
   '/settings': typeof SettingsRoute;
   '/addons/charts': typeof AddonsChartsRoute;
   '/overview/events': typeof OverviewEventsRoute;
@@ -574,6 +583,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
     | '/'
+    | '/create'
     | '/settings'
     | '/addons/charts'
     | '/overview/events'
@@ -634,6 +644,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo;
   to:
     | '/'
+    | '/create'
     | '/settings'
     | '/addons/charts'
     | '/overview/events'
@@ -694,6 +705,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/create'
     | '/settings'
     | '/addons/charts'
     | '/overview/events'
@@ -755,6 +767,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
+  CreateRoute: typeof CreateRoute;
   SettingsRoute: typeof SettingsRoute;
   AddonsChartsRoute: typeof AddonsChartsRoute;
   OverviewEventsRoute: typeof OverviewEventsRoute;
@@ -821,6 +834,13 @@ declare module '@tanstack/react-router' {
       path: '/';
       fullPath: '/';
       preLoaderRoute: typeof IndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/create': {
+      id: '/create';
+      path: '/create';
+      fullPath: '/create';
+      preLoaderRoute: typeof CreateRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/settings': {
@@ -1227,6 +1247,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CreateRoute: CreateRoute,
   SettingsRoute: SettingsRoute,
   AddonsChartsRoute: AddonsChartsRoute,
   OverviewEventsRoute: OverviewEventsRoute,

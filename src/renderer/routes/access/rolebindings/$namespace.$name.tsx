@@ -9,6 +9,8 @@ import {
     type DetailTabGroup,
 } from '@/components/templates/resource-detail';
 import { manifestTab } from '@/components/templates/manifest-panel';
+import { EditResourceButton } from '@/components/templates/edit-resource-button';
+import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
 import { ipcQueryKey } from '@/lib/query';
 import { useResource } from '@/lib/resources';
 
@@ -54,7 +56,18 @@ function RoleBindingDetailPage() {
             query={query}
             found={!!row}
             actions={
-                <RefreshButton queryKeys={[ipcQueryKey('resources.get', { kind: 'RoleBinding', name, namespace })]} />
+                <>
+                    <RefreshButton
+                        queryKeys={[ipcQueryKey('resources.get', { kind: 'RoleBinding', name, namespace })]}
+                    />
+                    <EditResourceButton />
+                    <DeleteResourceButton
+                        kind="RoleBinding"
+                        name={name}
+                        namespace={namespace}
+                        backTo="/access/rolebindings"
+                    />
+                </>
             }
             meta={row ? [`namespace: ${row.namespace}`, `role: ${row.role}`] : undefined}
             groups={groups}

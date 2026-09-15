@@ -14,4 +14,9 @@ Element.prototype.hasPointerCapture ??= () => false;
 Element.prototype.setPointerCapture ??= () => {};
 Element.prototype.releasePointerCapture ??= () => {};
 
+// CodeMirror measures its document through Range geometry, which jsdom does not implement.
+const emptyRectList = () => ({ length: 0, item: () => null, [Symbol.iterator]: function* () {} }) as DOMRectList;
+Range.prototype.getClientRects ??= emptyRectList;
+Range.prototype.getBoundingClientRect ??= () => new DOMRect();
+
 afterEach(() => cleanup());

@@ -10,6 +10,7 @@ import { NavLink } from '@/components/layout/nav-link';
 import { DetailCard, PropertyGrid } from '@/components/templates/detail-cards';
 import { DetailHeader, type DetailHeaderProps } from '@/components/templates/detail-header';
 import { ObjectEvents } from '@/components/templates/object-events';
+import { ManifestEditContext, useManifestEditBridge } from '@/components/templates/manifest-edit';
 import { cn } from '@/lib/utils';
 
 export interface DetailTab {
@@ -146,6 +147,9 @@ export function ResourceDetail({
     const allTabs = groups.flatMap((g) => g.items);
     const [activeId, setActiveId] = useState(allTabs[0]?.id);
     const activeTab = allTabs.find((t) => t.id === activeId) ?? allTabs[0];
+    // The header's Edit action opens the Manifest tab in edit mode; the panel registers the other
+    // half of that handshake when it mounts.
+    const editControl = useManifestEditBridge(() => setActiveId('manifest'));
 
     // Roving tabindex with arrow keys across the flat tab order, the WAI-ARIA pattern for a vertical tablist.
     const onTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -173,127 +177,145 @@ export function ResourceDetail({
     const where = clusterScoped ? '' : namespace ? ` in namespace “${namespace}”` : ' in the current namespace';
 
     return (
-        <div className="flex h-full flex-col bg-background" data-testid={testId}>
-            <DetailHeader {...header} />
+        <ManifestEditContext value={editControl}>
+            <div className="flex h-full flex-col bg-background" data-testid={testId}>
+                <DetailHeader {...header} />
 
-            {state === 'loading' ? (
-                <div
-                    className="grid min-h-0 flex-1 grid-cols-[var(--spacing-rail)_1fr] gap-3.5 border-t border-border px-4.5 pt-3.5 pb-4.5"
-                    role="status"
-                    aria-label="Loading"
-                >
-                    <div className="flex flex-col gap-2">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                            <Skeleton key={i} className="h-7 w-full" />
-                        ))}
+                {state === 'loading' ? (
+                    <div
+                        className="grid min-h-0 flex-1 grid-cols-[var(--spacing-rail)_1fr] gap-3.5 border-t border-border px-4.5 pt-3.5 pb-4.5"
+                        role="status"
+                        aria-label="Loading"
+                    >
+                        <div className="flex flex-col gap-2">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                                <Skeleton key={i} className="h-7 w-full" />
+                            ))}
+                        </div>
+                        <div className="flex flex-col gap-3">
+                            {Array.from({ length: 4 }).map((_, i) => (
+                                <Skeleton key={i} className="h-24 w-full" />
+                            ))}
+                        </div>
                     </div>
-                    <div className="flex flex-col gap-3">
-                        {Array.from({ length: 4 }).map((_, i) => (
-                            <Skeleton key={i} className="h-24 w-full" />
-                        ))}
-                    </div>
-                </div>
-            ) : state === 'error' ? (
-                <StatePanel testId="detail-error">
-                    <span>Failed to load {kind ?? 'this resource'}.</span>
-                    <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => void query.refetch()}>
-                            Retry
-                        </Button>
+                ) : state === 'error' ? (
+                    <StatePanel testId="detail-error">
+                        <span>Failed to load {kind ?? 'this resource'}.</span>
+                        <div className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={() => void query.refetch()}>
+                                Retry
+                            </Button>
+                            {backTo && (
+                                <Button variant="ghost" size="sm" asChild>
+                                    <NavLink to={backTo}>Back to list</NavLink>
+                                </Button>
+                            )}
+                        </div>
+                    </StatePanel>
+                ) : state === 'notFound' ? (
+                    <StatePanel testId="not-found">
+                        <span>
+                            {kind ?? 'Resource'} “{header.title}” was not found{where}.
+                        </span>
                         {backTo && (
-                            <Button variant="ghost" size="sm" asChild>
+                            <Button variant="outline" size="sm" asChild>
                                 <NavLink to={backTo}>Back to list</NavLink>
                             </Button>
                         )}
-                    </div>
-                </StatePanel>
-            ) : state === 'notFound' ? (
-                <StatePanel testId="not-found">
-                    <span>
-                        {kind ?? 'Resource'} “{header.title}” was not found{where}.
-                    </span>
-                    {backTo && (
-                        <Button variant="outline" size="sm" asChild>
-                            <NavLink to={backTo}>Back to list</NavLink>
-                        </Button>
-                    )}
-                </StatePanel>
-            ) : (
-                <div className="grid min-h-0 flex-1 grid-cols-[var(--spacing-rail)_1fr] gap-3.5 border-t border-border px-4.5 pb-4.5">
-                    <div role="tablist" aria-orientation="vertical" className="overflow-auto pt-3.5 pr-1 select-none">
-                        {groups.map((group) => (
-                            <div key={group.label} role="presentation" className="mb-3.5">
-                                <div className="px-1 pt-1 pb-1.5 text-eyebrow font-semibold tracking-[0.1em] text-text-dim">
-                                    {group.label}
+                    </StatePanel>
+                ) : (
+                    <div className="grid min-h-0 flex-1 grid-cols-[var(--spacing-rail)_1fr] gap-3.5 border-t border-border px-4.5 pb-4.5">
+                        <div
+                            role="tablist"
+                            aria-orientation="vertical"
+                            className="overflow-auto pt-3.5 pr-1 select-none"
+                        >
+                            {groups.map((group) => (
+                                <div key={group.label} role="presentation" className="mb-3.5">
+                                    <div className="px-1 pt-1 pb-1.5 text-eyebrow font-semibold tracking-[0.1em] text-text-dim">
+                                        {group.label}
+                                    </div>
+                                    {group.items.map((tab) => {
+                                        const TabIcon = tab.icon;
+                                        const active = tab.id === activeTab?.id;
+                                        return (
+                                            <button
+                                                key={tab.id}
+                                                id={`tab-${tab.id}`}
+                                                type="button"
+                                                role="tab"
+                                                aria-selected={active}
+                                                aria-controls={`panel-${tab.id}`}
+                                                tabIndex={active ? 0 : -1}
+                                                onClick={() => setActiveId(tab.id)}
+                                                onKeyDown={(e) => onTabKeyDown(e, allTabs.indexOf(tab))}
+                                                className={cn(
+                                                    'mb-px flex w-full items-center gap-2.5 border-l-2 py-1.5 pr-2 pl-2 text-left text-body transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+                                                    active
+                                                        ? 'border-primary bg-elev-2 text-foreground'
+                                                        : 'border-transparent text-text-2 hover:bg-elev-2/60',
+                                                )}
+                                            >
+                                                <TabIcon
+                                                    className={cn(
+                                                        'size-3.25',
+                                                        active ? 'text-primary' : 'text-text-muted',
+                                                    )}
+                                                />
+                                                <span className="flex-1">{tab.label}</span>
+                                                {tab.count != null && (
+                                                    <span className="rounded-[3px] bg-elev-3 px-1.5 font-mono text-caption text-text-muted">
+                                                        {tab.count}
+                                                    </span>
+                                                )}
+                                                {tab.hint && (
+                                                    <span className="font-mono text-eyebrow text-text-dim">
+                                                        {tab.hint}
+                                                    </span>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
-                                {group.items.map((tab) => {
-                                    const TabIcon = tab.icon;
-                                    const active = tab.id === activeTab?.id;
-                                    return (
-                                        <button
-                                            key={tab.id}
-                                            id={`tab-${tab.id}`}
-                                            type="button"
-                                            role="tab"
-                                            aria-selected={active}
-                                            aria-controls={`panel-${tab.id}`}
-                                            tabIndex={active ? 0 : -1}
-                                            onClick={() => setActiveId(tab.id)}
-                                            onKeyDown={(e) => onTabKeyDown(e, allTabs.indexOf(tab))}
-                                            className={cn(
-                                                'mb-px flex w-full items-center gap-2.5 border-l-2 py-1.5 pr-2 pl-2 text-left text-body transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
-                                                active
-                                                    ? 'border-primary bg-elev-2 text-foreground'
-                                                    : 'border-transparent text-text-2 hover:bg-elev-2/60',
-                                            )}
-                                        >
-                                            <TabIcon
-                                                className={cn('size-3.25', active ? 'text-primary' : 'text-text-muted')}
-                                            />
-                                            <span className="flex-1">{tab.label}</span>
-                                            {tab.count != null && (
-                                                <span className="rounded-[3px] bg-elev-3 px-1.5 font-mono text-caption text-text-muted">
-                                                    {tab.count}
-                                                </span>
-                                            )}
-                                            {tab.hint && (
-                                                <span className="font-mono text-eyebrow text-text-dim">{tab.hint}</span>
-                                            )}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
 
-                    {/* The active tab plus any keepMounted tabs (hidden) so live state survives a switch.
-                        `min-w-0` keeps this grid item from growing past its track when a fill tab holds
-                        wide content (long log lines, the terminal): the inner region scrolls instead. */}
-                    <div className="flex min-h-0 min-w-0 flex-col" data-testid={testId ? `${testId}-body` : undefined}>
-                        {allTabs.map((tab) => {
-                            const active = tab.id === activeTab?.id;
-                            if (!active && !tab.keepMounted) return null;
-                            return (
-                                <div
-                                    key={tab.id}
-                                    id={`panel-${tab.id}`}
-                                    role="tabpanel"
-                                    aria-labelledby={`tab-${tab.id}`}
-                                    tabIndex={0}
-                                    hidden={!active}
-                                    className={cn(
-                                        'min-h-0 pt-3.5 outline-none',
-                                        active && 'flex-1',
-                                        tab.fill ? 'flex flex-col overflow-hidden' : 'overflow-auto',
-                                    )}
-                                >
-                                    {tab.fill ? tab.content : <div className="flex flex-col gap-3">{tab.content}</div>}
-                                </div>
-                            );
-                        })}
+                        {/* The active tab plus any keepMounted tabs (hidden) so live state survives a switch.
+                            `min-w-0` keeps this grid item from growing past its track when a fill tab holds
+                            wide content (long log lines, the terminal): the inner region scrolls instead. */}
+                        <div
+                            className="flex min-h-0 min-w-0 flex-col"
+                            data-testid={testId ? `${testId}-body` : undefined}
+                        >
+                            {allTabs.map((tab) => {
+                                const active = tab.id === activeTab?.id;
+                                if (!active && !tab.keepMounted) return null;
+                                return (
+                                    <div
+                                        key={tab.id}
+                                        id={`panel-${tab.id}`}
+                                        role="tabpanel"
+                                        aria-labelledby={`tab-${tab.id}`}
+                                        tabIndex={0}
+                                        hidden={!active}
+                                        className={cn(
+                                            'min-h-0 pt-3.5 outline-none',
+                                            active && 'flex-1',
+                                            tab.fill ? 'flex flex-col overflow-hidden' : 'overflow-auto',
+                                        )}
+                                    >
+                                        {tab.fill ? (
+                                            tab.content
+                                        ) : (
+                                            <div className="flex flex-col gap-3">{tab.content}</div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )}
+            </div>
+        </ManifestEditContext>
     );
 }

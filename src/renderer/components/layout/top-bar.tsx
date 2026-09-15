@@ -13,7 +13,6 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ComingSoonButton } from '@/components/coming-soon-button';
 import { breadcrumbsForPath } from '@/lib/nav';
 import { useIpcQuery } from '@/lib/query';
 import { selectNamespace, switchContext } from '@/lib/scope';
@@ -67,9 +66,9 @@ export function TopBar() {
                 })}
             </nav>
             <div className="flex-1" />
-            <ComingSoonButton size="sm" tip="Creating resources arrives with the Create screen">
-                Create resource
-            </ComingSoonButton>
+            <Button size="sm" asChild>
+                <NavLink to="/create">Create resource</NavLink>
+            </Button>
         </header>
     );
 }

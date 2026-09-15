@@ -3,6 +3,8 @@ import { BoxIcon, HeartIcon, ScrollIcon, TerminalIcon, WaypointsIcon } from 'luc
 import { RefreshButton } from '@/components/refresh-button';
 import { eventsTab, labelsTab, ResourceDetail, type DetailTabGroup } from '@/components/templates/resource-detail';
 import { manifestTab } from '@/components/templates/manifest-panel';
+import { EditResourceButton } from '@/components/templates/edit-resource-button';
+import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
 import { LogsTab } from '@/components/pod/logs-tab';
 import { NetworkTab } from '@/components/pod/network-tab';
 import { OverviewTab } from '@/components/pod/overview-tab';
@@ -81,13 +83,17 @@ function PodDetailPage() {
                 `restarts: ${pod?.restarts ?? 0}`,
             ]}
             actions={
-                <RefreshButton
-                    queryKeys={[
-                        ipcQueryKey('resources.get', { kind: 'Pod', name, namespace }),
-                        ['pods.logSnapshot'],
-                        ['events.forObject'],
-                    ]}
-                />
+                <>
+                    <RefreshButton
+                        queryKeys={[
+                            ipcQueryKey('resources.get', { kind: 'Pod', name, namespace }),
+                            ['pods.logSnapshot'],
+                            ['events.forObject'],
+                        ]}
+                    />
+                    <EditResourceButton />
+                    <DeleteResourceButton kind="Pod" name={name} namespace={namespace} backTo="/workloads/pods" />
+                </>
             }
             groups={groups}
             query={query}

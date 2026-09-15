@@ -9,6 +9,8 @@ import {
     type DetailTabGroup,
 } from '@/components/templates/resource-detail';
 import { manifestTab } from '@/components/templates/manifest-panel';
+import { EditResourceButton } from '@/components/templates/edit-resource-button';
+import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
 import { ipcQueryKey } from '@/lib/query';
 import { useResource } from '@/lib/resources';
 import { JOB_TONE } from '@/lib/status';
@@ -55,7 +57,13 @@ function JobDetailPage() {
             query={query}
             found={!!row}
             status={row ? { label: row.status, tone: JOB_TONE[row.status] } : undefined}
-            actions={<RefreshButton queryKeys={[ipcQueryKey('resources.get', { kind: 'Job', name, namespace })]} />}
+            actions={
+                <>
+                    <RefreshButton queryKeys={[ipcQueryKey('resources.get', { kind: 'Job', name, namespace })]} />
+                    <EditResourceButton />
+                    <DeleteResourceButton kind="Job" name={name} namespace={namespace} backTo="/workloads/jobs" />
+                </>
+            }
             meta={row ? [`completions: ${row.completions}`, `duration: ${row.duration}`] : undefined}
             groups={groups}
             testId="job-page"

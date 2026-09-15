@@ -11,6 +11,8 @@ import {
     type DetailTabGroup,
 } from '@/components/templates/resource-detail';
 import { manifestTab } from '@/components/templates/manifest-panel';
+import { EditResourceButton } from '@/components/templates/edit-resource-button';
+import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ipcQueryKey, useIpcQuery } from '@/lib/query';
 import { useResource } from '@/lib/resources';
@@ -164,13 +166,17 @@ function ServiceDetailPage() {
                     : undefined
             }
             actions={
-                <RefreshButton
-                    queryKeys={[
-                        ipcQueryKey('resources.get', { kind: 'Service', name, namespace }),
-                        ipcQueryKey('services.ports', target),
-                        ipcQueryKey('services.endpoints', target),
-                    ]}
-                />
+                <>
+                    <RefreshButton
+                        queryKeys={[
+                            ipcQueryKey('resources.get', { kind: 'Service', name, namespace }),
+                            ipcQueryKey('services.ports', target),
+                            ipcQueryKey('services.endpoints', target),
+                        ]}
+                    />
+                    <EditResourceButton />
+                    <DeleteResourceButton kind="Service" name={name} namespace={namespace} backTo="/network/services" />
+                </>
             }
             groups={groups}
             query={query}

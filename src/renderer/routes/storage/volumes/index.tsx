@@ -32,6 +32,7 @@ function VolumesPage() {
             query={volumes}
             detailPath={detailPath}
             rowProps={(volume) => ({ 'data-volume': volume.name })}
+            bulkDelete={{ kind: 'PersistentVolume' }}
             testId="volumes-table"
             footerNote={volumes.live ? 'live' : undefined}
         />

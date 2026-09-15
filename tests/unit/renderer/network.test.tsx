@@ -100,7 +100,16 @@ describe('network lists', () => {
             within(ingresses)
                 .getAllByRole('columnheader')
                 .map((h) => h.textContent),
-        ).toEqual(['Name', 'Class', 'Hosts', 'Address', 'Ports', 'Age']);
+        ).toEqual([
+            // The blank leading header belongs to the selection checkbox column.
+            '',
+            'Name',
+            'Class',
+            'Hosts',
+            'Address',
+            'Ports',
+            'Age',
+        ]);
         expect(ingresses).toHaveTextContent('web.example.com');
 
         await userEvent.click(screen.getByRole('link', { name: 'Endpoints', exact: true }));

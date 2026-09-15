@@ -16,6 +16,16 @@ import { ageColumn, nameColumn, statusColumn, textColumn } from '@/components/te
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ThemeProvider } from '@/components/theme-provider';
 import { IpcError } from '@/lib/ipc';
+
+// The page reads the active scope to bucket row selection; nothing here depends on the values.
+vi.mock('@/lib/ipc', async () => ({
+    ...(await vi.importActual<typeof import('@/lib/ipc')>('@/lib/ipc')),
+    invoke: vi.fn(async (channel: string) =>
+        channel === 'context.current'
+            ? { name: 'alpha', cluster: 'a', user: 'u', current: true }
+            : { name: 'team-a', pods: 1, tone: 'accent' },
+    ),
+}));
 import type { StatusTone } from '@/lib/status';
 
 interface Row {
