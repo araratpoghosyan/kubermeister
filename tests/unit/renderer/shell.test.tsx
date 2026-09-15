@@ -1,8 +1,7 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
-import { render, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { renderRoutes } from './helpers';
 
 const invoke = vi.fn();
 const subscribe = vi.fn(() => () => {});
@@ -15,7 +14,6 @@ vi.mock('@/lib/ipc', async () => ({
 }));
 
 const { routeTree } = await import('@/routeTree.gen');
-const { LoadingRows } = await import('@/components/overview/query-state');
 
 const data: Record<string, unknown> = {
     'update.state': { status: 'up-to-date' },
@@ -42,16 +40,6 @@ const data: Record<string, unknown> = {
     'resources.list': { kind: 'Pod', items: [] },
 };
 
-function renderAt(path: string) {
-    const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: [path] }) });
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    return render(
-        <QueryClientProvider client={client}>
-            <RouterProvider router={router} />
-        </QueryClientProvider>,
-    );
-}
-
 describe('app shell', () => {
     beforeEach(() => {
         invoke.mockReset();
@@ -59,47 +47,68 @@ describe('app shell', () => {
     });
 
     it('renders the sidebar, the top bar with context and namespace, and the summary at the root', async () => {
-        renderAt('/');
+        renderRoutes(routeTree, '/');
         expect(await screen.findByTestId('summary-page')).toBeInTheDocument();
-        expect(await screen.findByTestId('cluster-summary')).toHaveTextContent('alpha');
+        const summary = await screen.findByTestId('cluster-summary');
+        expect(summary).toHaveTextContent('alpha');
+        expect(within(summary).getByText('Healthy')).toHaveAttribute('data-tone', 'ok');
+        expect(summary).toHaveTextContent('Kubernetes 1.36.4');
         expect(screen.getByTestId('sidebar')).toHaveTextContent('Kubermeister');
         expect(screen.getByRole('link', { name: 'Summary' })).toHaveAttribute('aria-current', 'page');
         expect(await screen.findByTestId('active-namespace')).toHaveTextContent('team-a · 4 pods');
         expect(await screen.findByTestId('context-selector')).toHaveTextContent('alpha');
+        expect(screen.getByTestId('breadcrumbs')).toHaveTextContent('Summary');
         expect(screen.queryByTestId('update-banner')).not.toBeInTheDocument();
     });
 
     it('navigates between the overview screens through the sidebar', async () => {
-        renderAt('/overview/nodes');
+        renderRoutes(routeTree, '/overview/nodes');
         const nodes = await screen.findByTestId('nodes-table');
         expect(within(nodes).getAllByRole('row')).toHaveLength(2);
         expect(nodes).toHaveTextContent('control-plane');
+        expect(within(nodes).getByText('Ready')).toHaveAttribute('data-tone', 'ok');
         await userEvent.click(screen.getByRole('link', { name: 'Namespaces' }));
         const namespaces = await screen.findByTestId('namespaces-table');
         expect(namespaces).toHaveTextContent('kube-system');
+        expect(within(namespaces).getByText('Active')).toHaveAttribute('data-tone', 'accent');
+        expect(namespaces.querySelector('[data-namespace="kube-system"]')).toHaveTextContent('Ready');
         expect(screen.getByRole('link', { name: 'Namespaces' })).toHaveAttribute('aria-current', 'page');
+        expect(screen.getByTestId('breadcrumbs')).toHaveTextContent('Namespaces');
     });
 
-    it('shows a classified error inside the page when a read fails', async () => {
+    it('shows a classified error inside the list when a read fails and retries on demand', async () => {
         const { IpcError } = await vi.importActual<typeof import('@/lib/ipc')>('@/lib/ipc');
         invoke.mockImplementation(async (channel: string) => {
             if (channel === 'nodes.list')
                 throw new IpcError({ kind: 'forbidden', detail: 'Access denied (RBAC).', op: 'nodes.list' });
             return data[channel];
         });
-        renderAt('/overview/nodes');
-        expect(await screen.findByRole('alert')).toHaveTextContent('Access denied');
+        renderRoutes(routeTree, '/overview/nodes');
+        expect(await screen.findByText('Access denied')).toBeInTheDocument();
+        expect(screen.getByText("You don't have permission to view Nodes.")).toBeInTheDocument();
+        invoke.mockImplementation(async (channel: string) => data[channel]);
+        await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+        expect(await screen.findByTestId('nodes-table')).toHaveTextContent('n1');
+    });
+
+    it('shows the summary error and the no-context state', async () => {
+        const { IpcError } = await vi.importActual<typeof import('@/lib/ipc')>('@/lib/ipc');
+        invoke.mockImplementation(async (channel: string) => {
+            if (channel === 'cluster.active')
+                throw new IpcError({ kind: 'unreachable', detail: 'timed out', op: 'cluster.active' });
+            return data[channel];
+        });
+        const first = renderRoutes(routeTree, '/');
+        expect(await screen.findByRole('alert')).toHaveTextContent('timed out');
+        first.unmount();
+
+        invoke.mockImplementation(async (channel: string) => (channel === 'cluster.active' ? null : data[channel]));
+        renderRoutes(routeTree, '/');
+        expect(await screen.findByText('No current context.')).toBeInTheDocument();
     });
 
     it('renders an unknown route as not found', async () => {
-        renderAt('/nowhere');
+        renderRoutes(routeTree, '/nowhere');
         expect(await screen.findByText('This page does not exist.')).toBeInTheDocument();
-    });
-});
-
-describe('LoadingRows', () => {
-    it('renders the requested number of skeleton rows', () => {
-        render(<LoadingRows rows={4} />);
-        expect(screen.getByRole('status', { name: 'Loading' }).children).toHaveLength(4);
     });
 });

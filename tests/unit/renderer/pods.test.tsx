@@ -1,8 +1,8 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PodDetail as PodDetailModel } from '../../../src/shared/k8s/pods';
+import { renderRoutes } from './helpers';
 
 const invoke = vi.fn();
 const subscribe = vi.fn(() => () => {});
@@ -88,16 +88,6 @@ const data: Record<string, unknown> = {
     'resources.get': { kind: 'Pod', item: detail },
 };
 
-function renderAt(path: string) {
-    const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: [path] }) });
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    return render(
-        <QueryClientProvider client={client}>
-            <RouterProvider router={router} />
-        </QueryClientProvider>,
-    );
-}
-
 describe('pods screens', () => {
     beforeEach(() => {
         invoke.mockReset();
@@ -105,7 +95,7 @@ describe('pods screens', () => {
     });
 
     it('lists pods with status tones and links each row to its namespaced detail', async () => {
-        renderAt('/workloads/pods');
+        renderRoutes(routeTree, '/workloads/pods');
         const table = await screen.findByTestId('pods-table');
         expect(within(table).getAllByRole('row')).toHaveLength(3);
         expect(within(table).getByText('CrashLoop')).toHaveAttribute('data-tone', 'danger');
@@ -113,28 +103,40 @@ describe('pods screens', () => {
             'href',
             '/workloads/pods/team-a/web-1',
         );
+        expect(table.querySelector('[data-pod="web-2"]')).toHaveTextContent('5');
         expect(invoke).toHaveBeenCalledWith('resources.list', { kind: 'Pod', namespace: undefined });
         expect(screen.getByRole('link', { name: 'Pods' })).toHaveAttribute('aria-current', 'page');
+        expect(screen.getByTestId('resource-list')).toHaveTextContent('2 results');
+    });
+
+    it('opens the detail when a row is clicked', async () => {
+        const { router } = renderRoutes(routeTree, '/workloads/pods');
+        const table = await screen.findByTestId('pods-table');
+        await userEvent.click(within(table).getByText('CrashLoop'));
+        await waitFor(() => expect(router.state.location.pathname).toBe('/workloads/pods/team-a/web-2'));
     });
 
     it('shows the namespace selector with the active namespace', async () => {
-        renderAt('/workloads/pods');
+        renderRoutes(routeTree, '/workloads/pods');
         const selector = await screen.findByTestId('namespace-selector');
         await waitFor(() => expect(selector).toHaveTextContent('team-a'));
     });
 
-    it('loads a pod by namespace and name and renders the detail', async () => {
-        renderAt('/workloads/pods/team-a/web-1');
+    it('loads a pod by namespace and name and renders the detail with its header', async () => {
+        renderRoutes(routeTree, '/workloads/pods/team-a/web-1');
         expect(await screen.findByTestId('pod-detail')).toBeInTheDocument();
         expect(invoke).toHaveBeenCalledWith('resources.get', { kind: 'Pod', name: 'web-1', namespace: 'team-a' });
-        expect(screen.getByTestId('pod-page')).toHaveTextContent('Pods / web-1');
+        const page = screen.getByTestId('pod-page');
+        expect(page).toHaveTextContent('Pod');
+        expect(within(page).getAllByText('Running')[0]).toHaveAttribute('data-tone', 'ok');
+        expect(page).toHaveTextContent('1/1 ready');
     });
 
     it('reports a missing pod as not found', async () => {
         invoke.mockImplementation(async (channel: string) =>
             channel === 'resources.get' ? { kind: 'Pod', item: null } : data[channel],
         );
-        renderAt('/workloads/pods/team-a/gone');
+        renderRoutes(routeTree, '/workloads/pods/team-a/gone');
         expect(await screen.findByTestId('not-found')).toHaveTextContent('Pod team-a/gone does not exist.');
     });
 });
@@ -152,6 +154,7 @@ describe('PodDetail', () => {
         expect(within(conditions).getByText('True')).toHaveAttribute('data-tone', 'ok');
         expect(within(conditions).getByText('False')).toHaveAttribute('data-tone', 'warn');
         expect(screen.getByText('web')).toBeInTheDocument(); // the label value
-        expect(screen.getByText('None')).toBeInTheDocument(); // empty annotations
+        expect(screen.getAllByText('None')).toHaveLength(2); // empty annotations: description and body
+        expect(screen.getByText('1 entry')).toBeInTheDocument();
     });
 });

@@ -67,9 +67,10 @@ test('lists the seeded pod, opens its detail, and rescopes by namespace', async 
     const row = pods.locator('[data-pod^="web-"]');
     await expect(row).toHaveCount(1);
     await expect(row).toContainText('Running');
-    await expect(row).toContainText(NAMESPACE);
 
     await row.getByRole('link').click();
+    // The header carries the namespace; the list only shows a Namespace column across namespaces.
+    await expect(window.getByTestId('pod-page')).toContainText(NAMESPACE);
     const detail = window.getByTestId('pod-detail');
     await expect(detail).toContainText('busybox:1.36');
     await expect(detail.getByTestId('containers-table').locator('[data-container="web"]')).toContainText('Running');

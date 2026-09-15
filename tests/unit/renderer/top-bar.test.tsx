@@ -1,0 +1,155 @@
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { renderRoutes, renderWithQuery } from './helpers';
+
+const invoke = vi.fn();
+const subscribe = vi.fn(() => () => {});
+const stream = vi.fn(() => ({ stop: vi.fn(), send: vi.fn() }));
+vi.mock('@/lib/ipc', async () => ({
+    ...(await vi.importActual<typeof import('@/lib/ipc')>('@/lib/ipc')),
+    invoke,
+    subscribe,
+    stream,
+}));
+
+const { routeTree } = await import('@/routeTree.gen');
+const { ContextSelector, NamespaceSelector } = await import('@/components/layout/top-bar');
+
+const contexts = [
+    { name: 'alpha', cluster: 'a', user: 'u', current: true },
+    { name: 'beta', cluster: 'b', user: 'u', current: false },
+];
+const namespaces = [
+    { name: 'team-a', pods: 1, tone: 'accent' },
+    { name: 'kube-system', pods: 9, tone: 'ok' },
+];
+const data: Record<string, unknown> = {
+    'update.state': { status: 'up-to-date' },
+    'contexts.list': contexts,
+    'namespaces.list': namespaces,
+    'namespace.active': { name: 'team-a', pods: 1, tone: 'accent' },
+    'cluster.active': { name: 'alpha', nodes: 1, status: 'Degraded', version: '1.36.4', provider: 'k3s', region: '—' },
+    'resources.list': { kind: 'Pod', items: [] },
+    'resources.get': { kind: 'Pod', item: null },
+    'context.set': undefined,
+    'namespace.set': undefined,
+};
+
+describe('TopBar', () => {
+    beforeEach(() => {
+        invoke.mockReset();
+        invoke.mockImplementation(async (channel: string) => data[channel]);
+    });
+
+    it('renders breadcrumbs for a detail page with a link back to the list', async () => {
+        renderRoutes(routeTree, '/workloads/pods/team-a/web-1');
+        const crumbs = await screen.findByTestId('breadcrumbs');
+        expect(crumbs).toHaveTextContent('Podsteam-aweb-1');
+        expect(within(crumbs).getByRole('link', { name: 'Pods' })).toHaveAttribute('href', '/workloads/pods');
+        expect(within(crumbs).queryByRole('link', { name: 'web-1' })).not.toBeInTheDocument();
+    });
+
+    it('walks the history with the back and forward buttons', async () => {
+        const { router } = renderRoutes(routeTree, '/overview/nodes');
+        await screen.findByRole('heading', { name: 'Nodes' });
+        await userEvent.click(screen.getByRole('link', { name: 'Namespaces' }));
+        await screen.findByRole('heading', { name: 'Namespaces' });
+        await userEvent.click(screen.getByRole('button', { name: 'Back' }));
+        await waitFor(() => expect(router.state.location.pathname).toBe('/overview/nodes'));
+        await userEvent.click(screen.getByRole('button', { name: 'Forward' }));
+        await waitFor(() => expect(router.state.location.pathname).toBe('/overview/namespaces'));
+    });
+
+    it('carries the cluster health on the context dot', async () => {
+        renderRoutes(routeTree, '/overview/summary');
+        const selector = await screen.findByTestId('context-selector');
+        await waitFor(() => expect(selector).toHaveTextContent('alpha'));
+        await waitFor(() =>
+            expect(selector.querySelector('[title]')).toHaveAttribute('title', expect.stringContaining('not ready')),
+        );
+    });
+});
+
+describe('ContextSelector', () => {
+    beforeEach(() => {
+        invoke.mockReset();
+        invoke.mockImplementation(async (channel: string) => data[channel]);
+    });
+
+    it('shows the current context and a neutral dot until the cluster is known', async () => {
+        invoke.mockImplementation(async (channel: string) => (channel === 'cluster.active' ? null : data[channel]));
+        renderWithQuery(<ContextSelector />);
+        const trigger = screen.getByTestId('context-selector');
+        expect(trigger).toHaveTextContent('No cluster');
+        await waitFor(() => expect(trigger).toHaveTextContent('alpha'));
+        expect(trigger.querySelector('[title]')).toHaveAttribute('title', 'No active cluster');
+    });
+
+    it('lists every context and switches through the bridge', async () => {
+        renderWithQuery(<ContextSelector />);
+        const trigger = screen.getByTestId('context-selector');
+        await waitFor(() => expect(trigger).toHaveTextContent('alpha'));
+        await userEvent.click(trigger);
+        const menu = await screen.findByRole('menu');
+        expect(within(menu).getAllByRole('menuitem')).toHaveLength(2);
+        await userEvent.click(within(menu).getByRole('menuitem', { name: /beta/ }));
+        await waitFor(() => expect(invoke).toHaveBeenCalledWith('context.set', { name: 'beta' }));
+    });
+
+    it('does not switch when the current context is chosen again', async () => {
+        renderWithQuery(<ContextSelector />);
+        const trigger = screen.getByTestId('context-selector');
+        await waitFor(() => expect(trigger).toHaveTextContent('alpha'));
+        await userEvent.click(trigger);
+        await userEvent.click(await screen.findByRole('menuitem', { name: /alpha/ }));
+        await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+        expect(invoke).not.toHaveBeenCalledWith('context.set', expect.anything());
+    });
+});
+
+describe('NamespaceSelector', () => {
+    beforeEach(() => {
+        invoke.mockReset();
+        invoke.mockImplementation(async (channel: string) => data[channel]);
+    });
+
+    it('shows the active namespace with its pod count', async () => {
+        renderWithQuery(<NamespaceSelector />);
+        await waitFor(() => expect(screen.getByTestId('active-namespace')).toHaveTextContent('team-a · 1 pods'));
+    });
+
+    it('shows All Namespaces when nothing is selected', async () => {
+        invoke.mockImplementation(async (channel: string) =>
+            channel === 'namespace.active' ? { name: 'All Namespaces', pods: 12, tone: 'accent' } : data[channel],
+        );
+        renderWithQuery(<NamespaceSelector />);
+        await waitFor(() =>
+            expect(screen.getByTestId('active-namespace')).toHaveTextContent('All Namespaces · 12 pods'),
+        );
+    });
+
+    it('filters the list and selects a namespace through the bridge', async () => {
+        renderWithQuery(<NamespaceSelector />);
+        await waitFor(() => expect(screen.getByTestId('active-namespace')).toHaveTextContent('team-a'));
+        await userEvent.click(screen.getByTestId('namespace-selector'));
+        const list = await screen.findByRole('listbox');
+        expect(within(list).getAllByRole('option')).toHaveLength(3);
+        await userEvent.type(screen.getByPlaceholderText('Filter namespaces…'), 'kube');
+        await waitFor(() => expect(within(list).getAllByRole('option')).toHaveLength(1));
+        await userEvent.click(within(list).getByRole('option', { name: /kube-system/ }));
+        await waitFor(() => expect(invoke).toHaveBeenCalledWith('namespace.set', { namespace: 'kube-system' }));
+        await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
+    });
+
+    it('clears the scope with All Namespaces and reports an empty filter', async () => {
+        renderWithQuery(<NamespaceSelector />);
+        await userEvent.click(screen.getByTestId('namespace-selector'));
+        const list = await screen.findByRole('listbox');
+        await userEvent.type(screen.getByPlaceholderText('Filter namespaces…'), 'zzz');
+        expect(await screen.findByText('No namespaces found.')).toBeInTheDocument();
+        await userEvent.clear(screen.getByPlaceholderText('Filter namespaces…'));
+        await userEvent.click(within(list).getByRole('option', { name: /All Namespaces/ }));
+        await waitFor(() => expect(invoke).toHaveBeenCalledWith('namespace.set', { namespace: null }));
+    });
+});
