@@ -16,6 +16,9 @@ updates:
         update-types: ['version-update:semver-major']
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']
+      # v6 peers on Vite 8, which electron-vite 5 does not accept; it can follow the Vite pin above.
+      - dependency-name: '@vitejs/plugin-react'
+        update-types: ['version-update:semver-major']
       # v9 is a different API (createCoreRowModel, ReactTable); the table templates target v8.
       - dependency-name: '@tanstack/react-table'
         update-types: ['version-update:semver-major']

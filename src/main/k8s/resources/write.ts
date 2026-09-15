@@ -41,6 +41,11 @@ export const CLUSTER_SCOPED_KINDS = new Set([
 
 /** Parse a single-document manifest, rejecting anything unusable before the cluster sees it. */
 export function parseManifest(manifestYaml: string, op: string): KubernetesObject {
+    // An empty document is reported as its own parse failure by the YAML reader, which reads as a
+    // syntax error rather than what it is: nothing to apply.
+    if (manifestYaml.trim() === '') {
+        throw new K8sError('invalid', 'The manifest must be a single YAML object.', op);
+    }
     let parsed: unknown;
     try {
         parsed = loadYaml(manifestYaml);
