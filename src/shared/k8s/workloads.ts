@@ -111,6 +111,37 @@ export const autoscalerSchema = z.object({
 });
 export const autoscalerDetailSchema = autoscalerSchema.extend({ labels: pairs, annotations: pairs });
 
+export const configMapSchema = z.object({
+    name: z.string(),
+    namespace: z.string(),
+    keys: z.number().int().nonnegative(),
+    /** Total size of the data and binary data, humanised. */
+    size: z.string(),
+    age: z.string(),
+});
+export const configMapDetailSchema = configMapSchema.extend({ labels: pairs, annotations: pairs });
+
+export const secretSchema = z.object({
+    name: z.string(),
+    namespace: z.string(),
+    type: z.string(),
+    keys: z.number().int().nonnegative(),
+    age: z.string(),
+});
+export const secretDetailSchema = secretSchema.extend({ labels: pairs, annotations: pairs });
+
+/** One ConfigMap key with its value; binary keys are counted but not returned. */
+export const configMapEntrySchema = z.object({
+    key: z.string(),
+    /** Guessed from the value's shape: JSON, YAML or plain text. */
+    contentType: z.string(),
+    size: z.string(),
+    value: z.string(),
+});
+
+/** One Secret key. The value is never read: only the key name and a fixed mask cross the bridge. */
+export const secretEntrySchema = z.object({ key: z.string(), masked: z.string() });
+
 export const namespacedNameSchema = z.object({ name: z.string().min(1), namespace: z.string().min(1) });
 
 export type DeploymentStatus = z.infer<typeof deploymentStatusSchema>;
@@ -130,4 +161,10 @@ export type CronJob = z.infer<typeof cronJobSchema>;
 export type CronJobDetail = z.infer<typeof cronJobDetailSchema>;
 export type Autoscaler = z.infer<typeof autoscalerSchema>;
 export type AutoscalerDetail = z.infer<typeof autoscalerDetailSchema>;
+export type ConfigMap = z.infer<typeof configMapSchema>;
+export type ConfigMapDetail = z.infer<typeof configMapDetailSchema>;
+export type Secret = z.infer<typeof secretSchema>;
+export type SecretDetail = z.infer<typeof secretDetailSchema>;
+export type ConfigMapEntry = z.infer<typeof configMapEntrySchema>;
+export type SecretEntry = z.infer<typeof secretEntrySchema>;
 export type NamespacedName = z.infer<typeof namespacedNameSchema>;

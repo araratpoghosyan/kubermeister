@@ -22,7 +22,13 @@ import {
     resourceListOutputSchema,
 } from './k8s/resources.js';
 import { settingsInputSchema, settingsSchema } from './settings.js';
-import { namespacedNameSchema, replicaSetSchema, rolloutSchema } from './k8s/workloads.js';
+import {
+    configMapEntrySchema,
+    namespacedNameSchema,
+    replicaSetSchema,
+    rolloutSchema,
+    secretEntrySchema,
+} from './k8s/workloads.js';
 
 const noInput = z.object({});
 
@@ -104,6 +110,8 @@ export const ipcSchemas = {
     'metrics.deploymentSeries': { input: deploymentSeriesInputSchema, output: resourceSeriesSchema },
     'deployments.replicaSets': { input: namespacedNameSchema, output: z.array(replicaSetSchema) },
     'deployments.rollouts': { input: namespacedNameSchema, output: z.array(rolloutSchema) },
+    'configMaps.entries': { input: namespacedNameSchema, output: z.array(configMapEntrySchema) },
+    'secrets.entries': { input: namespacedNameSchema, output: z.array(secretEntrySchema) },
 } as const;
 
 /**

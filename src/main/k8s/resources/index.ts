@@ -7,6 +7,7 @@ import type {
     ResourceListOutput,
     RowOf,
 } from '../../../shared/k8s/resources.js';
+import { getConfigMap, getSecret, listConfigMaps, listSecrets } from './config.js';
 import { getPod, listPods } from './pods.js';
 import {
     getAutoscaler,
@@ -37,6 +38,8 @@ const SOURCES: { [K in Kind]: Source<K> } = {
     Job: { list: listJobs, get: getJob },
     CronJob: { list: listCronJobs, get: getCronJob },
     HorizontalPodAutoscaler: { list: listAutoscalers, get: getAutoscaler },
+    ConfigMap: { list: listConfigMaps, get: getConfigMap },
+    Secret: { list: listSecrets, get: getSecret },
 };
 
 export async function listResources(input: ResourceListInput): Promise<ResourceListOutput> {
@@ -58,6 +61,10 @@ export async function listResources(input: ResourceListInput): Promise<ResourceL
                 kind: 'HorizontalPodAutoscaler',
                 items: await SOURCES.HorizontalPodAutoscaler.list(input.namespace),
             };
+        case 'ConfigMap':
+            return { kind: 'ConfigMap', items: await SOURCES.ConfigMap.list(input.namespace) };
+        case 'Secret':
+            return { kind: 'Secret', items: await SOURCES.Secret.list(input.namespace) };
     }
 }
 
@@ -80,5 +87,9 @@ export async function getResource(input: ResourceGetInput): Promise<ResourceGetO
                 kind: 'HorizontalPodAutoscaler',
                 item: await SOURCES.HorizontalPodAutoscaler.get(input.name, input.namespace),
             };
+        case 'ConfigMap':
+            return { kind: 'ConfigMap', item: await SOURCES.ConfigMap.get(input.name, input.namespace) };
+        case 'Secret':
+            return { kind: 'Secret', item: await SOURCES.Secret.get(input.name, input.namespace) };
     }
 }

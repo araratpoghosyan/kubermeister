@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 const podsMod = { listPods: vi.fn(), getPod: vi.fn() };
 vi.mock('../../../src/main/k8s/resources/pods.js', () => podsMod);
+const configMod = { listConfigMaps: vi.fn(), getConfigMap: vi.fn(), listSecrets: vi.fn(), getSecret: vi.fn() };
+vi.mock('../../../src/main/k8s/resources/config.js', () => configMod);
 const workloadsMod = {
     listDeployments: vi.fn(),
     getDeployment: vi.fn(),
@@ -83,5 +85,19 @@ describe('generic resource dispatch', () => {
             kind: 'HorizontalPodAutoscaler',
             item: null,
         });
+    });
+
+    it('routes the config kinds to their sources', async () => {
+        configMod.listConfigMaps.mockResolvedValue([{ name: 'app-config' }]);
+        configMod.getConfigMap.mockResolvedValue(null);
+        configMod.listSecrets.mockResolvedValue([]);
+        configMod.getSecret.mockResolvedValue(null);
+        await expect(listResources({ kind: 'ConfigMap', namespace: 'a' })).resolves.toEqual({
+            kind: 'ConfigMap',
+            items: [{ name: 'app-config' }],
+        });
+        await expect(listResources({ kind: 'Secret' })).resolves.toEqual({ kind: 'Secret', items: [] });
+        await expect(getResource({ kind: 'ConfigMap', name: 'c' })).resolves.toEqual({ kind: 'ConfigMap', item: null });
+        await expect(getResource({ kind: 'Secret', name: 's' })).resolves.toEqual({ kind: 'Secret', item: null });
     });
 });
