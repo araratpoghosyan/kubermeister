@@ -49,6 +49,8 @@ describe('Sidebar', () => {
             'DaemonSets',
             'Jobs',
             'CronJobs',
+            'ConfigMaps',
+            'Secrets',
             'Autoscalers',
             'Settings',
         ]);
