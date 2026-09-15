@@ -1,18 +1,41 @@
 import { createFileRoute } from '@tanstack/react-router';
+import type { ColumnDef } from '@tanstack/react-table';
+import { BoxesIcon } from 'lucide-react';
+import type { Namespace } from '../../../shared/k8s/cluster';
+import { StatusBadge } from '@/components/data-display/status-badge';
+import { ResourceListPage } from '@/components/templates/resource-list-page';
+import { nameColumn, textColumn } from '@/components/templates/list-columns';
 import { useIpcQuery } from '@/lib/query';
-import { NamespacesTable } from '@/components/overview/namespaces-table';
-import { LoadingRows, QueryError } from '@/components/overview/query-state';
+import { NAMESPACE_TONE } from '@/lib/status';
 
 export const Route = createFileRoute('/overview/namespaces')({ component: NamespacesPage });
+
+const TONE_LABEL = { accent: 'Active', ok: 'Ready', warn: 'Terminating' } as const;
+
+const columns: ColumnDef<Namespace>[] = [
+    nameColumn<Namespace>({ icon: BoxesIcon }),
+    {
+        id: 'tone',
+        header: 'Status',
+        size: 120,
+        accessorFn: (row) => row.tone,
+        cell: ({ row }) => (
+            <StatusBadge tone={NAMESPACE_TONE[row.original.tone]}>{TONE_LABEL[row.original.tone]}</StatusBadge>
+        ),
+    },
+    textColumn<Namespace>('pods', 'Pods', { size: 80, numeric: true, mono: true }),
+];
 
 function NamespacesPage() {
     const namespaces = useIpcQuery('namespaces.list', {}, { refetchInterval: 15_000 });
     return (
-        <section className="space-y-4" data-testid="namespaces-page">
-            <h1 className="text-lg font-semibold">Namespaces</h1>
-            {namespaces.isPending && <LoadingRows />}
-            {namespaces.isError && <QueryError error={namespaces.error} />}
-            {namespaces.data && <NamespacesTable namespaces={namespaces.data} />}
-        </section>
+        <ResourceListPage
+            icon={BoxesIcon}
+            title="Namespaces"
+            columns={columns}
+            query={namespaces}
+            rowProps={(ns) => ({ 'data-namespace': ns.name })}
+            testId="namespaces-table"
+        />
     );
 }

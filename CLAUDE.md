@@ -73,6 +73,19 @@ Body: why the change is needed, what a reader of the history cannot learn from t
   with shadcn primitives in `src/renderer/components/ui` (add them with the shadcn CLI, do not hand
   roll). `@/` aliases `src/renderer`. Main-to-renderer pushes go through `subscribe` on the bridge,
   allowlisted in `src/shared/ipc-channels.ts` with payload schemas in `ipc-subscriptions.ts`.
+- **Design system:** screens are compositions of templates, not bespoke markup. Lists render
+  through `ResourceListPage` (`src/renderer/components/templates`) with columns from the
+  `list-columns` factories (`nameColumn`, `statusColumn` with the kind's tone map, `ageColumn`,
+  `readyRatioColumn`, `textColumn`); details use `DetailHeader`, `DetailCard`, `PropertyGrid` and
+  `DetailMetrics`. Status always goes through `StatusBadge`/`StatusDot` with a `StatusTone` from
+  the per-kind maps in `src/renderer/lib/status.ts`. Navigation (sidebar, breadcrumbs) derives from
+  `DOMAINS` in `src/renderer/lib/nav.ts`, typed against the generated route tree, so a new route is
+  added there once. Theme tokens live in `src/renderer/styles/globals.css`; `ThemeProvider` toggles
+  the `dark`/`light` root class and persists under `km-theme`. `cn` in `lib/utils.ts` teaches
+  tailwind-merge the theme font sizes (`text-body`, `text-meta`, ...) so they are not merged away as
+  colors. `@tanstack/react-table` stays on v8 (v9 is a different API; Dependabot ignores the major).
+  The shadcn CLI writes `import { cn } from "cn"` and installs a `cn` package: fix the import to
+  `@/lib/utils` and uninstall the package.
 - **Streams** (`src/shared/streams.ts`, `src/main/ipc/streams.ts`) push many messages over time:
   the preload's `stream()` mints a `sub.<subId>` event and drives `stream.start/send/stop`; main
   keys every stream by window so one window can never address another's, and sweeps them on
@@ -149,9 +162,11 @@ updates need the `zip` target next to the dmg. Icons regenerate from `resources/
   `KUBERMEISTER_USER_DATA`. Needs Docker; ubuntu only in CI. `KM_E2E_KEEP_CLUSTER=1` keeps the
   container between local runs.
 - **Component tests** (`tests/unit/renderer`, jsdom project) use Testing Library; mock `@/lib/ipc`
-  at the module boundary and render through `renderWithQuery`. Hooks use block bodies: a mock
-  returned from `beforeEach(() => fn.mockReset())` is treated as a teardown and called with no
-  arguments.
+  at the module boundary and render through `renderWithQuery`, or `renderRoutes` for anything that
+  needs the router or the shell (both wrap the theme, query and tooltip providers). Radix menus and
+  popovers open under jsdom thanks to the ResizeObserver and pointer-capture stubs in
+  `tests/setup-renderer.ts`. Hooks use block bodies: a mock returned from
+  `beforeEach(() => fn.mockReset())` is treated as a teardown and called with no arguments.
 - Run one file: `npx vitest run tests/unit/main/updater.test.ts`. Watch: `npm run test:watch`.
 
 ## Code style
