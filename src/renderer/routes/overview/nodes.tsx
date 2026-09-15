@@ -10,8 +10,10 @@ import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/overview/nodes')({ component: NodesPage });
 
+const detailPath = (node: Pick<Node, 'name'>) => `/overview/nodes/${encodeURIComponent(node.name)}`;
+
 const columns: ColumnDef<Node>[] = [
-    nameColumn<Node>(),
+    nameColumn<Node>({ href: detailPath }),
     statusColumn<Node, Node['status']>(NODE_TONE, { size: 110 }),
     {
         id: 'role',
@@ -39,5 +41,15 @@ const columns: ColumnDef<Node>[] = [
 
 function NodesPage() {
     const nodes = useIpcQuery('nodes.list', {}, { refetchInterval: 15_000 });
-    return <ResourceListPage icon={ServerIcon} title="Nodes" columns={columns} query={nodes} testId="nodes-table" />;
+    return (
+        <ResourceListPage
+            icon={ServerIcon}
+            title="Nodes"
+            columns={columns}
+            query={nodes}
+            detailPath={detailPath}
+            rowProps={(node) => ({ 'data-node': node.name })}
+            testId="nodes-table"
+        />
+    );
 }
