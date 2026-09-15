@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { useRouterState } from '@tanstack/react-router';
-import { ChevronDownIcon, MoonIcon, SunIcon } from 'lucide-react';
+import { ChevronDownIcon, SearchIcon } from 'lucide-react';
 import { KMLogo } from '@/components/km-logo';
-import { useTheme } from '@/components/theme-provider';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { NavLink } from './nav-link';
-import { DOMAINS, activeSectionId, isActivePath, type Domain, type NavItem } from '@/lib/nav';
+import { DOMAINS, SETTINGS_NAV, activeSectionId, isActivePath, type Domain, type NavItem } from '@/lib/nav';
+import { isMac } from '@/lib/platform';
 import { cn } from '@/lib/utils';
 
-export function Sidebar() {
+export function Sidebar({ onOpenPalette }: { onOpenPalette: () => void }) {
     const pathname = useRouterState({ select: (s) => s.location.pathname });
     const currentId = activeSectionId(pathname);
     // Every domain starts open and a manual toggle sticks, except that navigating into a collapsed
@@ -48,28 +48,26 @@ export function Sidebar() {
                     ))}
                 </nav>
             </ScrollArea>
-            <ThemeToggle />
+            <div className="border-t border-border">
+                <button
+                    type="button"
+                    onClick={onOpenPalette}
+                    className="flex w-full items-center gap-2.5 px-4 py-2.5 text-body text-text-2 transition-colors hover:bg-elev-2/60"
+                    data-testid="quick-actions"
+                >
+                    <SearchIcon className="size-3.25 text-text-muted" />
+                    <span className="flex-1 text-left">Quick actions</span>
+                    <span className="font-mono text-caption text-text-dim">⌘K</span>
+                </button>
+                <div className="h-px bg-border" />
+                <SidebarItem
+                    item={SETTINGS_NAV}
+                    flat
+                    active={isActivePath(pathname, SETTINGS_NAV.path)}
+                    hint={isMac ? '⌘,' : undefined}
+                />
+            </div>
         </aside>
-    );
-}
-
-function ThemeToggle() {
-    const { theme, setTheme } = useTheme();
-    const dark = theme !== 'light';
-    return (
-        <button
-            type="button"
-            onClick={() => setTheme(dark ? 'light' : 'dark')}
-            className="flex w-full items-center gap-2.5 border-t border-border px-4 py-2.5 text-body text-text-2 transition-colors hover:bg-elev-2/60"
-            data-testid="theme-toggle"
-        >
-            {dark ? (
-                <SunIcon className="size-3.25 text-text-muted" />
-            ) : (
-                <MoonIcon className="size-3.25 text-text-muted" />
-            )}
-            <span className="flex-1 text-left">{dark ? 'Light theme' : 'Dark theme'}</span>
-        </button>
     );
 }
 
@@ -117,20 +115,40 @@ function SidebarSection({
     );
 }
 
-function SidebarItem({ item, active }: { item: NavItem; active: boolean }) {
+function SidebarItem({
+    item,
+    active,
+    flat = false,
+    hint,
+}: {
+    item: NavItem;
+    active: boolean;
+    /** A footer entry outside any section: full width, no indent. */
+    flat?: boolean;
+    hint?: string;
+}) {
     const Icon = item.icon;
     return (
         <NavLink
             to={item.path}
             aria-current={active ? 'page' : undefined}
             className={cn(
-                'relative mb-px flex items-center gap-2.5 rounded py-1 pr-2.5 pl-[34px] text-body transition-colors',
+                'relative mb-px flex items-center gap-2.5 rounded py-1 pr-2.5 text-body transition-colors',
+                flat ? 'mb-0 rounded-none px-4 py-2.5' : 'pl-[34px]',
                 active ? 'bg-elev-2 text-foreground' : 'text-text-2 hover:bg-elev-2/60',
             )}
         >
-            {active && <span className="absolute top-1.5 bottom-1.5 left-6 w-0.5 rounded-full bg-primary" />}
+            {active && (
+                <span
+                    className={cn(
+                        'absolute top-1.5 bottom-1.5 w-0.5 rounded-full bg-primary',
+                        flat ? 'left-0.5' : 'left-6',
+                    )}
+                />
+            )}
             <Icon className={cn('size-3.25', active ? 'text-primary' : 'text-text-muted')} />
             <span className="flex-1 truncate">{item.label}</span>
+            {hint && <span className="font-mono text-caption text-text-dim">{hint}</span>}
         </NavLink>
     );
 }

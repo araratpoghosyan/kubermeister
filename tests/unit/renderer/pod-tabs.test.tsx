@@ -331,7 +331,9 @@ describe('OverviewTab', () => {
     });
 
     it('shows the latest sampled usage with sparklines once series arrive', async () => {
-        invoke.mockResolvedValue({ cpu: [100, 250], mem: [60, 96] });
+        invoke.mockImplementation(async (channel: string) =>
+            channel === 'metrics.podSeries' ? { cpu: [100, 250], mem: [60, 96] } : undefined,
+        );
         renderWithQuery(<OverviewTab name="web-1" namespace="team-a" pod={pod} />);
         expect(await screen.findByText('250m')).toBeInTheDocument();
         expect(screen.getByText('96Mi')).toBeInTheDocument();

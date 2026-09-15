@@ -9,6 +9,8 @@ import { updateStateSchema } from './ipc.js';
  */
 export const subSchemas = {
     'update.state': updateStateSchema,
+    /** The application menu's Settings item; the renderer routes to the settings screen. */
+    'open-settings': z.object({}),
 } as const satisfies Record<AllowedSubscription, z.ZodType>;
 
 export type SubChannel = AllowedSubscription;

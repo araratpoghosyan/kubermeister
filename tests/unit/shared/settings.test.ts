@@ -13,6 +13,7 @@ describe('parseSettings', () => {
             version: 1,
             session: { lastContext: 'prod', lastNamespace: 'default', restoreOnLaunch: true },
             connection: { kubeconfigPath: '/tmp/kubeconfig' },
+            data: { refreshIntervalSec: 30 },
         };
         expect(parseSettings(valid)).toEqual(valid);
     });
@@ -45,6 +46,17 @@ describe('parseSettings', () => {
             version: 1,
             session: { lastContext: 'staging', lastNamespace: null, restoreOnLaunch: true },
             connection: { kubeconfigPath: null },
+            data: { refreshIntervalSec: 12 },
+        });
+    });
+
+    it('resets a refresh interval that is not a positive integer', () => {
+        expect(parseSettings({ version: 1, data: { refreshIntervalSec: 'soon' } }).data).toEqual({
+            refreshIntervalSec: 12,
+        });
+        expect(parseSettings({ version: 1, data: { refreshIntervalSec: 0 } }).data).toEqual({ refreshIntervalSec: 12 });
+        expect(parseSettings({ version: 1, data: { refreshIntervalSec: 30 } }).data).toEqual({
+            refreshIntervalSec: 30,
         });
     });
 });
@@ -79,5 +91,14 @@ describe('patch schemas', () => {
         expect(settingsInputSchema.safeParse({ session: { lastNamespace: 'kube-system' } }).success).toBe(true);
         const withPath = settingsInputSchema.safeParse({ connection: { kubeconfigPath: '/etc/passwd' } });
         expect(withPath.success && 'connection' in withPath.data).toBe(false);
+    });
+
+    it('lets the renderer change the refresh interval', () => {
+        expect(settingsInputSchema.safeParse({ data: { refreshIntervalSec: 30 } }).success).toBe(true);
+        expect(settingsInputSchema.safeParse({ data: { refreshIntervalSec: -1 } }).success).toBe(false);
+        expect(mergeSettings(DEFAULT_SETTINGS, { data: { refreshIntervalSec: 60 } }).data.refreshIntervalSec).toBe(60);
+        expect(mergeSettings(DEFAULT_SETTINGS, { data: { refreshIntervalSec: 60 } }).session).toEqual(
+            DEFAULT_SETTINGS.session,
+        );
     });
 });

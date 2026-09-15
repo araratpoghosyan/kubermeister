@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { registerHandlers } from './ipc/index.js';
 import { registerStreamHandlers } from './ipc/streams.js';
 import { stopSampler } from './k8s/sampler.js';
+import { installApplicationMenu } from './menu.js';
 import { isExternalWebUrl, isInternalNavigation } from './security.js';
 import { startUpdater } from './updater.js';
 
@@ -53,6 +54,7 @@ function createWindow(): BrowserWindow {
 }
 
 void app.whenReady().then(() => {
+    installApplicationMenu();
     registerHandlers();
     registerStreamHandlers();
     startUpdater();

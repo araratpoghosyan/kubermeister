@@ -64,16 +64,15 @@ describe('Sidebar', () => {
         expect(within(sidebar).getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-expanded', 'true');
     });
 
-    it('toggles between the dark and light themes from the footer', async () => {
+    it('shows Quick actions and the Settings entry in the footer, with the macOS hint only on a Mac', async () => {
         renderRoutes(routeTree, '/overview/summary');
-        const toggle = await screen.findByTestId('theme-toggle');
-        expect(toggle).toHaveTextContent('Light theme');
-        expect(document.documentElement).toHaveClass('dark');
-        await userEvent.click(toggle);
-        expect(toggle).toHaveTextContent('Dark theme');
-        expect(document.documentElement).toHaveClass('light');
-        expect(localStorage.getItem('km-theme')).toBe('light');
-        await userEvent.click(toggle);
-        expect(document.documentElement).toHaveClass('dark');
+        const sidebar = await screen.findByTestId('sidebar');
+        expect(within(sidebar).getByTestId('quick-actions')).toHaveTextContent('Quick actions⌘K');
+        const settings = within(sidebar).getByRole('link', { name: /Settings/ });
+        expect(settings).toHaveAttribute('href', '/settings');
+        expect(settings).not.toHaveAttribute('aria-current');
+        // jsdom reports no Mac platform, so the ⌘, hint stays hidden here.
+        expect(settings).not.toHaveTextContent('⌘,');
+        expect(within(sidebar).queryByTestId('theme-toggle')).not.toBeInTheDocument();
     });
 });

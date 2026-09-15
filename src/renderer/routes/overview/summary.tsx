@@ -14,6 +14,7 @@ import { StatusBadge } from '@/components/data-display/status-badge';
 import { RefreshButton } from '@/components/refresh-button';
 import { describeError } from '@/lib/k8s-error';
 import { useIpcQuery } from '@/lib/query';
+import { useRefreshIntervalMs } from '@/lib/settings';
 import { CLUSTER_TONE } from '@/lib/status';
 import { cn } from '@/lib/utils';
 
@@ -32,19 +33,17 @@ const DASHBOARD_KEYS = [
     ['metrics.sparklines'],
     ['metrics.workloadHealth'],
 ];
-const REFRESH_MS = 15_000;
-const SAMPLE_MS = 12_000;
-
 const last = (series: number[]) => series.at(-1) ?? 0;
 
 function DashboardPage() {
     const queryClient = useQueryClient();
-    const clusterQuery = useIpcQuery('cluster.active', {}, { refetchInterval: REFRESH_MS });
-    const namespacesQuery = useIpcQuery('namespaces.list', {}, { refetchInterval: REFRESH_MS });
-    const eventsQuery = useIpcQuery('events.recent', {}, { refetchInterval: REFRESH_MS });
-    const alertsQuery = useIpcQuery('metrics.alerts', {}, { refetchInterval: REFRESH_MS });
-    const spark = useIpcQuery('metrics.sparklines', {}, { refetchInterval: SAMPLE_MS }).data;
-    const workloadHealth = useIpcQuery('metrics.workloadHealth', {}, { refetchInterval: SAMPLE_MS }).data;
+    const refetchInterval = useRefreshIntervalMs();
+    const clusterQuery = useIpcQuery('cluster.active', {}, { refetchInterval });
+    const namespacesQuery = useIpcQuery('namespaces.list', {}, { refetchInterval });
+    const eventsQuery = useIpcQuery('events.recent', {}, { refetchInterval });
+    const alertsQuery = useIpcQuery('metrics.alerts', {}, { refetchInterval });
+    const spark = useIpcQuery('metrics.sparklines', {}, { refetchInterval }).data;
+    const workloadHealth = useIpcQuery('metrics.workloadHealth', {}, { refetchInterval }).data;
 
     // Sparklines and workload health are best-effort (empty, not failed, without metrics-server), so
     // reachability is judged on the core reads alone: a failed cluster read must not render as a

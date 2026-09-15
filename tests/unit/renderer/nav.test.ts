@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+    ALL_DOMAINS,
+    SETTINGS_NAV,
     activeSectionId,
     breadcrumbsForPath,
     CLUSTER_LANDING,
@@ -45,10 +47,19 @@ describe('navItemForPath / activeSectionId / domainForPath', () => {
         expect(domainForPath('/overview/summary')?.id).toBe('overview');
     });
 
+    it('resolves settings through the footer domain, which the sidebar sections exclude', () => {
+        expect(navItemForPath('/settings')?.item).toBe(SETTINGS_NAV);
+        expect(domainForPath('/settings')?.id).toBe('settings');
+        expect(activeSectionId('/settings')).toBe('settings');
+        expect(DOMAINS.some((d) => d.id === 'settings')).toBe(false);
+        expect(ALL_DOMAINS.at(-1)?.id).toBe('settings');
+        expect(breadcrumbsForPath('/settings').map((c) => c.label)).toEqual(['Settings']);
+    });
+
     it('returns undefined outside the configured tree', () => {
         expect(navItemForPath('/nowhere')).toBeUndefined();
         expect(activeSectionId('/')).toBeUndefined();
-        expect(domainForPath('/settings')).toBeUndefined();
+        expect(domainForPath('/nope')).toBeUndefined();
     });
 });
 

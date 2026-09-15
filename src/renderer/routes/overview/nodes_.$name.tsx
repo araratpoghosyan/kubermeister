@@ -6,6 +6,7 @@ import { RefreshButton } from '@/components/refresh-button';
 import { DetailCard, DetailMetrics, PropertyGrid } from '@/components/templates/detail-cards';
 import { eventsTab, labelsTab, ResourceDetail, type DetailTabGroup } from '@/components/templates/resource-detail';
 import { ipcQueryKey, useIpcQuery } from '@/lib/query';
+import { useRefreshIntervalMs } from '@/lib/settings';
 import { NODE_TONE } from '@/lib/status';
 
 export const Route = createFileRoute('/overview/nodes_/$name')({ component: NodeDetailPage });
@@ -14,9 +15,10 @@ const last = (series: number[]) => series.at(-1);
 
 function NodeDetailPage() {
     const { name } = Route.useParams();
-    const query = useIpcQuery('nodes.get', { name }, { refetchInterval: 15_000 });
+    const refetchInterval = useRefreshIntervalMs();
+    const query = useIpcQuery('nodes.get', { name }, { refetchInterval });
     const node = query.data;
-    const series = useIpcQuery('metrics.nodeSeries', { name }, { refetchInterval: 12_000 }).data;
+    const series = useIpcQuery('metrics.nodeSeries', { name }, { refetchInterval }).data;
     const sparkCpu = series?.cpu ?? [];
     const sparkMem = series?.mem ?? [];
     const conditions = node?.conditions ?? [];

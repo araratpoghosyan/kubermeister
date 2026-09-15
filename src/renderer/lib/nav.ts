@@ -1,4 +1,12 @@
-import { BoxesIcon, GaugeIcon, LayersIcon, LayoutDashboardIcon, type LucideIcon, ServerIcon } from 'lucide-react';
+import {
+    BoxesIcon,
+    GaugeIcon,
+    LayersIcon,
+    LayoutDashboardIcon,
+    type LucideIcon,
+    ServerIcon,
+    SettingsIcon,
+} from 'lucide-react';
 import type { RoutePath } from './router';
 
 export interface NavItem {
@@ -22,7 +30,7 @@ export interface Domain {
     groups: NavGroup[];
 }
 
-/** The sidebar and the breadcrumbs both derive from this one table. */
+/** The sidebar sections, the breadcrumbs and the command palette all derive from this one table. */
 export const DOMAINS: Domain[] = [
     {
         id: 'overview',
@@ -49,6 +57,19 @@ export const DOMAINS: Domain[] = [
     },
 ];
 
+export const SETTINGS_NAV: NavItem = { id: 'settings', label: 'Settings', path: '/settings', icon: SettingsIcon };
+
+const SETTINGS_DOMAIN: Domain = {
+    id: 'settings',
+    label: 'Settings',
+    icon: SettingsIcon,
+    basePath: '/settings',
+    groups: [{ label: null, items: [SETTINGS_NAV] }],
+};
+
+/** Every domain including Settings, which the sidebar renders in its footer rather than as a section. */
+export const ALL_DOMAINS: Domain[] = [...DOMAINS, SETTINGS_DOMAIN];
+
 export const CLUSTER_LANDING: RoutePath = '/overview/summary';
 
 /** `pathname` is `path` or a sub-page beneath it, matched on a `/` boundary. */
@@ -57,7 +78,7 @@ export function isActivePath(pathname: string, path: string): boolean {
 }
 
 export function domainForPath(pathname: string): Domain | undefined {
-    return DOMAINS.find((domain) => isActivePath(pathname, domain.basePath));
+    return ALL_DOMAINS.find((domain) => isActivePath(pathname, domain.basePath));
 }
 
 /** Id of the domain owning the item that matches the pathname. */
@@ -66,7 +87,7 @@ export function activeSectionId(pathname: string): string | undefined {
 }
 
 export function navItemForPath(pathname: string): { domain: Domain; item: NavItem } | undefined {
-    for (const domain of DOMAINS) {
+    for (const domain of ALL_DOMAINS) {
         for (const group of domain.groups) {
             for (const item of group.items) {
                 if (isActivePath(pathname, item.path)) return { domain, item };

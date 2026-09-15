@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root';
 import { Route as IndexRouteImport } from './routes/index';
+import { Route as SettingsRouteImport } from './routes/settings';
 import { Route as OverviewNamespacesRouteImport } from './routes/overview/namespaces';
 import { Route as OverviewNodesRouteImport } from './routes/overview/nodes';
 import { Route as OverviewSummaryRouteImport } from './routes/overview/summary';
@@ -20,6 +21,11 @@ import { Route as WorkloadsPodsNamespaceNameRouteImport } from './routes/workloa
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any);
 const OverviewNamespacesRoute = OverviewNamespacesRouteImport.update({
@@ -56,6 +62,7 @@ const WorkloadsPodsNamespaceNameRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute;
+  '/settings': typeof SettingsRoute;
   '/overview/namespaces': typeof OverviewNamespacesRoute;
   '/overview/nodes': typeof OverviewNodesRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
@@ -65,6 +72,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute;
+  '/settings': typeof SettingsRoute;
   '/overview/namespaces': typeof OverviewNamespacesRoute;
   '/overview/nodes': typeof OverviewNodesRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
@@ -75,6 +83,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   '/': typeof IndexRoute;
+  '/settings': typeof SettingsRoute;
   '/overview/namespaces': typeof OverviewNamespacesRoute;
   '/overview/nodes': typeof OverviewNodesRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
@@ -86,6 +95,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
     | '/'
+    | '/settings'
     | '/overview/namespaces'
     | '/overview/nodes'
     | '/overview/summary'
@@ -95,6 +105,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo;
   to:
     | '/'
+    | '/settings'
     | '/overview/namespaces'
     | '/overview/nodes'
     | '/overview/summary'
@@ -104,6 +115,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/settings'
     | '/overview/namespaces'
     | '/overview/nodes'
     | '/overview/summary'
@@ -114,6 +126,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
+  SettingsRoute: typeof SettingsRoute;
   OverviewNamespacesRoute: typeof OverviewNamespacesRoute;
   OverviewNodesRoute: typeof OverviewNodesRoute;
   OverviewSummaryRoute: typeof OverviewSummaryRoute;
@@ -129,6 +142,13 @@ declare module '@tanstack/react-router' {
       path: '/';
       fullPath: '/';
       preLoaderRoute: typeof IndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/settings': {
+      id: '/settings';
+      path: '/settings';
+      fullPath: '/settings';
+      preLoaderRoute: typeof SettingsRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/overview/namespaces': {
@@ -178,6 +198,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SettingsRoute: SettingsRoute,
   OverviewNamespacesRoute: OverviewNamespacesRoute,
   OverviewNodesRoute: OverviewNodesRoute,
   OverviewSummaryRoute: OverviewSummaryRoute,

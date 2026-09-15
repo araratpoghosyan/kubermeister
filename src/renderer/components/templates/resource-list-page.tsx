@@ -177,7 +177,7 @@ export function ResourceListPage<T>({
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
-    // Under "All Namespaces" (rows spanning ≥2 namespaces), inject a Namespace column after Name so
+    // Under "All namespaces" (rows spanning ≥2 namespaces), inject a Namespace column after Name so
     // same-named objects in different namespaces are distinguishable — unless the screen already
     // defines its own namespace column.
     const effectiveColumns = useMemo(() => {

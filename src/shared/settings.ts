@@ -19,16 +19,26 @@ const connectionSchema = z.object({
     kubeconfigPath: z.string().nullable(),
 });
 
+/** Live-refresh cadences offered in Settings, in seconds. */
+export const REFRESH_INTERVAL_OPTIONS = [5, 10, 15, 30, 60] as const;
+
+const dataSchema = z.object({
+    /** Poll cadence for the live lists, metrics and dashboard queries. */
+    refreshIntervalSec: z.number().int().positive(),
+});
+
 export const settingsSchema = z.object({
     version: z.literal(1),
     session: sessionSchema,
     connection: connectionSchema,
+    data: dataSchema,
 });
 
 /** A partial patch the main process may apply: any subset of sections, each a partial of its shape. */
 export const settingsPatchSchema = z.object({
     session: sessionSchema.partial().optional(),
     connection: connectionSchema.partial().optional(),
+    data: dataSchema.partial().optional(),
 });
 
 /**
@@ -46,6 +56,7 @@ export const DEFAULT_SETTINGS: Settings = {
     version: 1,
     session: { lastContext: null, lastNamespace: null, restoreOnLaunch: true },
     connection: { kubeconfigPath: null },
+    data: { refreshIntervalSec: 12 },
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -70,6 +81,7 @@ export function parseSettings(raw: unknown): Settings {
         version: 1,
         session: parseSection(sessionSchema, file.session, DEFAULT_SETTINGS.session),
         connection: parseSection(connectionSchema, file.connection, DEFAULT_SETTINGS.connection),
+        data: parseSection(dataSchema, file.data, DEFAULT_SETTINGS.data),
     };
 }
 
@@ -79,5 +91,6 @@ export function mergeSettings(current: Settings, patch: SettingsPatch): Settings
         version: current.version,
         session: { ...current.session, ...patch.session },
         connection: { ...current.connection, ...patch.connection },
+        data: { ...current.data, ...patch.data },
     };
 }

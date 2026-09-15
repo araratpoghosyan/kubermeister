@@ -123,13 +123,13 @@ describe('NamespaceSelector', () => {
         await waitFor(() => expect(screen.getByTestId('active-namespace')).toHaveTextContent('team-a · 1 pods'));
     });
 
-    it('shows All Namespaces when nothing is selected', async () => {
+    it('shows All namespaces when nothing is selected', async () => {
         invoke.mockImplementation(async (channel: string) =>
-            channel === 'namespace.active' ? { name: 'All Namespaces', pods: 12, tone: 'accent' } : data[channel],
+            channel === 'namespace.active' ? { name: 'All namespaces', pods: 12, tone: 'accent' } : data[channel],
         );
         renderWithQuery(<NamespaceSelector />);
         await waitFor(() =>
-            expect(screen.getByTestId('active-namespace')).toHaveTextContent('All Namespaces · 12 pods'),
+            expect(screen.getByTestId('active-namespace')).toHaveTextContent('All namespaces · 12 pods'),
         );
     });
 
@@ -146,14 +146,14 @@ describe('NamespaceSelector', () => {
         await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
     });
 
-    it('clears the scope with All Namespaces and reports an empty filter', async () => {
+    it('clears the scope with All namespaces and reports an empty filter', async () => {
         renderWithQuery(<NamespaceSelector />);
         await userEvent.click(screen.getByTestId('namespace-selector'));
         const list = await screen.findByRole('listbox');
         await userEvent.type(screen.getByPlaceholderText('Filter namespaces…'), 'zzz');
         expect(await screen.findByText('No namespaces found.')).toBeInTheDocument();
         await userEvent.clear(screen.getByPlaceholderText('Filter namespaces…'));
-        await userEvent.click(within(list).getByRole('option', { name: /All Namespaces/ }));
+        await userEvent.click(within(list).getByRole('option', { name: /All namespaces/ }));
         await waitFor(() => expect(invoke).toHaveBeenCalledWith('namespace.set', { namespace: null }));
     });
 });
