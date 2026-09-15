@@ -124,7 +124,8 @@ Body: why the change is needed, what a reader of the history cannot learn from t
   `list/index.tsx` plus `list/$namespace.$name.tsx` route pair, a navigation item and a tone map.
   Deployments also have `deployments.replicaSets`, `deployments.rollouts` and
   `metrics.deploymentSeries` (the sum of the selected pods' tracked series). Batch kinds read
-  through `apis().batch`, autoscalers through `apis().hpa`. Aggregates that are not a plain
+  through `apis().batch`, autoscalers through `apis().hpa`. **Secret values never cross the bridge**:
+  `secrets.entries` returns key names with a fixed mask, and no channel ever reads a secret's data. Aggregates that are not a plain
   kind (cluster summary, namespaces with pod counts, nodes) keep bespoke channels. Detail routes
   carry the namespace: `/workloads/pods/$namespace/$name`.
 - **Kubernetes access** lives in `src/main/k8s`. The kubeconfig is read-only: switching context

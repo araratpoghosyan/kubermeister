@@ -3,6 +3,8 @@ import {
     BoxesIcon,
     LayoutDashboardIcon,
     type LucideIcon,
+    FileTextIcon,
+    LockIcon,
     PlayIcon,
     ServerIcon,
     SettingsIcon,
@@ -75,6 +77,8 @@ export const DOMAINS: Domain[] = [
             {
                 label: 'CONFIG',
                 items: [
+                    { id: 'configmaps', label: 'ConfigMaps', path: '/workloads/configmaps', icon: FileTextIcon },
+                    { id: 'secrets', label: 'Secrets', path: '/workloads/secrets', icon: LockIcon },
                     { id: 'autoscalers', label: 'Autoscalers', path: '/workloads/autoscalers', icon: TrendingUpIcon },
                 ],
             },

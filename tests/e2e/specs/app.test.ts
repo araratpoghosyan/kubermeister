@@ -218,3 +218,24 @@ test('lists the seeded job and cron job and opens the job detail', async () => {
     await expect(cron).toContainText('0 2 * * *');
     await expect(cron).toContainText('true');
 });
+
+test('shows config map entries and masks secret values', async () => {
+    const { window } = launched;
+    await window.getByTestId('sidebar').getByRole('link', { name: 'ConfigMaps' }).click();
+    await window.getByTestId('configmaps-table').locator('[data-configmap="app-config"]').getByRole('link').click();
+    const configMap = window.getByTestId('configmap-page');
+    await expect(configMap).toContainText('keys: 2');
+    await window.getByRole('tab', { name: /Entries/ }).click();
+    const entries = configMap.getByTestId('configmap-entries');
+    await expect(entries).toContainText('LOG_LEVEL');
+    await expect(entries).toContainText('debug');
+    await expect(entries).toContainText('hello-from-e2e');
+
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Secrets' }).click();
+    await window.getByTestId('secrets-table').locator('[data-secret="app-secret"]').getByRole('link').click();
+    const secret = window.getByTestId('secret-page');
+    await expect(secret).toContainText('type: Opaque');
+    await window.getByRole('tab', { name: /Keys/ }).click();
+    await expect(secret.getByTestId('secret-keys').getByRole('cell', { name: 'password' })).toBeVisible();
+    await expect(window.getByText(/super-secret-value/)).toHaveCount(0);
+});
