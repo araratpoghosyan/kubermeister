@@ -17,6 +17,13 @@ import { Route as OverviewNamespacesRouteImport } from './routes/overview/namesp
 import { Route as OverviewNodesRouteImport } from './routes/overview/nodes';
 import { Route as OverviewQuotasRouteImport } from './routes/overview/quotas';
 import { Route as OverviewSummaryRouteImport } from './routes/overview/summary';
+import { Route as AccessClusterrolebindingsIndexRouteImport } from './routes/access/clusterrolebindings/index';
+import { Route as AccessClusterrolebindingsNameRouteImport } from './routes/access/clusterrolebindings_.$name';
+import { Route as AccessClusterrolesIndexRouteImport } from './routes/access/clusterroles/index';
+import { Route as AccessClusterrolesNameRouteImport } from './routes/access/clusterroles_.$name';
+import { Route as AccessRolebindingsIndexRouteImport } from './routes/access/rolebindings/index';
+import { Route as AccessRolesIndexRouteImport } from './routes/access/roles/index';
+import { Route as AccessServiceaccountsIndexRouteImport } from './routes/access/serviceaccounts/index';
 import { Route as NetworkEndpointsIndexRouteImport } from './routes/network/endpoints/index';
 import { Route as NetworkIngressesIndexRouteImport } from './routes/network/ingresses/index';
 import { Route as NetworkNetworkpoliciesIndexRouteImport } from './routes/network/networkpolicies/index';
@@ -37,6 +44,9 @@ import { Route as WorkloadsJobsIndexRouteImport } from './routes/workloads/jobs/
 import { Route as WorkloadsPodsIndexRouteImport } from './routes/workloads/pods/index';
 import { Route as WorkloadsSecretsIndexRouteImport } from './routes/workloads/secrets/index';
 import { Route as WorkloadsStatefulsetsIndexRouteImport } from './routes/workloads/statefulsets/index';
+import { Route as AccessRolebindingsNamespaceNameRouteImport } from './routes/access/rolebindings/$namespace.$name';
+import { Route as AccessRolesNamespaceNameRouteImport } from './routes/access/roles/$namespace.$name';
+import { Route as AccessServiceaccountsNamespaceNameRouteImport } from './routes/access/serviceaccounts/$namespace.$name';
 import { Route as NetworkEndpointsNamespaceNameRouteImport } from './routes/network/endpoints/$namespace.$name';
 import { Route as NetworkIngressesNamespaceNameRouteImport } from './routes/network/ingresses/$namespace.$name';
 import { Route as NetworkNetworkpoliciesNamespaceNameRouteImport } from './routes/network/networkpolicies/$namespace.$name';
@@ -93,6 +103,44 @@ const OverviewSummaryRoute = OverviewSummaryRouteImport.update({
   path: '/overview/summary',
   getParentRoute: () => rootRouteImport,
 } as any);
+const AccessClusterrolebindingsIndexRoute =
+  AccessClusterrolebindingsIndexRouteImport.update({
+    id: '/access/clusterrolebindings/',
+    path: '/access/clusterrolebindings/',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const AccessClusterrolebindingsNameRoute =
+  AccessClusterrolebindingsNameRouteImport.update({
+    id: '/access/clusterrolebindings_/$name',
+    path: '/access/clusterrolebindings/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const AccessClusterrolesIndexRoute = AccessClusterrolesIndexRouteImport.update({
+  id: '/access/clusterroles/',
+  path: '/access/clusterroles/',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const AccessClusterrolesNameRoute = AccessClusterrolesNameRouteImport.update({
+  id: '/access/clusterroles_/$name',
+  path: '/access/clusterroles/$name',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const AccessRolebindingsIndexRoute = AccessRolebindingsIndexRouteImport.update({
+  id: '/access/rolebindings/',
+  path: '/access/rolebindings/',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const AccessRolesIndexRoute = AccessRolesIndexRouteImport.update({
+  id: '/access/roles/',
+  path: '/access/roles/',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const AccessServiceaccountsIndexRoute =
+  AccessServiceaccountsIndexRouteImport.update({
+    id: '/access/serviceaccounts/',
+    path: '/access/serviceaccounts/',
+    getParentRoute: () => rootRouteImport,
+  } as any);
 const NetworkEndpointsIndexRoute = NetworkEndpointsIndexRouteImport.update({
   id: '/network/endpoints/',
   path: '/network/endpoints/',
@@ -201,6 +249,24 @@ const WorkloadsStatefulsetsIndexRoute =
     path: '/workloads/statefulsets/',
     getParentRoute: () => rootRouteImport,
   } as any);
+const AccessRolebindingsNamespaceNameRoute =
+  AccessRolebindingsNamespaceNameRouteImport.update({
+    id: '/access/rolebindings/$namespace/$name',
+    path: '/access/rolebindings/$namespace/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const AccessRolesNamespaceNameRoute =
+  AccessRolesNamespaceNameRouteImport.update({
+    id: '/access/roles/$namespace/$name',
+    path: '/access/roles/$namespace/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const AccessServiceaccountsNamespaceNameRoute =
+  AccessServiceaccountsNamespaceNameRouteImport.update({
+    id: '/access/serviceaccounts/$namespace/$name',
+    path: '/access/serviceaccounts/$namespace/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
 const NetworkEndpointsNamespaceNameRoute =
   NetworkEndpointsNamespaceNameRouteImport.update({
     id: '/network/endpoints/$namespace/$name',
@@ -301,9 +367,16 @@ export interface FileRoutesByFullPath {
   '/overview/nodes': typeof OverviewNodesRoute;
   '/overview/quotas': typeof OverviewQuotasRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
+  '/access/clusterrolebindings/$name': typeof AccessClusterrolebindingsNameRoute;
+  '/access/clusterroles/$name': typeof AccessClusterrolesNameRoute;
   '/overview/nodes/$name': typeof OverviewNodesNameRoute;
   '/storage/storageclasses/$name': typeof StorageStorageclassesNameRoute;
   '/storage/volumes/$name': typeof StorageVolumesNameRoute;
+  '/access/clusterrolebindings/': typeof AccessClusterrolebindingsIndexRoute;
+  '/access/clusterroles/': typeof AccessClusterrolesIndexRoute;
+  '/access/rolebindings/': typeof AccessRolebindingsIndexRoute;
+  '/access/roles/': typeof AccessRolesIndexRoute;
+  '/access/serviceaccounts/': typeof AccessServiceaccountsIndexRoute;
   '/network/endpoints/': typeof NetworkEndpointsIndexRoute;
   '/network/ingresses/': typeof NetworkIngressesIndexRoute;
   '/network/networkpolicies/': typeof NetworkNetworkpoliciesIndexRoute;
@@ -321,6 +394,9 @@ export interface FileRoutesByFullPath {
   '/workloads/pods/': typeof WorkloadsPodsIndexRoute;
   '/workloads/secrets/': typeof WorkloadsSecretsIndexRoute;
   '/workloads/statefulsets/': typeof WorkloadsStatefulsetsIndexRoute;
+  '/access/rolebindings/$namespace/$name': typeof AccessRolebindingsNamespaceNameRoute;
+  '/access/roles/$namespace/$name': typeof AccessRolesNamespaceNameRoute;
+  '/access/serviceaccounts/$namespace/$name': typeof AccessServiceaccountsNamespaceNameRoute;
   '/network/endpoints/$namespace/$name': typeof NetworkEndpointsNamespaceNameRoute;
   '/network/ingresses/$namespace/$name': typeof NetworkIngressesNamespaceNameRoute;
   '/network/networkpolicies/$namespace/$name': typeof NetworkNetworkpoliciesNamespaceNameRoute;
@@ -346,9 +422,16 @@ export interface FileRoutesByTo {
   '/overview/nodes': typeof OverviewNodesRoute;
   '/overview/quotas': typeof OverviewQuotasRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
+  '/access/clusterrolebindings/$name': typeof AccessClusterrolebindingsNameRoute;
+  '/access/clusterroles/$name': typeof AccessClusterrolesNameRoute;
   '/overview/nodes/$name': typeof OverviewNodesNameRoute;
   '/storage/storageclasses/$name': typeof StorageStorageclassesNameRoute;
   '/storage/volumes/$name': typeof StorageVolumesNameRoute;
+  '/access/clusterrolebindings': typeof AccessClusterrolebindingsIndexRoute;
+  '/access/clusterroles': typeof AccessClusterrolesIndexRoute;
+  '/access/rolebindings': typeof AccessRolebindingsIndexRoute;
+  '/access/roles': typeof AccessRolesIndexRoute;
+  '/access/serviceaccounts': typeof AccessServiceaccountsIndexRoute;
   '/network/endpoints': typeof NetworkEndpointsIndexRoute;
   '/network/ingresses': typeof NetworkIngressesIndexRoute;
   '/network/networkpolicies': typeof NetworkNetworkpoliciesIndexRoute;
@@ -366,6 +449,9 @@ export interface FileRoutesByTo {
   '/workloads/pods': typeof WorkloadsPodsIndexRoute;
   '/workloads/secrets': typeof WorkloadsSecretsIndexRoute;
   '/workloads/statefulsets': typeof WorkloadsStatefulsetsIndexRoute;
+  '/access/rolebindings/$namespace/$name': typeof AccessRolebindingsNamespaceNameRoute;
+  '/access/roles/$namespace/$name': typeof AccessRolesNamespaceNameRoute;
+  '/access/serviceaccounts/$namespace/$name': typeof AccessServiceaccountsNamespaceNameRoute;
   '/network/endpoints/$namespace/$name': typeof NetworkEndpointsNamespaceNameRoute;
   '/network/ingresses/$namespace/$name': typeof NetworkIngressesNamespaceNameRoute;
   '/network/networkpolicies/$namespace/$name': typeof NetworkNetworkpoliciesNamespaceNameRoute;
@@ -392,9 +478,16 @@ export interface FileRoutesById {
   '/overview/nodes': typeof OverviewNodesRoute;
   '/overview/quotas': typeof OverviewQuotasRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
+  '/access/clusterrolebindings_/$name': typeof AccessClusterrolebindingsNameRoute;
+  '/access/clusterroles_/$name': typeof AccessClusterrolesNameRoute;
   '/overview/nodes_/$name': typeof OverviewNodesNameRoute;
   '/storage/storageclasses_/$name': typeof StorageStorageclassesNameRoute;
   '/storage/volumes_/$name': typeof StorageVolumesNameRoute;
+  '/access/clusterrolebindings/': typeof AccessClusterrolebindingsIndexRoute;
+  '/access/clusterroles/': typeof AccessClusterrolesIndexRoute;
+  '/access/rolebindings/': typeof AccessRolebindingsIndexRoute;
+  '/access/roles/': typeof AccessRolesIndexRoute;
+  '/access/serviceaccounts/': typeof AccessServiceaccountsIndexRoute;
   '/network/endpoints/': typeof NetworkEndpointsIndexRoute;
   '/network/ingresses/': typeof NetworkIngressesIndexRoute;
   '/network/networkpolicies/': typeof NetworkNetworkpoliciesIndexRoute;
@@ -412,6 +505,9 @@ export interface FileRoutesById {
   '/workloads/pods/': typeof WorkloadsPodsIndexRoute;
   '/workloads/secrets/': typeof WorkloadsSecretsIndexRoute;
   '/workloads/statefulsets/': typeof WorkloadsStatefulsetsIndexRoute;
+  '/access/rolebindings/$namespace/$name': typeof AccessRolebindingsNamespaceNameRoute;
+  '/access/roles/$namespace/$name': typeof AccessRolesNamespaceNameRoute;
+  '/access/serviceaccounts/$namespace/$name': typeof AccessServiceaccountsNamespaceNameRoute;
   '/network/endpoints/$namespace/$name': typeof NetworkEndpointsNamespaceNameRoute;
   '/network/ingresses/$namespace/$name': typeof NetworkIngressesNamespaceNameRoute;
   '/network/networkpolicies/$namespace/$name': typeof NetworkNetworkpoliciesNamespaceNameRoute;
@@ -439,9 +535,16 @@ export interface FileRouteTypes {
     | '/overview/nodes'
     | '/overview/quotas'
     | '/overview/summary'
+    | '/access/clusterrolebindings/$name'
+    | '/access/clusterroles/$name'
     | '/overview/nodes/$name'
     | '/storage/storageclasses/$name'
     | '/storage/volumes/$name'
+    | '/access/clusterrolebindings/'
+    | '/access/clusterroles/'
+    | '/access/rolebindings/'
+    | '/access/roles/'
+    | '/access/serviceaccounts/'
     | '/network/endpoints/'
     | '/network/ingresses/'
     | '/network/networkpolicies/'
@@ -459,6 +562,9 @@ export interface FileRouteTypes {
     | '/workloads/pods/'
     | '/workloads/secrets/'
     | '/workloads/statefulsets/'
+    | '/access/rolebindings/$namespace/$name'
+    | '/access/roles/$namespace/$name'
+    | '/access/serviceaccounts/$namespace/$name'
     | '/network/endpoints/$namespace/$name'
     | '/network/ingresses/$namespace/$name'
     | '/network/networkpolicies/$namespace/$name'
@@ -484,9 +590,16 @@ export interface FileRouteTypes {
     | '/overview/nodes'
     | '/overview/quotas'
     | '/overview/summary'
+    | '/access/clusterrolebindings/$name'
+    | '/access/clusterroles/$name'
     | '/overview/nodes/$name'
     | '/storage/storageclasses/$name'
     | '/storage/volumes/$name'
+    | '/access/clusterrolebindings'
+    | '/access/clusterroles'
+    | '/access/rolebindings'
+    | '/access/roles'
+    | '/access/serviceaccounts'
     | '/network/endpoints'
     | '/network/ingresses'
     | '/network/networkpolicies'
@@ -504,6 +617,9 @@ export interface FileRouteTypes {
     | '/workloads/pods'
     | '/workloads/secrets'
     | '/workloads/statefulsets'
+    | '/access/rolebindings/$namespace/$name'
+    | '/access/roles/$namespace/$name'
+    | '/access/serviceaccounts/$namespace/$name'
     | '/network/endpoints/$namespace/$name'
     | '/network/ingresses/$namespace/$name'
     | '/network/networkpolicies/$namespace/$name'
@@ -529,9 +645,16 @@ export interface FileRouteTypes {
     | '/overview/nodes'
     | '/overview/quotas'
     | '/overview/summary'
+    | '/access/clusterrolebindings_/$name'
+    | '/access/clusterroles_/$name'
     | '/overview/nodes_/$name'
     | '/storage/storageclasses_/$name'
     | '/storage/volumes_/$name'
+    | '/access/clusterrolebindings/'
+    | '/access/clusterroles/'
+    | '/access/rolebindings/'
+    | '/access/roles/'
+    | '/access/serviceaccounts/'
     | '/network/endpoints/'
     | '/network/ingresses/'
     | '/network/networkpolicies/'
@@ -549,6 +672,9 @@ export interface FileRouteTypes {
     | '/workloads/pods/'
     | '/workloads/secrets/'
     | '/workloads/statefulsets/'
+    | '/access/rolebindings/$namespace/$name'
+    | '/access/roles/$namespace/$name'
+    | '/access/serviceaccounts/$namespace/$name'
     | '/network/endpoints/$namespace/$name'
     | '/network/ingresses/$namespace/$name'
     | '/network/networkpolicies/$namespace/$name'
@@ -575,9 +701,16 @@ export interface RootRouteChildren {
   OverviewNodesRoute: typeof OverviewNodesRoute;
   OverviewQuotasRoute: typeof OverviewQuotasRoute;
   OverviewSummaryRoute: typeof OverviewSummaryRoute;
+  AccessClusterrolebindingsNameRoute: typeof AccessClusterrolebindingsNameRoute;
+  AccessClusterrolesNameRoute: typeof AccessClusterrolesNameRoute;
   OverviewNodesNameRoute: typeof OverviewNodesNameRoute;
   StorageStorageclassesNameRoute: typeof StorageStorageclassesNameRoute;
   StorageVolumesNameRoute: typeof StorageVolumesNameRoute;
+  AccessClusterrolebindingsIndexRoute: typeof AccessClusterrolebindingsIndexRoute;
+  AccessClusterrolesIndexRoute: typeof AccessClusterrolesIndexRoute;
+  AccessRolebindingsIndexRoute: typeof AccessRolebindingsIndexRoute;
+  AccessRolesIndexRoute: typeof AccessRolesIndexRoute;
+  AccessServiceaccountsIndexRoute: typeof AccessServiceaccountsIndexRoute;
   NetworkEndpointsIndexRoute: typeof NetworkEndpointsIndexRoute;
   NetworkIngressesIndexRoute: typeof NetworkIngressesIndexRoute;
   NetworkNetworkpoliciesIndexRoute: typeof NetworkNetworkpoliciesIndexRoute;
@@ -595,6 +728,9 @@ export interface RootRouteChildren {
   WorkloadsPodsIndexRoute: typeof WorkloadsPodsIndexRoute;
   WorkloadsSecretsIndexRoute: typeof WorkloadsSecretsIndexRoute;
   WorkloadsStatefulsetsIndexRoute: typeof WorkloadsStatefulsetsIndexRoute;
+  AccessRolebindingsNamespaceNameRoute: typeof AccessRolebindingsNamespaceNameRoute;
+  AccessRolesNamespaceNameRoute: typeof AccessRolesNamespaceNameRoute;
+  AccessServiceaccountsNamespaceNameRoute: typeof AccessServiceaccountsNamespaceNameRoute;
   NetworkEndpointsNamespaceNameRoute: typeof NetworkEndpointsNamespaceNameRoute;
   NetworkIngressesNamespaceNameRoute: typeof NetworkIngressesNamespaceNameRoute;
   NetworkNetworkpoliciesNamespaceNameRoute: typeof NetworkNetworkpoliciesNamespaceNameRoute;
@@ -668,6 +804,55 @@ declare module '@tanstack/react-router' {
       path: '/overview/summary';
       fullPath: '/overview/summary';
       preLoaderRoute: typeof OverviewSummaryRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/access/clusterrolebindings/': {
+      id: '/access/clusterrolebindings/';
+      path: '/access/clusterrolebindings';
+      fullPath: '/access/clusterrolebindings/';
+      preLoaderRoute: typeof AccessClusterrolebindingsIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/access/clusterrolebindings_/$name': {
+      id: '/access/clusterrolebindings_/$name';
+      path: '/access/clusterrolebindings/$name';
+      fullPath: '/access/clusterrolebindings/$name';
+      preLoaderRoute: typeof AccessClusterrolebindingsNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/access/clusterroles/': {
+      id: '/access/clusterroles/';
+      path: '/access/clusterroles';
+      fullPath: '/access/clusterroles/';
+      preLoaderRoute: typeof AccessClusterrolesIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/access/clusterroles_/$name': {
+      id: '/access/clusterroles_/$name';
+      path: '/access/clusterroles/$name';
+      fullPath: '/access/clusterroles/$name';
+      preLoaderRoute: typeof AccessClusterrolesNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/access/rolebindings/': {
+      id: '/access/rolebindings/';
+      path: '/access/rolebindings';
+      fullPath: '/access/rolebindings/';
+      preLoaderRoute: typeof AccessRolebindingsIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/access/roles/': {
+      id: '/access/roles/';
+      path: '/access/roles';
+      fullPath: '/access/roles/';
+      preLoaderRoute: typeof AccessRolesIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/access/serviceaccounts/': {
+      id: '/access/serviceaccounts/';
+      path: '/access/serviceaccounts';
+      fullPath: '/access/serviceaccounts/';
+      preLoaderRoute: typeof AccessServiceaccountsIndexRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/network/endpoints/': {
@@ -810,6 +995,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkloadsStatefulsetsIndexRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/access/rolebindings/$namespace/$name': {
+      id: '/access/rolebindings/$namespace/$name';
+      path: '/access/rolebindings/$namespace/$name';
+      fullPath: '/access/rolebindings/$namespace/$name';
+      preLoaderRoute: typeof AccessRolebindingsNamespaceNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/access/roles/$namespace/$name': {
+      id: '/access/roles/$namespace/$name';
+      path: '/access/roles/$namespace/$name';
+      fullPath: '/access/roles/$namespace/$name';
+      preLoaderRoute: typeof AccessRolesNamespaceNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/access/serviceaccounts/$namespace/$name': {
+      id: '/access/serviceaccounts/$namespace/$name';
+      path: '/access/serviceaccounts/$namespace/$name';
+      fullPath: '/access/serviceaccounts/$namespace/$name';
+      preLoaderRoute: typeof AccessServiceaccountsNamespaceNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/network/endpoints/$namespace/$name': {
       id: '/network/endpoints/$namespace/$name';
       path: '/network/endpoints/$namespace/$name';
@@ -927,9 +1133,16 @@ const rootRouteChildren: RootRouteChildren = {
   OverviewNodesRoute: OverviewNodesRoute,
   OverviewQuotasRoute: OverviewQuotasRoute,
   OverviewSummaryRoute: OverviewSummaryRoute,
+  AccessClusterrolebindingsNameRoute: AccessClusterrolebindingsNameRoute,
+  AccessClusterrolesNameRoute: AccessClusterrolesNameRoute,
   OverviewNodesNameRoute: OverviewNodesNameRoute,
   StorageStorageclassesNameRoute: StorageStorageclassesNameRoute,
   StorageVolumesNameRoute: StorageVolumesNameRoute,
+  AccessClusterrolebindingsIndexRoute: AccessClusterrolebindingsIndexRoute,
+  AccessClusterrolesIndexRoute: AccessClusterrolesIndexRoute,
+  AccessRolebindingsIndexRoute: AccessRolebindingsIndexRoute,
+  AccessRolesIndexRoute: AccessRolesIndexRoute,
+  AccessServiceaccountsIndexRoute: AccessServiceaccountsIndexRoute,
   NetworkEndpointsIndexRoute: NetworkEndpointsIndexRoute,
   NetworkIngressesIndexRoute: NetworkIngressesIndexRoute,
   NetworkNetworkpoliciesIndexRoute: NetworkNetworkpoliciesIndexRoute,
@@ -947,6 +1160,10 @@ const rootRouteChildren: RootRouteChildren = {
   WorkloadsPodsIndexRoute: WorkloadsPodsIndexRoute,
   WorkloadsSecretsIndexRoute: WorkloadsSecretsIndexRoute,
   WorkloadsStatefulsetsIndexRoute: WorkloadsStatefulsetsIndexRoute,
+  AccessRolebindingsNamespaceNameRoute: AccessRolebindingsNamespaceNameRoute,
+  AccessRolesNamespaceNameRoute: AccessRolesNamespaceNameRoute,
+  AccessServiceaccountsNamespaceNameRoute:
+    AccessServiceaccountsNamespaceNameRoute,
   NetworkEndpointsNamespaceNameRoute: NetworkEndpointsNamespaceNameRoute,
   NetworkIngressesNamespaceNameRoute: NetworkIngressesNamespaceNameRoute,
   NetworkNetworkpoliciesNamespaceNameRoute:

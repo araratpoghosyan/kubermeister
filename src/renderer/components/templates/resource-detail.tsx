@@ -2,6 +2,7 @@ import { useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { CalendarClockIcon, InfoIcon, TagIcon, type LucideIcon } from 'lucide-react';
 import type { ObjectEventsInput } from '../../../shared/k8s/events';
+import { KINDS, kindInfo, type Kind } from '../../../shared/k8s/registry';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -167,7 +168,9 @@ export function ResourceDetail({
           : query.isSuccess && !found
             ? 'notFound'
             : 'ready';
-    const where = namespace ? `in namespace “${namespace}”` : 'in the current namespace';
+    // A cluster-scoped kind lives in no namespace, so the not-found copy names none.
+    const clusterScoped = !!kind && (KINDS as readonly string[]).includes(kind) && kindInfo(kind as Kind).clusterScoped;
+    const where = clusterScoped ? '' : namespace ? ` in namespace “${namespace}”` : ' in the current namespace';
 
     return (
         <div className="flex h-full flex-col bg-background" data-testid={testId}>
@@ -207,7 +210,7 @@ export function ResourceDetail({
             ) : state === 'notFound' ? (
                 <StatePanel testId="not-found">
                     <span>
-                        {kind ?? 'Resource'} “{header.title}” was not found {where}.
+                        {kind ?? 'Resource'} “{header.title}” was not found{where}.
                     </span>
                     {backTo && (
                         <Button variant="outline" size="sm" asChild>

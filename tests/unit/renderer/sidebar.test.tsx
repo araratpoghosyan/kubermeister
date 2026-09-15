@@ -64,6 +64,11 @@ describe('Sidebar', () => {
             'Claims',
             'StorageClasses',
             'Snapshots',
+            'ServiceAccounts',
+            'Roles',
+            'RoleBindings',
+            'ClusterRoles',
+            'ClusterRoleBindings',
             'Settings',
         ]);
     });
