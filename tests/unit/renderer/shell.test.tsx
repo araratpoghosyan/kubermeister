@@ -6,10 +6,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const invoke = vi.fn();
 const subscribe = vi.fn(() => () => {});
+const stream = vi.fn(() => ({ stop: vi.fn(), send: vi.fn() }));
 vi.mock('@/lib/ipc', async () => ({
     ...(await vi.importActual<typeof import('@/lib/ipc')>('@/lib/ipc')),
     invoke,
     subscribe,
+    stream,
 }));
 
 const { routeTree } = await import('@/routeTree.gen');

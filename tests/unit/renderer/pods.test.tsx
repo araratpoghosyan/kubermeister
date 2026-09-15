@@ -6,10 +6,12 @@ import type { PodDetail as PodDetailModel } from '../../../src/shared/k8s/pods';
 
 const invoke = vi.fn();
 const subscribe = vi.fn(() => () => {});
+const stream = vi.fn(() => ({ stop: vi.fn(), send: vi.fn() }));
 vi.mock('@/lib/ipc', async () => ({
     ...(await vi.importActual<typeof import('@/lib/ipc')>('@/lib/ipc')),
     invoke,
     subscribe,
+    stream,
 }));
 
 const { routeTree } = await import('@/routeTree.gen');

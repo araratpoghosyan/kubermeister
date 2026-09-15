@@ -16,6 +16,8 @@ export const CONTEXT_NAME = 'km-e2e-ctx';
 export const NAMESPACE = 'km-e2e';
 export const KUBECONFIG_PATH = resolve('tests/e2e/.kubeconfig');
 export const CONTAINER_NAME = 'km-e2e-cluster';
+/** Where global setup records the container id for the spec workers, which run in other processes. */
+export const CLUSTER_STATE_PATH = resolve('tests/e2e/.cluster.json');
 /** Keep the container between runs (skips the cluster boot); remove with `docker rm -f km-e2e-cluster`. */
 export const KEEP_CLUSTER = process.env.KM_E2E_KEEP_CLUSTER === '1';
 
@@ -49,6 +51,7 @@ export async function ensureCluster(): Promise<void> {
         'deployment',
         '--all',
     ]);
+    writeFileSync(CLUSTER_STATE_PATH, JSON.stringify({ containerId: started.getId() }));
     console.log(`[e2e] cluster ready, kubeconfig at ${KUBECONFIG_PATH}`);
 }
 
@@ -60,4 +63,10 @@ export async function stopCluster(): Promise<void> {
         return;
     }
     await started?.stop();
+}
+
+/** Run kubectl inside the test cluster's container from a spec, e.g. to mutate seeded objects. */
+export function clusterKubectl(args: string[]): string {
+    const { containerId } = JSON.parse(readFileSync(CLUSTER_STATE_PATH, 'utf8')) as { containerId: string };
+    return execFileSync('docker', ['exec', containerId, 'kubectl', ...args], { encoding: 'utf8' });
 }
