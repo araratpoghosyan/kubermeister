@@ -60,6 +60,14 @@ Body: why the change is needed, what a reader of the history cannot learn from t
 - **IPC contract:** every channel is declared in `src/shared/ipc.ts` with zod input and output
   schemas and listed in `src/shared/ipc-channels.ts`. Main validates both directions; the
   renderer reaches the bridge only through `src/renderer/lib/ipc.ts` (ESLint enforces this).
+- **Kubernetes access** lives in `src/main/k8s`. The kubeconfig is read-only: switching context
+  or namespace changes memory and the app's own settings, never the file. Every cluster call goes
+  through `withK8s` (timeout plus `[kind]`-prefixed `K8sError`). No `kubectl` dependency; the
+  client library handles exec credential plugins itself.
+- **Settings** (`src/shared/settings.ts`, `src/main/settings/store.ts`) are a versioned JSON file
+  in Electron's `userData`, so the stable and tip apps never share state. The renderer can never
+  set the kubeconfig path; that goes through the native dialog channel `kubeconfig.pick`.
+  `KUBERMEISTER_USER_DATA` redirects `userData`, which is how tests isolate the app.
 
 ## Release model
 
