@@ -59,3 +59,26 @@ test('reads the cluster node list through the bridge', async () => {
     expect(nodes).toHaveLength(1);
     expect(nodes[0]).toMatchObject({ status: 'Ready' });
 });
+
+test('lists the seeded pod, opens its detail, and rescopes by namespace', async () => {
+    const { window } = launched;
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Pods' }).click();
+    const pods = window.getByTestId('pods-table');
+    const row = pods.locator('[data-pod^="web-"]');
+    await expect(row).toHaveCount(1);
+    await expect(row).toContainText('Running');
+    await expect(row).toContainText(NAMESPACE);
+
+    await row.getByRole('link').click();
+    const detail = window.getByTestId('pod-detail');
+    await expect(detail).toContainText('busybox:1.36');
+    await expect(detail.getByTestId('containers-table').locator('[data-container="web"]')).toContainText('Running');
+    await expect(detail).toContainText('8080/TCP');
+
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Pods' }).click();
+    await window.getByTestId('namespace-selector').click();
+    await window.getByRole('option', { name: 'kube-system' }).click();
+    await expect(window.getByTestId('active-namespace')).toContainText('kube-system');
+    await expect(window.getByTestId('pods-table').locator('[data-pod^="web-"]')).toHaveCount(0);
+    await expect(window.getByTestId('pods-table').locator('[data-pod^="coredns-"]')).toHaveCount(1);
+});

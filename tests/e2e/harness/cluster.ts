@@ -39,6 +39,16 @@ export async function ensureCluster(): Promise<void> {
     // Rename the generic "default" context, cluster and user so the UI shows an unmistakable name.
     writeFileSync(KUBECONFIG_PATH, started.getKubeConfig().replace(/\bdefault\b/g, CONTEXT_NAME));
     kubectl(started.getId(), ['apply', '-f', '-'], readFileSync(FIXTURES_PATH, 'utf8'));
+    // The specs assert on running pods, so wait for the seeded workload before any app launches.
+    kubectl(started.getId(), [
+        '-n',
+        NAMESPACE,
+        'wait',
+        '--for=condition=Available',
+        '--timeout=180s',
+        'deployment',
+        '--all',
+    ]);
     console.log(`[e2e] cluster ready, kubeconfig at ${KUBECONFIG_PATH}`);
 }
 

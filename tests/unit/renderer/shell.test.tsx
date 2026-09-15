@@ -37,6 +37,7 @@ const data: Record<string, unknown> = {
         { name: 'team-a', pods: 4, tone: 'accent' },
         { name: 'kube-system', pods: 9, tone: 'ok' },
     ],
+    'resources.list': { kind: 'Pod', items: [] },
 };
 
 function renderAt(path: string) {
