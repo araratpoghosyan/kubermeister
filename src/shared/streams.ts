@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { STREAM_CHANNELS, type AllowedStream } from './ipc-channels.js';
+import type { LogLine } from './k8s/logs.js';
 import { podSchema } from './k8s/pods.js';
 import type { Kind } from './k8s/registry.js';
 import { resourceListInputSchema, type ResourceListInput } from './k8s/resources.js';
@@ -31,9 +32,55 @@ export const watchEventSchema = z.discriminatedUnion('kind', [
 export type WatchEvent = z.infer<typeof watchEventSchema>;
 export type WatchEventOf<K extends Kind> = Extract<WatchEvent, { kind: K }>;
 
+const podTargetSchema = z.object({
+    name: z.string().min(1),
+    namespace: z.string().min(1),
+    /** Container to address; defaults to the pod's first container. */
+    container: z.string().min(1).optional(),
+});
+
+export const podLogsInputSchema = podTargetSchema.extend({
+    /** Relative window in seconds; omitted means tail from `tailLines`. */
+    sinceSeconds: z
+        .number()
+        .int()
+        .positive()
+        .max(365 * 24 * 3600)
+        .optional(),
+    /** Lines of backlog to start with. */
+    tailLines: z.number().int().positive().max(10_000).optional(),
+});
+
+export const podExecInputSchema = podTargetSchema.extend({
+    /** Command to run; defaults to a shell. */
+    command: z.array(z.string().min(1)).min(1).max(32).optional(),
+});
+
+const tcpPort = z.number().int().min(1).max(65535);
+
+export const podPortForwardInputSchema = podTargetSchema.omit({ container: true }).extend({
+    targetPort: tcpPort,
+    localPort: tcpPort,
+});
+
+export const portForwardStatusSchema = z.object({
+    status: z.literal('listening'),
+    localPort: tcpPort,
+    targetPort: tcpPort,
+});
+
+export type PodLogsInput = z.infer<typeof podLogsInputSchema>;
+export type PodExecInput = z.infer<typeof podExecInputSchema>;
+export type PodPortForwardInput = z.infer<typeof podPortForwardInputSchema>;
+export type PortForwardStatus = z.infer<typeof portForwardStatusSchema>;
+
 /** Per-channel stream contract: renderer-to-main input and main-to-renderer data. */
 export interface StreamContract extends Record<AllowedStream, { input: unknown; data: unknown }> {
     'resources.watch': { input: ResourceListInput; data: WatchEvent };
+    'pods.logs': { input: PodLogsInput; data: LogLine };
+    /** Raw terminal output; keystrokes travel back through `send`. */
+    'pods.exec': { input: PodExecInput; data: string };
+    'pods.portForward': { input: PodPortForwardInput; data: PortForwardStatus };
 }
 
 export { STREAM_CHANNELS };
@@ -44,6 +91,9 @@ export type StreamData<C extends StreamChannel> = StreamContract[C]['data'];
 /** Runtime input validation per stream channel, mirroring {@link StreamContract}. */
 export const streamSchemas = {
     'resources.watch': resourceListInputSchema,
+    'pods.logs': podLogsInputSchema,
+    'pods.exec': podExecInputSchema,
+    'pods.portForward': podPortForwardInputSchema,
 } satisfies Record<StreamChannel, z.ZodType>;
 
 /**
