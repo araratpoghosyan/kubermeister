@@ -4,6 +4,10 @@ import { registerHandlers } from './ipc/index.js';
 import { isExternalWebUrl, isInternalNavigation } from './security.js';
 import { startUpdater } from './updater.js';
 
+// Tests redirect all per-user state (settings, caches) into a throwaway directory so the real
+// installation is never read or written.
+if (process.env.KUBERMEISTER_USER_DATA) app.setPath('userData', process.env.KUBERMEISTER_USER_DATA);
+
 // Packaged builds take their name from electron-builder's productName ("Kubermeister" or
 // "Kubermeister Tip"), which also separates their settings folders. Only development, which runs
 // from Electron's own bundle, needs the name set by hand.
