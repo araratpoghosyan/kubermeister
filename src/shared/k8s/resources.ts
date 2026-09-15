@@ -2,10 +2,16 @@ import { z } from 'zod';
 import { podDetailSchema, podSchema } from './pods.js';
 import { kindSchema } from './registry.js';
 import {
+    autoscalerDetailSchema,
+    autoscalerSchema,
+    cronJobDetailSchema,
+    cronJobSchema,
     daemonSetDetailSchema,
     daemonSetSchema,
     deploymentDetailSchema,
     deploymentSchema,
+    jobDetailSchema,
+    jobSchema,
     statefulSetDetailSchema,
     statefulSetSchema,
 } from './workloads.js';
@@ -32,6 +38,9 @@ export const resourceListOutputSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('Deployment'), items: z.array(deploymentSchema) }),
     z.object({ kind: z.literal('StatefulSet'), items: z.array(statefulSetSchema) }),
     z.object({ kind: z.literal('DaemonSet'), items: z.array(daemonSetSchema) }),
+    z.object({ kind: z.literal('Job'), items: z.array(jobSchema) }),
+    z.object({ kind: z.literal('CronJob'), items: z.array(cronJobSchema) }),
+    z.object({ kind: z.literal('HorizontalPodAutoscaler'), items: z.array(autoscalerSchema) }),
 ]);
 
 export const resourceGetOutputSchema = z.discriminatedUnion('kind', [
@@ -39,6 +48,9 @@ export const resourceGetOutputSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('Deployment'), item: deploymentDetailSchema.nullable() }),
     z.object({ kind: z.literal('StatefulSet'), item: statefulSetDetailSchema.nullable() }),
     z.object({ kind: z.literal('DaemonSet'), item: daemonSetDetailSchema.nullable() }),
+    z.object({ kind: z.literal('Job'), item: jobDetailSchema.nullable() }),
+    z.object({ kind: z.literal('CronJob'), item: cronJobDetailSchema.nullable() }),
+    z.object({ kind: z.literal('HorizontalPodAutoscaler'), item: autoscalerDetailSchema.nullable() }),
 ]);
 
 export type ResourceListInput = z.infer<typeof resourceListInputSchema>;

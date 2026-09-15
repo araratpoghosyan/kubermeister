@@ -1,6 +1,7 @@
 import type { Alert } from '../../shared/k8s/metrics.js';
 import { apis } from './client.js';
 import { toPod } from './resources/pods.js';
+import { toJob } from './resources/workloads.js';
 import { nodeReady } from './resources/cluster.js';
 
 /**
@@ -61,11 +62,23 @@ export async function nodeAlerts(): Promise<Alert[]> {
     return alerts;
 }
 
+export async function jobAlerts(): Promise<Alert[]> {
+    const res = await safe(() => apis().batch.listJobForAllNamespaces(), { items: [] });
+    return res.items
+        .map((item) => toJob(item))
+        .filter((job) => job.status === 'Failed')
+        .map((job) => ({
+            tone: 'danger' as const,
+            title: `Job failed: ${job.name}`,
+            detail: `completions ${job.completions} — ${job.namespace}/${job.name}`,
+        }));
+}
+
 export const MAX_ALERTS = 20;
 
 /** Danger first, then warnings, capped so the panel stays bounded. */
 export async function listAlerts(): Promise<Alert[]> {
-    const groups = await Promise.all([podAlerts(), nodeAlerts()]);
+    const groups = await Promise.all([podAlerts(), nodeAlerts(), jobAlerts()]);
     const all = groups.flat();
     all.sort((a, b) => (a.tone === b.tone ? 0 : a.tone === 'danger' ? -1 : 1));
     return all.slice(0, MAX_ALERTS);

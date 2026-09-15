@@ -3,7 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const listPodForAllNamespaces = vi.fn();
 const listNode = vi.fn();
-vi.mock('../../../src/main/k8s/client.js', () => ({ apis: () => ({ core: { listPodForAllNamespaces, listNode } }) }));
+const listJobForAllNamespaces = vi.fn();
+vi.mock('../../../src/main/k8s/client.js', () => ({
+    apis: () => ({ core: { listPodForAllNamespaces, listNode }, batch: { listJobForAllNamespaces } }),
+}));
 vi.mock('../../../src/main/k8s/sampler.js', () => ({ ensureSampler: vi.fn(), podUsage: vi.fn(), percent: vi.fn() }));
 
 const alerts = await import('../../../src/main/k8s/alerts.js');
@@ -45,6 +48,8 @@ describe('alerts', () => {
         listNode.mockReset();
         listNode.mockResolvedValue({ items: [] });
         listPodForAllNamespaces.mockResolvedValue({ items: [] });
+        listJobForAllNamespaces.mockReset();
+        listJobForAllNamespaces.mockResolvedValue({ items: [] });
     });
 
     it('derives pod alerts by status and restarts across all namespaces', async () => {
@@ -88,5 +93,26 @@ describe('alerts', () => {
         listPodForAllNamespaces.mockResolvedValue({ items: [pod('wait', 'Pending')] });
         listNode.mockResolvedValue({ items: [node('b', false)] });
         expect((await alerts.listAlerts()).map((a) => a.tone)).toEqual(['danger', 'warn']);
+    });
+
+    it('reports failed jobs with their completion ratio', async () => {
+        listJobForAllNamespaces.mockResolvedValue({
+            items: [
+                {
+                    metadata: { name: 'import', namespace: 'team-a' },
+                    spec: { completions: 3 },
+                    status: { succeeded: 1, conditions: [{ type: 'Failed', status: 'True' }] },
+                },
+                {
+                    metadata: { name: 'ok', namespace: 'team-a' },
+                    status: { conditions: [{ type: 'Complete', status: 'True' }] },
+                },
+            ],
+        });
+        expect(await alerts.jobAlerts()).toEqual([
+            { tone: 'danger', title: 'Job failed: import', detail: 'completions 1/3 — team-a/import' },
+        ]);
+        listJobForAllNamespaces.mockRejectedValue(new Error('forbidden'));
+        expect(await alerts.jobAlerts()).toEqual([]);
     });
 });

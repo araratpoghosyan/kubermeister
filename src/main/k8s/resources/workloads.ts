@@ -1,10 +1,25 @@
-import type { V1DaemonSet, V1Deployment, V1ReplicaSet, V1StatefulSet } from '@kubernetes/client-node';
 import type {
+    V1CronJob,
+    V1DaemonSet,
+    V1Deployment,
+    V1Job,
+    V1ReplicaSet,
+    V1StatefulSet,
+    V2HorizontalPodAutoscaler,
+} from '@kubernetes/client-node';
+import type {
+    Autoscaler,
+    AutoscalerDetail,
+    CronJob,
+    CronJobDetail,
     DaemonSet,
     DaemonSetDetail,
     Deployment,
     DeploymentDetail,
     DeploymentStatus,
+    Job,
+    JobDetail,
+    JobStatus,
     ReplicaSet,
     Rollout,
     StatefulSet,
@@ -221,5 +236,151 @@ export function getDaemonSet(name: string, namespace?: string): Promise<DaemonSe
             (fieldSelector) => apis().apps.listDaemonSetForAllNamespaces({ fieldSelector }),
         );
         return d ? toDaemonSetDetail(d) : null;
+    });
+}
+
+/** Terminal conditions decide the status; a failure outranks a completion. Anything else is Running. */
+export function jobStatus(job: V1Job): JobStatus {
+    const conditions = job.status?.conditions ?? [];
+    if (conditions.some((c) => c.type === 'Failed' && c.status === 'True')) return 'Failed';
+    if (conditions.some((c) => c.type === 'Complete' && c.status === 'True')) return 'Complete';
+    return 'Running';
+}
+
+export function toJob(job: V1Job, now = Date.now()): Job {
+    return {
+        name: job.metadata?.name ?? '',
+        namespace: job.metadata?.namespace ?? '',
+        completions: readyRatio(job.status?.succeeded, job.spec?.completions ?? 1),
+        duration: duration(job.status?.startTime, job.status?.completionTime ?? new Date(now)),
+        status: jobStatus(job),
+        age: age(job.metadata?.creationTimestamp, now),
+    };
+}
+
+export function toJobDetail(job: V1Job, now = Date.now()): JobDetail {
+    return {
+        ...toJob(job, now),
+        labels: toPairs(job.metadata?.labels),
+        annotations: toPairs(job.metadata?.annotations),
+    };
+}
+
+export function toCronJob(cronJob: V1CronJob, now = Date.now()): CronJob {
+    return {
+        name: cronJob.metadata?.name ?? '',
+        namespace: cronJob.metadata?.namespace ?? '',
+        schedule: dash(cronJob.spec?.schedule),
+        suspend: cronJob.spec?.suspend ?? false,
+        active: cronJob.status?.active?.length ?? 0,
+        lastSchedule: ago(cronJob.status?.lastScheduleTime, now),
+        age: age(cronJob.metadata?.creationTimestamp, now),
+    };
+}
+
+export function toCronJobDetail(cronJob: V1CronJob, now = Date.now()): CronJobDetail {
+    return {
+        ...toCronJob(cronJob, now),
+        labels: toPairs(cronJob.metadata?.labels),
+        annotations: toPairs(cronJob.metadata?.annotations),
+    };
+}
+
+/** Current over target utilisation of the first resource metric; an em-dash when neither side reports. */
+export function hpaTargets(autoscaler: V2HorizontalPodAutoscaler): string {
+    const current = autoscaler.status?.currentMetrics?.[0]?.resource?.current?.averageUtilization;
+    const target = autoscaler.spec?.metrics?.[0]?.resource?.target?.averageUtilization;
+    if (current == null && target == null) return '—';
+    return `${current ?? 0}% / ${target ?? 0}%`;
+}
+
+export function toAutoscaler(autoscaler: V2HorizontalPodAutoscaler, now = Date.now()): Autoscaler {
+    const ref = autoscaler.spec?.scaleTargetRef;
+    return {
+        name: autoscaler.metadata?.name ?? '',
+        namespace: autoscaler.metadata?.namespace ?? '',
+        reference: ref ? `${ref.kind}/${ref.name}` : '—',
+        min: autoscaler.spec?.minReplicas ?? 1,
+        max: autoscaler.spec?.maxReplicas ?? 0,
+        replicas: autoscaler.status?.currentReplicas ?? 0,
+        targets: hpaTargets(autoscaler),
+        age: age(autoscaler.metadata?.creationTimestamp, now),
+    };
+}
+
+export function toAutoscalerDetail(autoscaler: V2HorizontalPodAutoscaler, now = Date.now()): AutoscalerDetail {
+    return {
+        ...toAutoscaler(autoscaler, now),
+        labels: toPairs(autoscaler.metadata?.labels),
+        annotations: toPairs(autoscaler.metadata?.annotations),
+    };
+}
+
+export function listJobs(namespace?: string): Promise<Job[]> {
+    return withK8s('resources.list', async () => {
+        const { items } = await listItems(
+            namespace,
+            (ns) => apis().batch.listNamespacedJob({ namespace: ns }),
+            () => apis().batch.listJobForAllNamespaces(),
+        );
+        return items.map((job) => toJob(job));
+    });
+}
+
+export function getJob(name: string, namespace?: string): Promise<JobDetail | null> {
+    return withK8s('resources.get', async () => {
+        const job = await getNamespaced(
+            name,
+            namespace,
+            (n, ns) => apis().batch.readNamespacedJob({ name: n, namespace: ns }),
+            (fieldSelector) => apis().batch.listJobForAllNamespaces({ fieldSelector }),
+        );
+        return job ? toJobDetail(job) : null;
+    });
+}
+
+export function listCronJobs(namespace?: string): Promise<CronJob[]> {
+    return withK8s('resources.list', async () => {
+        const { items } = await listItems(
+            namespace,
+            (ns) => apis().batch.listNamespacedCronJob({ namespace: ns }),
+            () => apis().batch.listCronJobForAllNamespaces(),
+        );
+        return items.map((cronJob) => toCronJob(cronJob));
+    });
+}
+
+export function getCronJob(name: string, namespace?: string): Promise<CronJobDetail | null> {
+    return withK8s('resources.get', async () => {
+        const cronJob = await getNamespaced(
+            name,
+            namespace,
+            (n, ns) => apis().batch.readNamespacedCronJob({ name: n, namespace: ns }),
+            (fieldSelector) => apis().batch.listCronJobForAllNamespaces({ fieldSelector }),
+        );
+        return cronJob ? toCronJobDetail(cronJob) : null;
+    });
+}
+
+export function listAutoscalers(namespace?: string): Promise<Autoscaler[]> {
+    return withK8s('resources.list', async () => {
+        const { items } = await listItems(
+            namespace,
+            (ns) => apis().hpa.listNamespacedHorizontalPodAutoscaler({ namespace: ns }),
+            () => apis().hpa.listHorizontalPodAutoscalerForAllNamespaces(),
+        );
+        return items.map((autoscaler) => toAutoscaler(autoscaler));
+    });
+}
+
+export function getAutoscaler(name: string, namespace?: string): Promise<AutoscalerDetail | null> {
+    return withK8s('resources.get', async () => {
+        const autoscaler = await getNamespaced(
+            name,
+            namespace,
+            (n, ns) => apis().hpa.readNamespacedHorizontalPodAutoscaler({ name: n, namespace: ns }),
+            (fieldSelector) => apis().hpa.listHorizontalPodAutoscalerForAllNamespaces({ fieldSelector }),
+        );
+        return autoscaler ? toAutoscalerDetail(autoscaler) : null;
     });
 }

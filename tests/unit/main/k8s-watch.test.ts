@@ -19,6 +19,9 @@ const listDeploymentForAllNamespaces = vi.fn(async () => ({ items: [] }));
 const listNamespacedStatefulSet = vi.fn(async () => ({ items: [] }));
 const listStatefulSetForAllNamespaces = vi.fn(async () => ({ items: [] }));
 const listNamespacedDaemonSet = vi.fn(async () => ({ items: [] }));
+const listNamespacedJob = vi.fn(async () => ({ items: [] }));
+const listCronJobForAllNamespaces = vi.fn(async () => ({ items: [] }));
+const listNamespacedHorizontalPodAutoscaler = vi.fn(async () => ({ items: [] }));
 const listDaemonSetForAllNamespaces = vi.fn(async () => ({ items: [] }));
 const client = {
     kubeConfig: () => ({ fake: true }),
@@ -32,6 +35,8 @@ const client = {
             listNamespacedDaemonSet,
             listDaemonSetForAllNamespaces,
         },
+        batch: { listNamespacedJob, listCronJobForAllNamespaces },
+        hpa: { listNamespacedHorizontalPodAutoscaler },
     }),
     resolveNamespace: (explicit?: string) => explicit ?? 'team-a',
 };
@@ -202,6 +207,46 @@ describe('startResourceWatch', () => {
         expect(send.mock.calls.at(-1)![0]).toMatchObject({
             data: { kind: 'DaemonSet', item: { name: 'agent', ready: 2 } },
         });
+    });
+
+    it('watches the batch and autoscaler kinds on their own API paths', async () => {
+        const listOf = (index: number) => (makeInformer.mock.calls[index] as unknown[])[2] as () => Promise<unknown>;
+        const send = vi.fn();
+        await startResourceWatch({ kind: 'Job', namespace: 'team-a' }, send);
+        expect(makeInformer).toHaveBeenLastCalledWith(
+            expect.anything(),
+            '/apis/batch/v1/namespaces/team-a/jobs',
+            expect.any(Function),
+        );
+        await listOf(0)();
+        expect(listNamespacedJob).toHaveBeenCalledWith({ namespace: 'team-a' });
+        informer.emit('add', {
+            metadata: { name: 'import', namespace: 'team-a' },
+            status: { conditions: [{ type: 'Complete', status: 'True' }] },
+        });
+        expect(send.mock.calls.at(-1)![0]).toMatchObject({
+            data: { kind: 'Job', type: 'added', item: { name: 'import', status: 'Complete' } },
+        });
+
+        client.resolveNamespace = () => undefined;
+        await startResourceWatch({ kind: 'CronJob' }, vi.fn());
+        expect(makeInformer).toHaveBeenLastCalledWith(
+            expect.anything(),
+            '/apis/batch/v1/cronjobs',
+            expect.any(Function),
+        );
+        await listOf(1)();
+        expect(listCronJobForAllNamespaces).toHaveBeenCalled();
+        client.resolveNamespace = (explicit?: string) => explicit ?? 'team-a';
+
+        await startResourceWatch({ kind: 'HorizontalPodAutoscaler' }, vi.fn());
+        expect(makeInformer).toHaveBeenLastCalledWith(
+            expect.anything(),
+            '/apis/autoscaling/v2/namespaces/team-a/horizontalpodautoscalers',
+            expect.any(Function),
+        );
+        await listOf(2)();
+        expect(listNamespacedHorizontalPodAutoscaler).toHaveBeenCalledWith({ namespace: 'team-a' });
     });
 
     it('rejects an invalid input before touching the cluster', async () => {
