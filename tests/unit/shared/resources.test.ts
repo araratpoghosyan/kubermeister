@@ -31,6 +31,8 @@ describe('kind registry', () => {
             'Job',
             'CronJob',
             'HorizontalPodAutoscaler',
+            'ConfigMap',
+            'Secret',
         ]);
         expect(kindInfo('HorizontalPodAutoscaler')).toMatchObject({
             apiVersion: 'autoscaling/v2',
@@ -116,6 +118,14 @@ describe('generic resource channels', () => {
         expect(resourceListOutputSchema.safeParse({ kind: 'HorizontalPodAutoscaler', items: [hpaRow] }).success).toBe(
             true,
         );
+        const cmRow = { name: 'app-config', namespace: 'a', keys: 2, size: '40 B', age: '1h' };
+        expect(resourceListOutputSchema.safeParse({ kind: 'ConfigMap', items: [cmRow] }).success).toBe(true);
+        const secretRow = { name: 's', namespace: 'a', type: 'Opaque', keys: 1, age: '1h' };
+        expect(resourceListOutputSchema.safeParse({ kind: 'Secret', items: [secretRow] }).success).toBe(true);
+        expect(
+            resourceGetOutputSchema.safeParse({ kind: 'Secret', item: { ...secretRow, labels: [], annotations: [] } })
+                .success,
+        ).toBe(true);
         const deployment = {
             name: 'web',
             namespace: 'a',

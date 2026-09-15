@@ -3,6 +3,7 @@ import type { Kind } from '../../shared/k8s/registry.js';
 import type { RowOf } from '../../shared/k8s/resources.js';
 import { streamSchemas, type StreamController, type StreamSend, type WatchEvent } from '../../shared/streams.js';
 import { apis, kubeConfig, resolveNamespace } from './client.js';
+import { toConfigMap, toSecret } from './resources/config.js';
 import { toPod, usageFor } from './resources/pods.js';
 import { toAutoscaler, toCronJob, toDaemonSet, toDeployment, toJob, toStatefulSet } from './resources/workloads.js';
 
@@ -71,6 +72,22 @@ const WATCH_SOURCES: { [K in Kind]: WatchSource<K> } = {
                 ? () => apis().hpa.listNamespacedHorizontalPodAutoscaler({ namespace: ns })
                 : () => apis().hpa.listHorizontalPodAutoscalerForAllNamespaces(),
         toRow: (autoscaler) => toAutoscaler(autoscaler),
+    },
+    ConfigMap: {
+        path: (ns) => (ns ? `/api/v1/namespaces/${ns}/configmaps` : '/api/v1/configmaps'),
+        list: (ns) =>
+            ns
+                ? () => apis().core.listNamespacedConfigMap({ namespace: ns })
+                : () => apis().core.listConfigMapForAllNamespaces(),
+        toRow: (configMap) => toConfigMap(configMap),
+    },
+    Secret: {
+        path: (ns) => (ns ? `/api/v1/namespaces/${ns}/secrets` : '/api/v1/secrets'),
+        list: (ns) =>
+            ns
+                ? () => apis().core.listNamespacedSecret({ namespace: ns })
+                : () => apis().core.listSecretForAllNamespaces(),
+        toRow: (secret) => toSecret(secret),
     },
 };
 

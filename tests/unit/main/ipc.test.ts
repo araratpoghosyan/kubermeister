@@ -37,6 +37,7 @@ const metricsMod = {
     getDeploymentSeries: vi.fn(),
 };
 const workloadsMod = { getDeploymentReplicaSets: vi.fn(), getDeploymentRollouts: vi.fn() };
+const configMod = { getConfigMapEntries: vi.fn(), getSecretEntries: vi.fn() };
 const alertsMod = { listAlerts: vi.fn() };
 vi.mock('../../../src/main/updater.js', () => updater);
 vi.mock('../../../src/main/k8s/client.js', () => client);
@@ -51,6 +52,7 @@ vi.mock('../../../src/main/k8s/resources/events.js', () => eventsMod);
 vi.mock('../../../src/main/k8s/resources/metrics.js', () => metricsMod);
 vi.mock('../../../src/main/k8s/alerts.js', () => alertsMod);
 vi.mock('../../../src/main/k8s/resources/workloads.js', () => workloadsMod);
+vi.mock('../../../src/main/k8s/resources/config.js', () => configMod);
 
 const { registerHandlers } = await import('../../../src/main/ipc/index.js');
 const { ipcSchemas } = await import('../../../src/shared/ipc.js');
@@ -301,6 +303,21 @@ describe('registerHandlers', () => {
         });
         expect(metricsMod.getDeploymentSeries).toHaveBeenCalledWith('team-a', 'web');
         await expect(invoke('deployments.rollouts', { name: 'web' })).rejects.toThrow();
+    });
+
+    it('forwards the config map and secret entry channels', async () => {
+        configMod.getConfigMapEntries.mockResolvedValue([
+            { key: 'greeting', contentType: 'text/plain', size: '5 B', value: 'hello' },
+        ]);
+        configMod.getSecretEntries.mockResolvedValue([{ key: 'password', masked: '••••••••' }]);
+        await expect(invoke('configMaps.entries', { name: 'app-config', namespace: 'team-a' })).resolves.toEqual([
+            { key: 'greeting', contentType: 'text/plain', size: '5 B', value: 'hello' },
+        ]);
+        expect(configMod.getConfigMapEntries).toHaveBeenCalledWith('app-config', 'team-a');
+        await expect(invoke('secrets.entries', { name: 'app-secret', namespace: 'team-a' })).resolves.toEqual([
+            { key: 'password', masked: '••••••••' },
+        ]);
+        await expect(invoke('secrets.entries', { name: 'app-secret' })).rejects.toThrow();
     });
 
     it('resets to the default kubeconfig and reloads', async () => {
