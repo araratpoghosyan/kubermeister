@@ -35,7 +35,7 @@ export const IPC_CHANNELS = [
     'metrics.nodeSeries',
 ] as const;
 
-export const SUBSCRIPTION_CHANNELS = ['update.state'] as const;
+export const SUBSCRIPTION_CHANNELS = ['update.state', 'open-settings'] as const;
 
 /** Stream channels the preload's `stream()` accepts. Schemas live in `streams.ts`; this file stays import-free. */
 export const STREAM_CHANNELS = ['resources.watch', 'pods.logs', 'pods.exec', 'pods.portForward'] as const;

@@ -137,7 +137,7 @@ describe('readers', () => {
         await expect(cluster.getActiveNamespaceInfo()).resolves.toEqual({ name: 'team-a', pods: 1, tone: 'accent' });
         client.getActiveNamespace.mockReturnValue(null);
         await expect(cluster.getActiveNamespaceInfo()).resolves.toEqual({
-            name: 'All Namespaces',
+            name: 'All namespaces',
             pods: 2,
             tone: 'accent',
         });

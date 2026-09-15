@@ -99,7 +99,7 @@ export function getActiveNamespaceInfo(): Promise<Namespace | null> {
         const podCounts = await podsPerNamespace();
         if (!active) {
             const total = [...podCounts.values()].reduce((sum, n) => sum + n, 0);
-            return { name: 'All Namespaces', pods: total, tone: 'accent' };
+            return { name: 'All namespaces', pods: total, tone: 'accent' };
         }
         return { name: active, pods: podCounts.get(active) ?? 0, tone: 'accent' };
     });
