@@ -47,6 +47,12 @@ const helmMod = {
     listHelmCharts: vi.fn(),
 };
 const manifestMod = { getObjectYaml: vi.fn() };
+const writeMod = {
+    createResource: vi.fn(),
+    replaceResource: vi.fn(),
+    deleteResource: vi.fn(),
+    scaleResource: vi.fn(),
+};
 const alertsMod = { listAlerts: vi.fn() };
 vi.mock('../../../src/main/updater.js', () => updater);
 vi.mock('../../../src/main/k8s/client.js', () => client);
@@ -66,6 +72,7 @@ vi.mock('../../../src/main/k8s/resources/overview.js', () => overviewMod);
 vi.mock('../../../src/main/k8s/resources/network.js', () => networkMod);
 vi.mock('../../../src/main/k8s/resources/helm.js', () => helmMod);
 vi.mock('../../../src/main/k8s/resources/manifest.js', () => manifestMod);
+vi.mock('../../../src/main/k8s/resources/write.js', () => writeMod);
 
 const { registerHandlers } = await import('../../../src/main/ipc/index.js');
 const { ipcSchemas } = await import('../../../src/shared/ipc.js');
@@ -399,6 +406,28 @@ describe('registerHandlers', () => {
         await expect(invoke('resources.getYaml', { kind: 'Node', name: 'node-1' })).resolves.toBeTruthy();
         await expect(invoke('resources.getYaml', { kind: 'ReplicaSet', name: 'web' })).rejects.toThrow();
         await expect(invoke('resources.getYaml', { kind: 'Pod', name: '' })).rejects.toThrow();
+    });
+
+    it('forwards the writes and rejects inputs the contract refuses', async () => {
+        const result = { kind: 'ConfigMap', name: 'app-config', namespace: 'team-a' };
+        writeMod.createResource.mockResolvedValue(result);
+        writeMod.replaceResource.mockResolvedValue(result);
+        writeMod.deleteResource.mockResolvedValue(result);
+        writeMod.scaleResource.mockResolvedValue({ kind: 'Deployment', name: 'web', namespace: 'team-a' });
+
+        await expect(invoke('resources.create', { manifest: 'kind: ConfigMap' })).resolves.toMatchObject(result);
+        expect(writeMod.createResource).toHaveBeenCalledWith('kind: ConfigMap', undefined);
+        await expect(invoke('resources.replace', { manifest: 'kind: ConfigMap', dryRun: true })).resolves.toBeTruthy();
+        expect(writeMod.replaceResource).toHaveBeenCalledWith('kind: ConfigMap', true);
+        await expect(invoke('resources.delete', { kind: 'ConfigMap', name: 'app-config' })).resolves.toBeTruthy();
+        expect(writeMod.deleteResource).toHaveBeenCalledWith('ConfigMap', 'app-config', undefined);
+        await expect(invoke('resources.scale', { kind: 'Deployment', name: 'web', replicas: 3 })).resolves.toBeTruthy();
+        expect(writeMod.scaleResource).toHaveBeenCalledWith('Deployment', 'web', 3, undefined);
+
+        await expect(invoke('resources.create', { manifest: '' })).rejects.toThrow();
+        await expect(invoke('resources.scale', { kind: 'Deployment', name: 'web', replicas: -1 })).rejects.toThrow();
+        // A node has no scale subresource and is not a registered kind, so the contract refuses it.
+        await expect(invoke('resources.scale', { kind: 'Node', name: 'node-1', replicas: 1 })).rejects.toThrow();
     });
 
     it('resets to the default kubeconfig and reloads', async () => {

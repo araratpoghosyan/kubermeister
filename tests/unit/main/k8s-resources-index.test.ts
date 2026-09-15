@@ -41,8 +41,28 @@ const workloadsMod = {
     getAutoscaler: vi.fn(),
 };
 vi.mock('../../../src/main/k8s/resources/workloads.js', () => workloadsMod);
+const accessMod = {
+    listServiceAccounts: vi.fn(),
+    getServiceAccount: vi.fn(),
+    listRoles: vi.fn(),
+    getRole: vi.fn(),
+    listRoleBindings: vi.fn(),
+    getRoleBinding: vi.fn(),
+    listClusterRoles: vi.fn(),
+    getClusterRole: vi.fn(),
+    listClusterRoleBindings: vi.fn(),
+    getClusterRoleBinding: vi.fn(),
+};
+vi.mock('../../../src/main/k8s/resources/access.js', () => accessMod);
+const crdsMod = { listCustomResources: vi.fn(), getCustomResource: vi.fn() };
+vi.mock('../../../src/main/k8s/resources/crds.js', () => crdsMod);
 
 const { listResources, getResource } = await import('../../../src/main/k8s/resources/index.js');
+
+/** Every mocked reader, so the table-driven test below can reset and satisfy all of them. */
+const readers = [podsMod, configMod, networkMod, storageMod, workloadsMod, accessMod, crdsMod].flatMap((mod) =>
+    Object.entries(mod),
+);
 
 describe('generic resource dispatch', () => {
     it('routes list and get to the kind source and tags the output with the kind', async () => {
@@ -185,5 +205,19 @@ describe('generic resource dispatch', () => {
             kind: 'VolumeSnapshot',
             item: null,
         });
+    });
+});
+
+describe('every registered kind', () => {
+    it('has a list and a get that come back tagged with the kind', async () => {
+        const { KINDS, kindInfo } = await import('../../../src/shared/k8s/registry.js');
+        for (const [name, fn] of readers) {
+            (fn as ReturnType<typeof vi.fn>).mockResolvedValue(name.startsWith('list') ? [] : null);
+        }
+        for (const kind of KINDS) {
+            const namespace = kindInfo(kind).clusterScoped ? undefined : 'team-a';
+            await expect(listResources({ kind, namespace })).resolves.toEqual({ kind, items: [] });
+            await expect(getResource({ kind, name: 'x', namespace })).resolves.toEqual({ kind, item: null });
+        }
     });
 });
