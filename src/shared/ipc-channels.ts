@@ -1,7 +1,8 @@
 /**
  * The exact set of IPC channel names the sandboxed preload forwards to the main process. A plain
  * string array with no imports so the preload bundle stays tiny. `ipc.ts` asserts at compile time
- * that this list and the schema registry name the same channels.
+ * that this list and the schema registry name the same channels. Push channels the renderer may
+ * subscribe to are listed alongside for the same reason.
  */
 export const IPC_CHANNELS = [
     'app.info',
@@ -24,4 +25,7 @@ export const IPC_CHANNELS = [
     'nodes.get',
 ] as const;
 
+export const SUBSCRIPTION_CHANNELS = ['update.state'] as const;
+
 export type AllowedChannel = (typeof IPC_CHANNELS)[number];
+export type AllowedSubscription = (typeof SUBSCRIPTION_CHANNELS)[number];

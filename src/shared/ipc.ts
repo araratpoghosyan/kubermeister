@@ -21,7 +21,7 @@ const appInfoSchema = z.object({
  * Where the in-app updater is. `unsupported` covers development builds and Linux packages that
  * cannot self-update (deb); `message` carries the reason or the error text.
  */
-const updateStateSchema = z.object({
+export const updateStateSchema = z.object({
     status: z.enum(['unsupported', 'idle', 'checking', 'up-to-date', 'downloading', 'downloaded', 'error']),
     /** Version being downloaded or ready to install. */
     version: z.string().optional(),

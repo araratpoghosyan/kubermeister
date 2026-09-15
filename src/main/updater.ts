@@ -1,6 +1,7 @@
 import { app } from 'electron';
 import electronUpdater from 'electron-updater';
 import type { UpdateState } from '../shared/ipc.js';
+import { broadcast } from './ipc/push.js';
 
 // electron-updater is CommonJS; named imports are not reliably detected from ESM, so destructure.
 const { autoUpdater } = electronUpdater;
@@ -12,6 +13,7 @@ let state: UpdateState = { status: 'idle' };
 
 function setState(next: UpdateState): void {
     state = next;
+    broadcast('update.state', next);
 }
 
 function errorMessage(error: unknown): string {

@@ -14,6 +14,9 @@ class FakeAutoUpdater extends EventEmitter {
 const autoUpdater = new FakeAutoUpdater();
 vi.mock('electron-updater', () => ({ default: { autoUpdater } }));
 
+const broadcast = vi.fn();
+vi.mock('../../../src/main/ipc/push.js', () => ({ broadcast }));
+
 const savedAppImage = process.env.APPIMAGE;
 let platform: NodeJS.Platform = 'darwin';
 vi.spyOn(process, 'platform', 'get').mockImplementation(() => platform);
@@ -90,6 +93,8 @@ describe('startUpdater', () => {
         expect(getUpdateState()).toEqual({ status: 'up-to-date' });
         autoUpdater.emit('error', new Error('feed unreachable'));
         expect(getUpdateState()).toEqual({ status: 'error', message: 'feed unreachable' });
+        // Every transition is pushed to the renderer.
+        expect(broadcast).toHaveBeenLastCalledWith('update.state', { status: 'error', message: 'feed unreachable' });
     });
 
     it('records a failed check as an error state', async () => {
