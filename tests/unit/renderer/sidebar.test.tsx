@@ -60,6 +60,10 @@ describe('Sidebar', () => {
             'Ingresses',
             'Endpoints',
             'NetworkPolicies',
+            'Volumes',
+            'Claims',
+            'StorageClasses',
+            'Snapshots',
             'Settings',
         ]);
     });

@@ -22,6 +22,12 @@ import { Route as NetworkIngressesIndexRouteImport } from './routes/network/ingr
 import { Route as NetworkNetworkpoliciesIndexRouteImport } from './routes/network/networkpolicies/index';
 import { Route as NetworkServicesIndexRouteImport } from './routes/network/services/index';
 import { Route as OverviewNodesNameRouteImport } from './routes/overview/nodes_.$name';
+import { Route as StorageClaimsIndexRouteImport } from './routes/storage/claims/index';
+import { Route as StorageSnapshotsIndexRouteImport } from './routes/storage/snapshots/index';
+import { Route as StorageStorageclassesIndexRouteImport } from './routes/storage/storageclasses/index';
+import { Route as StorageStorageclassesNameRouteImport } from './routes/storage/storageclasses_.$name';
+import { Route as StorageVolumesIndexRouteImport } from './routes/storage/volumes/index';
+import { Route as StorageVolumesNameRouteImport } from './routes/storage/volumes_.$name';
 import { Route as WorkloadsAutoscalersIndexRouteImport } from './routes/workloads/autoscalers/index';
 import { Route as WorkloadsConfigmapsIndexRouteImport } from './routes/workloads/configmaps/index';
 import { Route as WorkloadsCronjobsIndexRouteImport } from './routes/workloads/cronjobs/index';
@@ -35,6 +41,8 @@ import { Route as NetworkEndpointsNamespaceNameRouteImport } from './routes/netw
 import { Route as NetworkIngressesNamespaceNameRouteImport } from './routes/network/ingresses/$namespace.$name';
 import { Route as NetworkNetworkpoliciesNamespaceNameRouteImport } from './routes/network/networkpolicies/$namespace.$name';
 import { Route as NetworkServicesNamespaceNameRouteImport } from './routes/network/services/$namespace.$name';
+import { Route as StorageClaimsNamespaceNameRouteImport } from './routes/storage/claims/$namespace.$name';
+import { Route as StorageSnapshotsNamespaceNameRouteImport } from './routes/storage/snapshots/$namespace.$name';
 import { Route as WorkloadsAutoscalersNamespaceNameRouteImport } from './routes/workloads/autoscalers/$namespace.$name';
 import { Route as WorkloadsConfigmapsNamespaceNameRouteImport } from './routes/workloads/configmaps/$namespace.$name';
 import { Route as WorkloadsCronjobsNamespaceNameRouteImport } from './routes/workloads/cronjobs/$namespace.$name';
@@ -111,6 +119,38 @@ const OverviewNodesNameRoute = OverviewNodesNameRouteImport.update({
   path: '/overview/nodes/$name',
   getParentRoute: () => rootRouteImport,
 } as any);
+const StorageClaimsIndexRoute = StorageClaimsIndexRouteImport.update({
+  id: '/storage/claims/',
+  path: '/storage/claims/',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const StorageSnapshotsIndexRoute = StorageSnapshotsIndexRouteImport.update({
+  id: '/storage/snapshots/',
+  path: '/storage/snapshots/',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const StorageStorageclassesIndexRoute =
+  StorageStorageclassesIndexRouteImport.update({
+    id: '/storage/storageclasses/',
+    path: '/storage/storageclasses/',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const StorageStorageclassesNameRoute =
+  StorageStorageclassesNameRouteImport.update({
+    id: '/storage/storageclasses_/$name',
+    path: '/storage/storageclasses/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const StorageVolumesIndexRoute = StorageVolumesIndexRouteImport.update({
+  id: '/storage/volumes/',
+  path: '/storage/volumes/',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const StorageVolumesNameRoute = StorageVolumesNameRouteImport.update({
+  id: '/storage/volumes_/$name',
+  path: '/storage/volumes/$name',
+  getParentRoute: () => rootRouteImport,
+} as any);
 const WorkloadsAutoscalersIndexRoute =
   WorkloadsAutoscalersIndexRouteImport.update({
     id: '/workloads/autoscalers/',
@@ -185,6 +225,18 @@ const NetworkServicesNamespaceNameRoute =
     path: '/network/services/$namespace/$name',
     getParentRoute: () => rootRouteImport,
   } as any);
+const StorageClaimsNamespaceNameRoute =
+  StorageClaimsNamespaceNameRouteImport.update({
+    id: '/storage/claims/$namespace/$name',
+    path: '/storage/claims/$namespace/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const StorageSnapshotsNamespaceNameRoute =
+  StorageSnapshotsNamespaceNameRouteImport.update({
+    id: '/storage/snapshots/$namespace/$name',
+    path: '/storage/snapshots/$namespace/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
 const WorkloadsAutoscalersNamespaceNameRoute =
   WorkloadsAutoscalersNamespaceNameRouteImport.update({
     id: '/workloads/autoscalers/$namespace/$name',
@@ -250,10 +302,16 @@ export interface FileRoutesByFullPath {
   '/overview/quotas': typeof OverviewQuotasRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
   '/overview/nodes/$name': typeof OverviewNodesNameRoute;
+  '/storage/storageclasses/$name': typeof StorageStorageclassesNameRoute;
+  '/storage/volumes/$name': typeof StorageVolumesNameRoute;
   '/network/endpoints/': typeof NetworkEndpointsIndexRoute;
   '/network/ingresses/': typeof NetworkIngressesIndexRoute;
   '/network/networkpolicies/': typeof NetworkNetworkpoliciesIndexRoute;
   '/network/services/': typeof NetworkServicesIndexRoute;
+  '/storage/claims/': typeof StorageClaimsIndexRoute;
+  '/storage/snapshots/': typeof StorageSnapshotsIndexRoute;
+  '/storage/storageclasses/': typeof StorageStorageclassesIndexRoute;
+  '/storage/volumes/': typeof StorageVolumesIndexRoute;
   '/workloads/autoscalers/': typeof WorkloadsAutoscalersIndexRoute;
   '/workloads/configmaps/': typeof WorkloadsConfigmapsIndexRoute;
   '/workloads/cronjobs/': typeof WorkloadsCronjobsIndexRoute;
@@ -267,6 +325,8 @@ export interface FileRoutesByFullPath {
   '/network/ingresses/$namespace/$name': typeof NetworkIngressesNamespaceNameRoute;
   '/network/networkpolicies/$namespace/$name': typeof NetworkNetworkpoliciesNamespaceNameRoute;
   '/network/services/$namespace/$name': typeof NetworkServicesNamespaceNameRoute;
+  '/storage/claims/$namespace/$name': typeof StorageClaimsNamespaceNameRoute;
+  '/storage/snapshots/$namespace/$name': typeof StorageSnapshotsNamespaceNameRoute;
   '/workloads/autoscalers/$namespace/$name': typeof WorkloadsAutoscalersNamespaceNameRoute;
   '/workloads/configmaps/$namespace/$name': typeof WorkloadsConfigmapsNamespaceNameRoute;
   '/workloads/cronjobs/$namespace/$name': typeof WorkloadsCronjobsNamespaceNameRoute;
@@ -287,10 +347,16 @@ export interface FileRoutesByTo {
   '/overview/quotas': typeof OverviewQuotasRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
   '/overview/nodes/$name': typeof OverviewNodesNameRoute;
+  '/storage/storageclasses/$name': typeof StorageStorageclassesNameRoute;
+  '/storage/volumes/$name': typeof StorageVolumesNameRoute;
   '/network/endpoints': typeof NetworkEndpointsIndexRoute;
   '/network/ingresses': typeof NetworkIngressesIndexRoute;
   '/network/networkpolicies': typeof NetworkNetworkpoliciesIndexRoute;
   '/network/services': typeof NetworkServicesIndexRoute;
+  '/storage/claims': typeof StorageClaimsIndexRoute;
+  '/storage/snapshots': typeof StorageSnapshotsIndexRoute;
+  '/storage/storageclasses': typeof StorageStorageclassesIndexRoute;
+  '/storage/volumes': typeof StorageVolumesIndexRoute;
   '/workloads/autoscalers': typeof WorkloadsAutoscalersIndexRoute;
   '/workloads/configmaps': typeof WorkloadsConfigmapsIndexRoute;
   '/workloads/cronjobs': typeof WorkloadsCronjobsIndexRoute;
@@ -304,6 +370,8 @@ export interface FileRoutesByTo {
   '/network/ingresses/$namespace/$name': typeof NetworkIngressesNamespaceNameRoute;
   '/network/networkpolicies/$namespace/$name': typeof NetworkNetworkpoliciesNamespaceNameRoute;
   '/network/services/$namespace/$name': typeof NetworkServicesNamespaceNameRoute;
+  '/storage/claims/$namespace/$name': typeof StorageClaimsNamespaceNameRoute;
+  '/storage/snapshots/$namespace/$name': typeof StorageSnapshotsNamespaceNameRoute;
   '/workloads/autoscalers/$namespace/$name': typeof WorkloadsAutoscalersNamespaceNameRoute;
   '/workloads/configmaps/$namespace/$name': typeof WorkloadsConfigmapsNamespaceNameRoute;
   '/workloads/cronjobs/$namespace/$name': typeof WorkloadsCronjobsNamespaceNameRoute;
@@ -325,10 +393,16 @@ export interface FileRoutesById {
   '/overview/quotas': typeof OverviewQuotasRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
   '/overview/nodes_/$name': typeof OverviewNodesNameRoute;
+  '/storage/storageclasses_/$name': typeof StorageStorageclassesNameRoute;
+  '/storage/volumes_/$name': typeof StorageVolumesNameRoute;
   '/network/endpoints/': typeof NetworkEndpointsIndexRoute;
   '/network/ingresses/': typeof NetworkIngressesIndexRoute;
   '/network/networkpolicies/': typeof NetworkNetworkpoliciesIndexRoute;
   '/network/services/': typeof NetworkServicesIndexRoute;
+  '/storage/claims/': typeof StorageClaimsIndexRoute;
+  '/storage/snapshots/': typeof StorageSnapshotsIndexRoute;
+  '/storage/storageclasses/': typeof StorageStorageclassesIndexRoute;
+  '/storage/volumes/': typeof StorageVolumesIndexRoute;
   '/workloads/autoscalers/': typeof WorkloadsAutoscalersIndexRoute;
   '/workloads/configmaps/': typeof WorkloadsConfigmapsIndexRoute;
   '/workloads/cronjobs/': typeof WorkloadsCronjobsIndexRoute;
@@ -342,6 +416,8 @@ export interface FileRoutesById {
   '/network/ingresses/$namespace/$name': typeof NetworkIngressesNamespaceNameRoute;
   '/network/networkpolicies/$namespace/$name': typeof NetworkNetworkpoliciesNamespaceNameRoute;
   '/network/services/$namespace/$name': typeof NetworkServicesNamespaceNameRoute;
+  '/storage/claims/$namespace/$name': typeof StorageClaimsNamespaceNameRoute;
+  '/storage/snapshots/$namespace/$name': typeof StorageSnapshotsNamespaceNameRoute;
   '/workloads/autoscalers/$namespace/$name': typeof WorkloadsAutoscalersNamespaceNameRoute;
   '/workloads/configmaps/$namespace/$name': typeof WorkloadsConfigmapsNamespaceNameRoute;
   '/workloads/cronjobs/$namespace/$name': typeof WorkloadsCronjobsNamespaceNameRoute;
@@ -364,10 +440,16 @@ export interface FileRouteTypes {
     | '/overview/quotas'
     | '/overview/summary'
     | '/overview/nodes/$name'
+    | '/storage/storageclasses/$name'
+    | '/storage/volumes/$name'
     | '/network/endpoints/'
     | '/network/ingresses/'
     | '/network/networkpolicies/'
     | '/network/services/'
+    | '/storage/claims/'
+    | '/storage/snapshots/'
+    | '/storage/storageclasses/'
+    | '/storage/volumes/'
     | '/workloads/autoscalers/'
     | '/workloads/configmaps/'
     | '/workloads/cronjobs/'
@@ -381,6 +463,8 @@ export interface FileRouteTypes {
     | '/network/ingresses/$namespace/$name'
     | '/network/networkpolicies/$namespace/$name'
     | '/network/services/$namespace/$name'
+    | '/storage/claims/$namespace/$name'
+    | '/storage/snapshots/$namespace/$name'
     | '/workloads/autoscalers/$namespace/$name'
     | '/workloads/configmaps/$namespace/$name'
     | '/workloads/cronjobs/$namespace/$name'
@@ -401,10 +485,16 @@ export interface FileRouteTypes {
     | '/overview/quotas'
     | '/overview/summary'
     | '/overview/nodes/$name'
+    | '/storage/storageclasses/$name'
+    | '/storage/volumes/$name'
     | '/network/endpoints'
     | '/network/ingresses'
     | '/network/networkpolicies'
     | '/network/services'
+    | '/storage/claims'
+    | '/storage/snapshots'
+    | '/storage/storageclasses'
+    | '/storage/volumes'
     | '/workloads/autoscalers'
     | '/workloads/configmaps'
     | '/workloads/cronjobs'
@@ -418,6 +508,8 @@ export interface FileRouteTypes {
     | '/network/ingresses/$namespace/$name'
     | '/network/networkpolicies/$namespace/$name'
     | '/network/services/$namespace/$name'
+    | '/storage/claims/$namespace/$name'
+    | '/storage/snapshots/$namespace/$name'
     | '/workloads/autoscalers/$namespace/$name'
     | '/workloads/configmaps/$namespace/$name'
     | '/workloads/cronjobs/$namespace/$name'
@@ -438,10 +530,16 @@ export interface FileRouteTypes {
     | '/overview/quotas'
     | '/overview/summary'
     | '/overview/nodes_/$name'
+    | '/storage/storageclasses_/$name'
+    | '/storage/volumes_/$name'
     | '/network/endpoints/'
     | '/network/ingresses/'
     | '/network/networkpolicies/'
     | '/network/services/'
+    | '/storage/claims/'
+    | '/storage/snapshots/'
+    | '/storage/storageclasses/'
+    | '/storage/volumes/'
     | '/workloads/autoscalers/'
     | '/workloads/configmaps/'
     | '/workloads/cronjobs/'
@@ -455,6 +553,8 @@ export interface FileRouteTypes {
     | '/network/ingresses/$namespace/$name'
     | '/network/networkpolicies/$namespace/$name'
     | '/network/services/$namespace/$name'
+    | '/storage/claims/$namespace/$name'
+    | '/storage/snapshots/$namespace/$name'
     | '/workloads/autoscalers/$namespace/$name'
     | '/workloads/configmaps/$namespace/$name'
     | '/workloads/cronjobs/$namespace/$name'
@@ -476,10 +576,16 @@ export interface RootRouteChildren {
   OverviewQuotasRoute: typeof OverviewQuotasRoute;
   OverviewSummaryRoute: typeof OverviewSummaryRoute;
   OverviewNodesNameRoute: typeof OverviewNodesNameRoute;
+  StorageStorageclassesNameRoute: typeof StorageStorageclassesNameRoute;
+  StorageVolumesNameRoute: typeof StorageVolumesNameRoute;
   NetworkEndpointsIndexRoute: typeof NetworkEndpointsIndexRoute;
   NetworkIngressesIndexRoute: typeof NetworkIngressesIndexRoute;
   NetworkNetworkpoliciesIndexRoute: typeof NetworkNetworkpoliciesIndexRoute;
   NetworkServicesIndexRoute: typeof NetworkServicesIndexRoute;
+  StorageClaimsIndexRoute: typeof StorageClaimsIndexRoute;
+  StorageSnapshotsIndexRoute: typeof StorageSnapshotsIndexRoute;
+  StorageStorageclassesIndexRoute: typeof StorageStorageclassesIndexRoute;
+  StorageVolumesIndexRoute: typeof StorageVolumesIndexRoute;
   WorkloadsAutoscalersIndexRoute: typeof WorkloadsAutoscalersIndexRoute;
   WorkloadsConfigmapsIndexRoute: typeof WorkloadsConfigmapsIndexRoute;
   WorkloadsCronjobsIndexRoute: typeof WorkloadsCronjobsIndexRoute;
@@ -493,6 +599,8 @@ export interface RootRouteChildren {
   NetworkIngressesNamespaceNameRoute: typeof NetworkIngressesNamespaceNameRoute;
   NetworkNetworkpoliciesNamespaceNameRoute: typeof NetworkNetworkpoliciesNamespaceNameRoute;
   NetworkServicesNamespaceNameRoute: typeof NetworkServicesNamespaceNameRoute;
+  StorageClaimsNamespaceNameRoute: typeof StorageClaimsNamespaceNameRoute;
+  StorageSnapshotsNamespaceNameRoute: typeof StorageSnapshotsNamespaceNameRoute;
   WorkloadsAutoscalersNamespaceNameRoute: typeof WorkloadsAutoscalersNamespaceNameRoute;
   WorkloadsConfigmapsNamespaceNameRoute: typeof WorkloadsConfigmapsNamespaceNameRoute;
   WorkloadsCronjobsNamespaceNameRoute: typeof WorkloadsCronjobsNamespaceNameRoute;
@@ -597,6 +705,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OverviewNodesNameRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/storage/claims/': {
+      id: '/storage/claims/';
+      path: '/storage/claims';
+      fullPath: '/storage/claims/';
+      preLoaderRoute: typeof StorageClaimsIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/storage/snapshots/': {
+      id: '/storage/snapshots/';
+      path: '/storage/snapshots';
+      fullPath: '/storage/snapshots/';
+      preLoaderRoute: typeof StorageSnapshotsIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/storage/storageclasses/': {
+      id: '/storage/storageclasses/';
+      path: '/storage/storageclasses';
+      fullPath: '/storage/storageclasses/';
+      preLoaderRoute: typeof StorageStorageclassesIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/storage/storageclasses_/$name': {
+      id: '/storage/storageclasses_/$name';
+      path: '/storage/storageclasses/$name';
+      fullPath: '/storage/storageclasses/$name';
+      preLoaderRoute: typeof StorageStorageclassesNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/storage/volumes/': {
+      id: '/storage/volumes/';
+      path: '/storage/volumes';
+      fullPath: '/storage/volumes/';
+      preLoaderRoute: typeof StorageVolumesIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/storage/volumes_/$name': {
+      id: '/storage/volumes_/$name';
+      path: '/storage/volumes/$name';
+      fullPath: '/storage/volumes/$name';
+      preLoaderRoute: typeof StorageVolumesNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/workloads/autoscalers/': {
       id: '/workloads/autoscalers/';
       path: '/workloads/autoscalers';
@@ -688,6 +838,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NetworkServicesNamespaceNameRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/storage/claims/$namespace/$name': {
+      id: '/storage/claims/$namespace/$name';
+      path: '/storage/claims/$namespace/$name';
+      fullPath: '/storage/claims/$namespace/$name';
+      preLoaderRoute: typeof StorageClaimsNamespaceNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/storage/snapshots/$namespace/$name': {
+      id: '/storage/snapshots/$namespace/$name';
+      path: '/storage/snapshots/$namespace/$name';
+      fullPath: '/storage/snapshots/$namespace/$name';
+      preLoaderRoute: typeof StorageSnapshotsNamespaceNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/workloads/autoscalers/$namespace/$name': {
       id: '/workloads/autoscalers/$namespace/$name';
       path: '/workloads/autoscalers/$namespace/$name';
@@ -764,10 +928,16 @@ const rootRouteChildren: RootRouteChildren = {
   OverviewQuotasRoute: OverviewQuotasRoute,
   OverviewSummaryRoute: OverviewSummaryRoute,
   OverviewNodesNameRoute: OverviewNodesNameRoute,
+  StorageStorageclassesNameRoute: StorageStorageclassesNameRoute,
+  StorageVolumesNameRoute: StorageVolumesNameRoute,
   NetworkEndpointsIndexRoute: NetworkEndpointsIndexRoute,
   NetworkIngressesIndexRoute: NetworkIngressesIndexRoute,
   NetworkNetworkpoliciesIndexRoute: NetworkNetworkpoliciesIndexRoute,
   NetworkServicesIndexRoute: NetworkServicesIndexRoute,
+  StorageClaimsIndexRoute: StorageClaimsIndexRoute,
+  StorageSnapshotsIndexRoute: StorageSnapshotsIndexRoute,
+  StorageStorageclassesIndexRoute: StorageStorageclassesIndexRoute,
+  StorageVolumesIndexRoute: StorageVolumesIndexRoute,
   WorkloadsAutoscalersIndexRoute: WorkloadsAutoscalersIndexRoute,
   WorkloadsConfigmapsIndexRoute: WorkloadsConfigmapsIndexRoute,
   WorkloadsCronjobsIndexRoute: WorkloadsCronjobsIndexRoute,
@@ -782,6 +952,8 @@ const rootRouteChildren: RootRouteChildren = {
   NetworkNetworkpoliciesNamespaceNameRoute:
     NetworkNetworkpoliciesNamespaceNameRoute,
   NetworkServicesNamespaceNameRoute: NetworkServicesNamespaceNameRoute,
+  StorageClaimsNamespaceNameRoute: StorageClaimsNamespaceNameRoute,
+  StorageSnapshotsNamespaceNameRoute: StorageSnapshotsNamespaceNameRoute,
   WorkloadsAutoscalersNamespaceNameRoute:
     WorkloadsAutoscalersNamespaceNameRoute,
   WorkloadsConfigmapsNamespaceNameRoute: WorkloadsConfigmapsNamespaceNameRoute,

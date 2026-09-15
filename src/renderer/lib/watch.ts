@@ -16,7 +16,8 @@ export function applyWatchEvent(
     event: WatchEvent,
 ): ResourceListOutput | undefined {
     if (!current || current.kind !== event.kind) return current;
-    const id = (row: { namespace: string; name: string }) => `${row.namespace}/${row.name}`;
+    // Cluster-scoped rows carry no namespace, so the id is just `/name` for them.
+    const id = (row: { namespace?: string; name: string }) => `${row.namespace ?? ''}/${row.name}`;
     const index = current.items.findIndex((row) => id(row) === id(event.item));
     const items = [...current.items];
     if (event.type === 'deleted') {
