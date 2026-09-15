@@ -4,6 +4,7 @@ import type { RowOf } from '../../shared/k8s/resources.js';
 import { streamSchemas, type StreamController, type StreamSend, type WatchEvent } from '../../shared/streams.js';
 import { apis, kubeConfig, resolveNamespace } from './client.js';
 import { toConfigMap, toSecret } from './resources/config.js';
+import { toEndpoints, toIngress, toNetworkPolicy, toService } from './resources/network.js';
 import { toPod, usageFor } from './resources/pods.js';
 import { toAutoscaler, toCronJob, toDaemonSet, toDeployment, toJob, toStatefulSet } from './resources/workloads.js';
 
@@ -88,6 +89,42 @@ const WATCH_SOURCES: { [K in Kind]: WatchSource<K> } = {
                 ? () => apis().core.listNamespacedSecret({ namespace: ns })
                 : () => apis().core.listSecretForAllNamespaces(),
         toRow: (secret) => toSecret(secret),
+    },
+    Service: {
+        path: (ns) => (ns ? `/api/v1/namespaces/${ns}/services` : '/api/v1/services'),
+        list: (ns) =>
+            ns
+                ? () => apis().core.listNamespacedService({ namespace: ns })
+                : () => apis().core.listServiceForAllNamespaces(),
+        toRow: (service) => toService(service),
+    },
+    Ingress: {
+        path: (ns) =>
+            ns ? `/apis/networking.k8s.io/v1/namespaces/${ns}/ingresses` : '/apis/networking.k8s.io/v1/ingresses',
+        list: (ns) =>
+            ns
+                ? () => apis().net.listNamespacedIngress({ namespace: ns })
+                : () => apis().net.listIngressForAllNamespaces(),
+        toRow: (ingress) => toIngress(ingress),
+    },
+    Endpoints: {
+        path: (ns) => (ns ? `/api/v1/namespaces/${ns}/endpoints` : '/api/v1/endpoints'),
+        list: (ns) =>
+            ns
+                ? () => apis().core.listNamespacedEndpoints({ namespace: ns })
+                : () => apis().core.listEndpointsForAllNamespaces(),
+        toRow: (endpoints) => toEndpoints(endpoints),
+    },
+    NetworkPolicy: {
+        path: (ns) =>
+            ns
+                ? `/apis/networking.k8s.io/v1/namespaces/${ns}/networkpolicies`
+                : '/apis/networking.k8s.io/v1/networkpolicies',
+        list: (ns) =>
+            ns
+                ? () => apis().net.listNamespacedNetworkPolicy({ namespace: ns })
+                : () => apis().net.listNetworkPolicyForAllNamespaces(),
+        toRow: (policy) => toNetworkPolicy(policy),
     },
 };
 

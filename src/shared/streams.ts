@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { STREAM_CHANNELS, type AllowedStream } from './ipc-channels.js';
 import type { LogLine } from './k8s/logs.js';
 import { podSchema } from './k8s/pods.js';
+import { endpointsSchema, ingressSchema, networkPolicySchema, serviceSchema } from './k8s/network.js';
 import type { Kind } from './k8s/registry.js';
 import { resourceListInputSchema, type ResourceListInput } from './k8s/resources.js';
 import {
@@ -46,6 +47,10 @@ export const watchEventSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('HorizontalPodAutoscaler'), type: watchType, item: autoscalerSchema }),
     z.object({ kind: z.literal('ConfigMap'), type: watchType, item: configMapSchema }),
     z.object({ kind: z.literal('Secret'), type: watchType, item: secretSchema }),
+    z.object({ kind: z.literal('Service'), type: watchType, item: serviceSchema }),
+    z.object({ kind: z.literal('Ingress'), type: watchType, item: ingressSchema }),
+    z.object({ kind: z.literal('Endpoints'), type: watchType, item: endpointsSchema }),
+    z.object({ kind: z.literal('NetworkPolicy'), type: watchType, item: networkPolicySchema }),
 ]);
 
 export type WatchEvent = z.infer<typeof watchEventSchema>;

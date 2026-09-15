@@ -19,6 +19,7 @@ const listDeploymentForAllNamespaces = vi.fn(async () => ({ items: [] }));
 const listNamespacedStatefulSet = vi.fn(async () => ({ items: [] }));
 const listStatefulSetForAllNamespaces = vi.fn(async () => ({ items: [] }));
 const listNamespacedDaemonSet = vi.fn(async () => ({ items: [] }));
+const listAny = vi.fn(async () => ({ items: [] }));
 const listNamespacedJob = vi.fn(async () => ({ items: [] }));
 const listCronJobForAllNamespaces = vi.fn(async () => ({ items: [] }));
 const listNamespacedHorizontalPodAutoscaler = vi.fn(async () => ({ items: [] }));
@@ -26,7 +27,18 @@ const listDaemonSetForAllNamespaces = vi.fn(async () => ({ items: [] }));
 const client = {
     kubeConfig: () => ({ fake: true }),
     apis: () => ({
-        core: { listNamespacedPod, listPodForAllNamespaces },
+        core: {
+            listNamespacedPod,
+            listPodForAllNamespaces,
+            listNamespacedConfigMap: listAny,
+            listConfigMapForAllNamespaces: listAny,
+            listNamespacedSecret: listAny,
+            listSecretForAllNamespaces: listAny,
+            listNamespacedService: listAny,
+            listServiceForAllNamespaces: listAny,
+            listNamespacedEndpoints: listAny,
+            listEndpointsForAllNamespaces: listAny,
+        },
         apps: {
             listNamespacedDeployment,
             listDeploymentForAllNamespaces,
@@ -35,8 +47,22 @@ const client = {
             listNamespacedDaemonSet,
             listDaemonSetForAllNamespaces,
         },
-        batch: { listNamespacedJob, listCronJobForAllNamespaces },
-        hpa: { listNamespacedHorizontalPodAutoscaler },
+        batch: {
+            listNamespacedJob,
+            listJobForAllNamespaces: listAny,
+            listNamespacedCronJob: listAny,
+            listCronJobForAllNamespaces,
+        },
+        hpa: {
+            listNamespacedHorizontalPodAutoscaler,
+            listHorizontalPodAutoscalerForAllNamespaces: listAny,
+        },
+        net: {
+            listNamespacedIngress: listAny,
+            listIngressForAllNamespaces: listAny,
+            listNamespacedNetworkPolicy: listAny,
+            listNetworkPolicyForAllNamespaces: listAny,
+        },
     }),
     resolveNamespace: (explicit?: string) => explicit ?? 'team-a',
 };
@@ -247,6 +273,35 @@ describe('startResourceWatch', () => {
         );
         await listOf(2)();
         expect(listNamespacedHorizontalPodAutoscaler).toHaveBeenCalledWith({ namespace: 'team-a' });
+    });
+
+    it('gives every registered kind a namespaced path, a cluster-wide path and a row transform', async () => {
+        const { KINDS } = await import('../../../src/shared/k8s/registry.js');
+        const object = { metadata: { name: 'x', namespace: 'team-a' }, spec: {}, status: {} };
+        for (const [index, kind] of KINDS.entries()) {
+            const send = vi.fn();
+            await startResourceWatch({ kind, namespace: 'team-a' }, send);
+            const [, namespacedPath, list] = makeInformer.mock.calls[index * 2] as [
+                unknown,
+                string,
+                () => Promise<unknown>,
+            ];
+            expect(namespacedPath).toContain('/namespaces/team-a/');
+            await expect(list()).resolves.toEqual({ items: [] });
+            informer.emit('add', object);
+            expect(send.mock.calls.at(-1)![0]).toMatchObject({ data: { kind, type: 'added', item: { name: 'x' } } });
+
+            client.resolveNamespace = () => undefined;
+            await startResourceWatch({ kind }, vi.fn());
+            const [, clusterPath, listAll] = makeInformer.mock.calls[index * 2 + 1] as [
+                unknown,
+                string,
+                () => Promise<unknown>,
+            ];
+            expect(clusterPath).not.toContain('/namespaces/');
+            await expect(listAll()).resolves.toEqual({ items: [] });
+            client.resolveNamespace = (explicit?: string) => explicit ?? 'team-a';
+        }
     });
 
     it('rejects an invalid input before touching the cluster', async () => {

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { AllowedChannel } from './ipc-channels.js';
 import { kubeContextSchema } from './k8s/contexts.js';
 import { clusterEventSchema, objectEventsInputSchema } from './k8s/events.js';
+import { ingressRuleSchema, serviceEndpointSchema, servicePortSchema } from './k8s/network.js';
 import { limitRangeSchema, resourceQuotaSchema } from './k8s/overview.js';
 import { logLineSchema, podLogSnapshotInputSchema } from './k8s/logs.js';
 import {
@@ -119,6 +120,9 @@ export const ipcSchemas = {
     'deployments.rollouts': { input: namespacedNameSchema, output: z.array(rolloutSchema) },
     'configMaps.entries': { input: namespacedNameSchema, output: z.array(configMapEntrySchema) },
     'secrets.entries': { input: namespacedNameSchema, output: z.array(secretEntrySchema) },
+    'services.ports': { input: namespacedNameSchema, output: z.array(servicePortSchema) },
+    'services.endpoints': { input: namespacedNameSchema, output: z.array(serviceEndpointSchema) },
+    'ingresses.rules': { input: namespacedNameSchema, output: z.array(ingressRuleSchema) },
 } as const;
 
 /**

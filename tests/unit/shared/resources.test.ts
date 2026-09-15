@@ -33,6 +33,10 @@ describe('kind registry', () => {
             'HorizontalPodAutoscaler',
             'ConfigMap',
             'Secret',
+            'Service',
+            'Ingress',
+            'Endpoints',
+            'NetworkPolicy',
         ]);
         expect(kindInfo('HorizontalPodAutoscaler')).toMatchObject({
             apiVersion: 'autoscaling/v2',

@@ -39,6 +39,7 @@ const metricsMod = {
 };
 const workloadsMod = { getDeploymentReplicaSets: vi.fn(), getDeploymentRollouts: vi.fn() };
 const configMod = { getConfigMapEntries: vi.fn(), getSecretEntries: vi.fn() };
+const networkMod = { getServicePorts: vi.fn(), getServiceEndpoints: vi.fn(), getIngressRules: vi.fn() };
 const alertsMod = { listAlerts: vi.fn() };
 vi.mock('../../../src/main/updater.js', () => updater);
 vi.mock('../../../src/main/k8s/client.js', () => client);
@@ -55,6 +56,7 @@ vi.mock('../../../src/main/k8s/alerts.js', () => alertsMod);
 vi.mock('../../../src/main/k8s/resources/workloads.js', () => workloadsMod);
 vi.mock('../../../src/main/k8s/resources/config.js', () => configMod);
 vi.mock('../../../src/main/k8s/resources/overview.js', () => overviewMod);
+vi.mock('../../../src/main/k8s/resources/network.js', () => networkMod);
 
 const { registerHandlers } = await import('../../../src/main/ipc/index.js');
 const { ipcSchemas } = await import('../../../src/shared/ipc.js');
@@ -333,6 +335,21 @@ describe('registerHandlers', () => {
         expect(overviewMod.listQuotas).toHaveBeenCalledWith(undefined);
         await expect(invoke('limits.list', {})).resolves.toEqual([]);
         await expect(invoke('quotas.list', { namespace: '' })).rejects.toThrow();
+    });
+
+    it('forwards the service and ingress sub-reads', async () => {
+        networkMod.getServicePorts.mockResolvedValue([
+            { name: 'http', port: '80', protocol: 'TCP', target: '8080', appProtocol: '—' },
+        ]);
+        networkMod.getServiceEndpoints.mockResolvedValue([
+            { pod: 'web-1', node: 'n1', address: '10.0.0.1', ready: 'Ready' },
+        ]);
+        networkMod.getIngressRules.mockResolvedValue([{ host: 'h', path: '/', backend: 'web', port: '80' }]);
+        await expect(invoke('services.ports', { name: 'web', namespace: 'team-a' })).resolves.toHaveLength(1);
+        expect(networkMod.getServicePorts).toHaveBeenCalledWith('web', 'team-a');
+        await expect(invoke('services.endpoints', { name: 'web', namespace: 'team-a' })).resolves.toHaveLength(1);
+        await expect(invoke('ingresses.rules', { name: 'web', namespace: 'team-a' })).resolves.toHaveLength(1);
+        await expect(invoke('services.ports', { name: 'web' })).rejects.toThrow();
     });
 
     it('resets to the default kubeconfig and reloads', async () => {
