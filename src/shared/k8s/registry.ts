@@ -118,6 +118,41 @@ export const KIND_REGISTRY = {
         scalable: false,
         listPath: '/storage/snapshots',
     },
+    ServiceAccount: {
+        kind: 'ServiceAccount',
+        apiVersion: 'v1',
+        clusterScoped: false,
+        scalable: false,
+        listPath: '/access/serviceaccounts',
+    },
+    Role: {
+        kind: 'Role',
+        apiVersion: 'rbac.authorization.k8s.io/v1',
+        clusterScoped: false,
+        scalable: false,
+        listPath: '/access/roles',
+    },
+    RoleBinding: {
+        kind: 'RoleBinding',
+        apiVersion: 'rbac.authorization.k8s.io/v1',
+        clusterScoped: false,
+        scalable: false,
+        listPath: '/access/rolebindings',
+    },
+    ClusterRole: {
+        kind: 'ClusterRole',
+        apiVersion: 'rbac.authorization.k8s.io/v1',
+        clusterScoped: true,
+        scalable: false,
+        listPath: '/access/clusterroles',
+    },
+    ClusterRoleBinding: {
+        kind: 'ClusterRoleBinding',
+        apiVersion: 'rbac.authorization.k8s.io/v1',
+        clusterScoped: true,
+        scalable: false,
+        listPath: '/access/clusterrolebindings',
+    },
 } as const satisfies Record<string, KindInfo>;
 
 export type Kind = keyof typeof KIND_REGISTRY;

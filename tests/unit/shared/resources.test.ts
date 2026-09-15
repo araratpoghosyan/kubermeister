@@ -41,6 +41,11 @@ describe('kind registry', () => {
             'PersistentVolumeClaim',
             'StorageClass',
             'VolumeSnapshot',
+            'ServiceAccount',
+            'Role',
+            'RoleBinding',
+            'ClusterRole',
+            'ClusterRoleBinding',
         ]);
         expect(kindInfo('HorizontalPodAutoscaler')).toMatchObject({
             apiVersion: 'autoscaling/v2',
@@ -53,6 +58,11 @@ describe('kind registry', () => {
             listPath: '/workloads/deployments',
         });
         expect(kindInfo('DaemonSet').scalable).toBe(false);
+        expect(kindInfo('ClusterRole')).toMatchObject({
+            apiVersion: 'rbac.authorization.k8s.io/v1',
+            clusterScoped: true,
+            listPath: '/access/clusterroles',
+        });
         expect(kindInfo('Pod')).toEqual({
             kind: 'Pod',
             apiVersion: 'v1',

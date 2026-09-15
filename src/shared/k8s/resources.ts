@@ -10,6 +10,18 @@ import {
     serviceDetailSchema,
     serviceSchema,
 } from './network.js';
+import {
+    clusterRoleBindingDetailSchema,
+    clusterRoleBindingSchema,
+    clusterRoleDetailSchema,
+    clusterRoleSchema,
+    roleBindingDetailSchema,
+    roleBindingSchema,
+    roleDetailSchema,
+    roleSchema,
+    serviceAccountDetailSchema,
+    serviceAccountSchema,
+} from './access.js';
 import { kindSchema } from './registry.js';
 import {
     claimDetailSchema,
@@ -75,6 +87,11 @@ export const resourceListOutputSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('PersistentVolumeClaim'), items: z.array(claimSchema) }),
     z.object({ kind: z.literal('StorageClass'), items: z.array(storageClassSchema) }),
     z.object({ kind: z.literal('VolumeSnapshot'), items: z.array(snapshotSchema) }),
+    z.object({ kind: z.literal('ServiceAccount'), items: z.array(serviceAccountSchema) }),
+    z.object({ kind: z.literal('Role'), items: z.array(roleSchema) }),
+    z.object({ kind: z.literal('RoleBinding'), items: z.array(roleBindingSchema) }),
+    z.object({ kind: z.literal('ClusterRole'), items: z.array(clusterRoleSchema) }),
+    z.object({ kind: z.literal('ClusterRoleBinding'), items: z.array(clusterRoleBindingSchema) }),
 ]);
 
 export const resourceGetOutputSchema = z.discriminatedUnion('kind', [
@@ -95,6 +112,11 @@ export const resourceGetOutputSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('PersistentVolumeClaim'), item: claimDetailSchema.nullable() }),
     z.object({ kind: z.literal('StorageClass'), item: storageClassDetailSchema.nullable() }),
     z.object({ kind: z.literal('VolumeSnapshot'), item: snapshotDetailSchema.nullable() }),
+    z.object({ kind: z.literal('ServiceAccount'), item: serviceAccountDetailSchema.nullable() }),
+    z.object({ kind: z.literal('Role'), item: roleDetailSchema.nullable() }),
+    z.object({ kind: z.literal('RoleBinding'), item: roleBindingDetailSchema.nullable() }),
+    z.object({ kind: z.literal('ClusterRole'), item: clusterRoleDetailSchema.nullable() }),
+    z.object({ kind: z.literal('ClusterRoleBinding'), item: clusterRoleBindingDetailSchema.nullable() }),
 ]);
 
 export type ResourceListInput = z.infer<typeof resourceListInputSchema>;

@@ -2,6 +2,11 @@ import { EventEmitter } from 'node:events';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 class FakeInformer extends EventEmitter {
+    constructor() {
+        // One fake informer is shared by every watch a test starts; the listener count is expected.
+        super({ captureRejections: false });
+        this.setMaxListeners(0);
+    }
     start = vi.fn(async () => {});
     stop = vi.fn(async () => {});
 }
@@ -41,6 +46,8 @@ const client = {
             listServiceForAllNamespaces: listAny,
             listNamespacedEndpoints: listAny,
             listEndpointsForAllNamespaces: listAny,
+            listNamespacedServiceAccount: listAny,
+            listServiceAccountForAllNamespaces: listAny,
         },
         apps: {
             listNamespacedDeployment,
@@ -61,6 +68,14 @@ const client = {
             listHorizontalPodAutoscalerForAllNamespaces: listAny,
         },
         storage: { listStorageClass: listAny },
+        rbac: {
+            listNamespacedRole: listAny,
+            listRoleForAllNamespaces: listAny,
+            listNamespacedRoleBinding: listAny,
+            listRoleBindingForAllNamespaces: listAny,
+            listClusterRole: listAny,
+            listClusterRoleBinding: listAny,
+        },
         net: {
             listNamespacedIngress: listAny,
             listIngressForAllNamespaces: listAny,
@@ -283,7 +298,13 @@ describe('startResourceWatch', () => {
         const { KINDS, kindInfo } = await import('../../../src/shared/k8s/registry.js');
         // VolumeSnapshot is polled: a cluster need not have its CRD, so it has no watch source.
         const watched = KINDS.filter((kind) => kind !== 'VolumeSnapshot');
-        const object = { metadata: { name: 'x', namespace: 'team-a' }, spec: {}, status: {} };
+        // roleRef is required on both binding kinds, so the shared fixture carries one.
+        const object = {
+            metadata: { name: 'x', namespace: 'team-a' },
+            spec: {},
+            status: {},
+            roleRef: { apiGroup: 'rbac.authorization.k8s.io', kind: 'Role', name: 'reader' },
+        };
         for (const [index, kind] of watched.entries()) {
             const clusterScoped = kindInfo(kind).clusterScoped;
             const send = vi.fn();
