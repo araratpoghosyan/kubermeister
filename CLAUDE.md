@@ -76,8 +76,11 @@ Body: why the change is needed, what a reader of the history cannot learn from t
 - **Design system:** screens are compositions of templates, not bespoke markup. Lists render
   through `ResourceListPage` (`src/renderer/components/templates`) with columns from the
   `list-columns` factories (`nameColumn`, `statusColumn` with the kind's tone map, `ageColumn`,
-  `readyRatioColumn`, `textColumn`); details use `DetailHeader`, `DetailCard`, `PropertyGrid` and
-  `DetailMetrics`. Status always goes through `StatusBadge`/`StatusDot` with a `StatusTone` from
+  `readyRatioColumn`, `textColumn`); details render through `ResourceDetail`: the shared header over a
+  left rail of tabs in labeled groups (OBSERVE, INSPECT, CONNECT), built from the `overviewTab`,
+  `labelsTab` and `eventsTab` factories plus bespoke tabs, with `fill` for panels that scroll
+  themselves and `keepMounted` for panels holding live state. Cards inside tabs use `DetailCard`,
+  `PropertyGrid`, `KeyValueCard` and `DetailMetrics`. Status always goes through `StatusBadge`/`StatusDot` with a `StatusTone` from
   the per-kind maps in `src/renderer/lib/status.ts`. Navigation (sidebar, breadcrumbs) derives from
   `DOMAINS` in `src/renderer/lib/nav.ts`, typed against the generated route tree, so a new route is
   added there once. Theme tokens live in `src/renderer/styles/globals.css`; `ThemeProvider` toggles
@@ -95,7 +98,9 @@ Body: why the change is needed, what a reader of the history cannot learn from t
   over polling for anything that changes on its own. Pod streams (`src/main/k8s/logs.ts`,
   `exec.ts`, `port-forward.ts`) resolve their target through `pod-target.ts` and report a missing
   pod as an error followed by end rather than throwing; the renderer side lives in
-  `src/renderer/lib/pod-streams.ts` with the log buffer capped at 2,000 lines.
+  `src/renderer/lib/pod-streams.ts` with the log buffer capped at 2,000 lines. The Logs tab shows a
+  one-shot `pods.logSnapshot` read until the user turns Live on, then follows the stream. Object
+  events come from `events.forObject` (`src/main/k8s/resources/events.ts`), newest first.
 - **Resource reads** (`src/main/k8s/resources/*`) are pure transforms from Kubernetes objects to
   view models, exported and unit tested on their own, plus thin readers that fetch and delegate.
   Keep it that way so a watch stream can feed the same transforms later.

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PodDetail as PodDetailModel } from '../../../src/shared/k8s/pods';
@@ -15,7 +15,6 @@ vi.mock('@/lib/ipc', async () => ({
 }));
 
 const { routeTree } = await import('@/routeTree.gen');
-const { PodDetail } = await import('@/components/workloads/pod-detail');
 
 const row = {
     name: 'web-1',
@@ -86,6 +85,17 @@ const data: Record<string, unknown> = {
     'namespace.active': { name: 'team-a', pods: 1, tone: 'accent' },
     'resources.list': { kind: 'Pod', items: [row, { ...row, name: 'web-2', status: 'CrashLoop', restarts: 5 }] },
     'resources.get': { kind: 'Pod', item: detail },
+    'pods.logSnapshot': [],
+    'events.forObject': [
+        {
+            time: '12:00:05',
+            type: 'Warning',
+            reason: 'BackOff',
+            object: 'pod/web-1',
+            namespace: 'team-a',
+            message: 'restarting',
+        },
+    ],
 };
 
 describe('pods screens', () => {
@@ -122,14 +132,25 @@ describe('pods screens', () => {
         await waitFor(() => expect(selector).toHaveTextContent('team-a'));
     });
 
-    it('loads a pod by namespace and name and renders the detail with its header', async () => {
+    it('loads a pod by namespace and name and renders the railed detail', async () => {
         renderRoutes(routeTree, '/workloads/pods/team-a/web-1');
-        expect(await screen.findByTestId('pod-detail')).toBeInTheDocument();
+        const page = await screen.findByTestId('pod-page');
+        await waitFor(() => expect(page).toHaveTextContent('namespace: team-a'));
         expect(invoke).toHaveBeenCalledWith('resources.get', { kind: 'Pod', name: 'web-1', namespace: 'team-a' });
-        const page = screen.getByTestId('pod-page');
-        expect(page).toHaveTextContent('Pod');
-        expect(within(page).getAllByText('Running')[0]).toHaveAttribute('data-tone', 'ok');
-        expect(page).toHaveTextContent('1/1 ready');
+        expect(within(page).getAllByText('Running', { selector: '[data-tone]' })[0]).toHaveAttribute('data-tone', 'ok');
+        expect(page).toHaveTextContent('age: 3d');
+        const rail = within(page).getByRole('tablist');
+        expect(
+            within(rail)
+                .getAllByRole('tab')
+                .map((tab) => tab.textContent),
+        ).toEqual(['Overview', 'Logs', 'Events', 'Labels1', 'Network1', 'Shell']);
+        expect(within(page).getByTestId('containers')).toHaveTextContent('nginx:1.27');
+        await userEvent.click(within(rail).getByRole('tab', { name: /Labels/ }));
+        expect(within(page).getByText('web')).toBeInTheDocument();
+        await userEvent.click(within(rail).getByRole('tab', { name: /Events/ }));
+        expect(await within(page).findByText('BackOff')).toBeInTheDocument();
+        expect(invoke).toHaveBeenCalledWith('events.forObject', { kind: 'Pod', name: 'web-1', namespace: 'team-a' });
     });
 
     it('reports a missing pod as not found', async () => {
@@ -137,24 +158,9 @@ describe('pods screens', () => {
             channel === 'resources.get' ? { kind: 'Pod', item: null } : data[channel],
         );
         renderRoutes(routeTree, '/workloads/pods/team-a/gone');
-        expect(await screen.findByTestId('not-found')).toHaveTextContent('Pod team-a/gone does not exist.');
-    });
-});
-
-describe('PodDetail', () => {
-    it('renders facts, containers with tones, conditions, labels and an empty annotations state', () => {
-        render(<PodDetail pod={detail} />);
-        expect(screen.getByText('10.0.0.5')).toBeInTheDocument();
-        const containers = screen.getByTestId('containers-table');
-        expect(within(containers).getAllByRole('row')).toHaveLength(3);
-        expect(within(containers).getByText('CrashLoop')).toHaveAttribute('data-tone', 'danger');
-        expect(containers).toHaveTextContent('Readiness: httpGet /:80 · 10s');
-        expect(containers).toHaveTextContent('100m / 500m');
-        const conditions = screen.getByTestId('conditions');
-        expect(within(conditions).getByText('True')).toHaveAttribute('data-tone', 'ok');
-        expect(within(conditions).getByText('False')).toHaveAttribute('data-tone', 'warn');
-        expect(screen.getByText('web')).toBeInTheDocument(); // the label value
-        expect(screen.getAllByText('None')).toHaveLength(2); // empty annotations: description and body
-        expect(screen.getByText('1 entry')).toBeInTheDocument();
+        expect(await screen.findByTestId('not-found')).toHaveTextContent(
+            'Pod “gone” was not found in namespace “team-a”.',
+        );
+        expect(screen.getByRole('link', { name: 'Back to list' })).toHaveAttribute('href', '/workloads/pods');
     });
 });

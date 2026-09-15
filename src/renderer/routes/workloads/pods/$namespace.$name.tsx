@@ -1,68 +1,94 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { LayersIcon } from 'lucide-react';
-import { DetailHeader } from '@/components/templates/detail-header';
-import { POD_TONE } from '@/lib/status';
+import { BoxIcon, HeartIcon, ScrollIcon, TerminalIcon, WaypointsIcon } from 'lucide-react';
+import { RefreshButton } from '@/components/refresh-button';
+import { eventsTab, labelsTab, ResourceDetail, type DetailTabGroup } from '@/components/templates/resource-detail';
+import { LogsTab } from '@/components/pod/logs-tab';
+import { NetworkTab } from '@/components/pod/network-tab';
+import { OverviewTab } from '@/components/pod/overview-tab';
+import { ShellTab } from '@/components/pod/shell-tab';
+import { ipcQueryKey } from '@/lib/query';
 import { useResource } from '@/lib/resources';
-import { LoadingRows, QueryError } from '@/components/overview/query-state';
-import { PodDetail } from '@/components/workloads/pod-detail';
-import { PodLogsTab } from '@/components/workloads/pod-logs-tab';
-import { PodShellTab } from '@/components/workloads/pod-shell-tab';
-import { PortForwardControl } from '@/components/workloads/port-forward-control';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { POD_TONE } from '@/lib/status';
 
-export const Route = createFileRoute('/workloads/pods/$namespace/$name')({ component: PodPage });
+export const Route = createFileRoute('/workloads/pods/$namespace/$name')({ component: PodDetailPage });
 
-function PodPage() {
+function PodDetailPage() {
     const { namespace, name } = Route.useParams();
-    const pod = useResource('Pod', name, namespace);
+    const query = useResource('Pod', name, namespace);
+    const pod = query.data;
+    const portCount = pod?.containers.reduce((sum, c) => sum + c.ports.length, 0);
+
+    const groups: DetailTabGroup[] = [
+        {
+            label: 'OBSERVE',
+            items: [
+                { id: 'overview', label: 'Overview', icon: HeartIcon, content: <OverviewTab pod={pod} /> },
+                {
+                    id: 'logs',
+                    label: 'Logs',
+                    icon: ScrollIcon,
+                    fill: true,
+                    keepMounted: true,
+                    content: <LogsTab name={name} namespace={namespace} pod={pod} />,
+                },
+                eventsTab({ kind: 'Pod', name, namespace }),
+            ],
+        },
+        {
+            label: 'INSPECT',
+            items: [
+                labelsTab(pod ? { labels: pod.labels, annotations: pod.annotations } : undefined),
+                {
+                    id: 'network',
+                    label: 'Network',
+                    icon: WaypointsIcon,
+                    count: portCount || undefined,
+                    keepMounted: true,
+                    content: <NetworkTab name={name} namespace={namespace} pod={pod} />,
+                },
+            ],
+        },
+        {
+            label: 'CONNECT',
+            items: [
+                {
+                    id: 'shell',
+                    label: 'Shell',
+                    icon: TerminalIcon,
+                    fill: true,
+                    content: <ShellTab name={name} namespace={namespace} pod={pod} />,
+                },
+            ],
+        },
+    ];
+
     return (
-        <section className="flex h-full flex-col overflow-auto" data-testid="pod-page">
-            {pod.isPending && (
-                <div className="p-4.5">
-                    <LoadingRows rows={4} />
-                </div>
-            )}
-            {pod.isError && (
-                <div className="p-4.5">
-                    <QueryError error={pod.error} />
-                </div>
-            )}
-            {pod.data === null && (
-                <p className="p-4.5 text-body text-text-muted" data-testid="not-found">
-                    Pod {namespace}/{name} does not exist.
-                </p>
-            )}
-            {pod.data && (
-                <>
-                    <DetailHeader
-                        icon={LayersIcon}
-                        eyebrow="Pod"
-                        title={pod.data.name}
-                        status={{ label: pod.data.status, tone: POD_TONE[pod.data.status] }}
-                        meta={[pod.data.namespace, pod.data.node, `${pod.data.ready} ready`, pod.data.age]}
-                    />
-                    <Tabs defaultValue="overview" className="px-4.5 pb-4.5">
-                        <TabsList>
-                            <TabsTrigger value="overview">Overview</TabsTrigger>
-                            <TabsTrigger value="logs">Logs</TabsTrigger>
-                            <TabsTrigger value="shell">Shell</TabsTrigger>
-                            <TabsTrigger value="network">Network</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="overview">
-                            <PodDetail pod={pod.data} />
-                        </TabsContent>
-                        <TabsContent value="logs">
-                            <PodLogsTab pod={pod.data} />
-                        </TabsContent>
-                        <TabsContent value="shell">
-                            <PodShellTab pod={pod.data} />
-                        </TabsContent>
-                        <TabsContent value="network">
-                            <PortForwardControl pod={pod.data} />
-                        </TabsContent>
-                    </Tabs>
-                </>
-            )}
-        </section>
+        <ResourceDetail
+            icon={BoxIcon}
+            eyebrow="Pod"
+            title={name}
+            status={pod ? { label: pod.status, tone: POD_TONE[pod.status] } : undefined}
+            meta={[
+                `namespace: ${pod?.namespace ?? namespace}`,
+                `age: ${pod?.age ?? '—'}`,
+                `restarts: ${pod?.restarts ?? 0}`,
+            ]}
+            actions={
+                <RefreshButton
+                    queryKeys={[
+                        ipcQueryKey('resources.get', { kind: 'Pod', name, namespace }),
+                        ['pods.logSnapshot'],
+                        ['events.forObject'],
+                    ]}
+                />
+            }
+            groups={groups}
+            query={query}
+            found={!!pod}
+            backTo="/workloads/pods"
+            kind="Pod"
+            namespace={namespace}
+            testId="pod-page"
+        />
     );
 }

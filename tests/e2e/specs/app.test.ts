@@ -70,11 +70,15 @@ test('lists the seeded pod, opens its detail, and rescopes by namespace', async 
 
     await row.getByRole('link').click();
     // The header carries the namespace; the list only shows a Namespace column across namespaces.
-    await expect(window.getByTestId('pod-page')).toContainText(NAMESPACE);
-    const detail = window.getByTestId('pod-detail');
-    await expect(detail).toContainText('busybox:1.36');
-    await expect(detail.getByTestId('containers-table').locator('[data-container="web"]')).toContainText('Running');
-    await expect(detail).toContainText('8080/TCP');
+    const page = window.getByTestId('pod-page');
+    await expect(page).toContainText(`namespace: ${NAMESPACE}`);
+    const containers = page.getByTestId('containers');
+    await expect(containers).toContainText('busybox:1.36');
+    await expect(containers.locator('[data-container="web"]')).toContainText('Running');
+    await window.getByRole('tab', { name: 'Events' }).click();
+    await expect(page.getByTestId('object-events')).toContainText('Scheduled');
+    await window.getByRole('tab', { name: 'Network' }).click();
+    await expect(page.getByTestId('network')).toContainText('8080/TCP');
 
     await window.getByTestId('sidebar').getByRole('link', { name: 'Pods' }).click();
     await window.getByTestId('namespace-selector').click();
@@ -107,12 +111,16 @@ test('follows pod logs, runs a command in the pod shell, and starts a port-forwa
     const { window } = launched;
     await window.getByTestId('sidebar').getByRole('link', { name: 'Pods' }).click();
     await window.getByTestId('pods-table').locator('[data-pod^="web-"]').getByRole('link').click();
-    await expect(window.getByTestId('pod-detail')).toBeVisible();
+    await expect(window.getByTestId('pod-page')).toBeVisible();
 
     await window.getByRole('tab', { name: 'Logs' }).click();
     const viewer = window.getByTestId('log-viewer');
+    // The snapshot read shows recent lines first; Live switches to the follow stream.
+    await expect(viewer.getByRole('list', { name: 'Log lines' })).toContainText('km-e2e-marker', { timeout: 30_000 });
+    await expect(viewer).toHaveAttribute('data-live', 'false');
+    await window.getByRole('button', { name: 'Live' }).click();
     await expect(viewer).toHaveAttribute('data-live', 'true', { timeout: 30_000 });
-    await expect(viewer.getByRole('list', { name: 'Log lines' })).toContainText('km-e2e-marker');
+    await expect(viewer.getByRole('list', { name: 'Log lines' })).toContainText('km-e2e-marker', { timeout: 30_000 });
 
     await window.getByRole('tab', { name: 'Shell' }).click();
     const terminal = window.getByTestId('terminal-host');
