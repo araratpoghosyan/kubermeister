@@ -12,8 +12,6 @@ with separate settings.
 | **Stable** | Kubermeister     | Versioned releases, `vX.Y.Z`                                 | [Releases](https://github.com/araratpoghosyan/kubermeister/releases)            |
 | **Tip**    | Kubermeister Tip | Nightly build, rebuilt on every change to `main`. May break. | [Tip release](https://github.com/araratpoghosyan/kubermeister/releases/tag/tip) |
 
-The first stable release is not out yet. Until it is, Tip is the only download.
-
 ### macOS
 
 Download the `.dmg` for your Mac: `mac-arm64` for Apple silicon, `mac-x64` for Intel. Open it and
