@@ -16,9 +16,11 @@ import {
     RouteIcon,
     ServerIcon,
     SettingsIcon,
+    ShieldCheckIcon,
     ShieldIcon,
     TimerIcon,
     TrendingUpIcon,
+    UserIcon,
     WaypointsIcon,
 } from 'lucide-react';
 import type { RoutePath } from './router';
@@ -142,6 +144,44 @@ export const DOMAINS: Domain[] = [
                         icon: LayersIcon,
                     },
                     { id: 'snapshots', label: 'Snapshots', path: '/storage/snapshots', icon: CopyIcon },
+                ],
+            },
+        ],
+    },
+    {
+        id: 'access',
+        label: 'Access',
+        icon: ShieldIcon,
+        basePath: '/access',
+        groups: [
+            {
+                label: 'IDENTITY',
+                items: [
+                    {
+                        id: 'serviceaccounts',
+                        label: 'ServiceAccounts',
+                        path: '/access/serviceaccounts',
+                        icon: UserIcon,
+                    },
+                ],
+            },
+            {
+                label: 'ROLES',
+                items: [
+                    { id: 'roles', label: 'Roles', path: '/access/roles', icon: ShieldIcon },
+                    {
+                        id: 'rolebindings',
+                        label: 'RoleBindings',
+                        path: '/access/rolebindings',
+                        icon: ShieldCheckIcon,
+                    },
+                    { id: 'clusterroles', label: 'ClusterRoles', path: '/access/clusterroles', icon: ShieldIcon },
+                    {
+                        id: 'clusterrolebindings',
+                        label: 'ClusterRoleBindings',
+                        path: '/access/clusterrolebindings',
+                        icon: ShieldCheckIcon,
+                    },
                 ],
             },
         ],

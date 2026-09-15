@@ -294,3 +294,34 @@ test('lists the default storage class and the seeded claim', async () => {
     await window.getByTestId('sidebar').getByRole('link', { name: 'Snapshots' }).click();
     await expect(window.getByText(/may not have the VolumeSnapshot CRD installed/)).toBeVisible();
 });
+
+test('lists the identity and role screens for the namespace and the cluster', async () => {
+    const { window } = launched;
+    const sidebar = window.getByTestId('sidebar');
+    await sidebar.getByRole('link', { name: 'ServiceAccounts' }).click();
+    // Every namespace gets a `default` service account, so it needs no seeding.
+    await expect(window.getByTestId('serviceaccounts-table').locator('[data-serviceaccount="default"]')).toBeVisible();
+
+    // "Roles" and "RoleBindings" are substrings of the cluster-scoped entries, so match exactly.
+    await sidebar.getByRole('link', { name: 'Roles', exact: true }).click();
+    const role = window.getByTestId('roles-table').locator('[data-role="reader"]');
+    await expect(role).toContainText('2');
+    await role.getByRole('link').click();
+    await expect(window.getByTestId('role-page')).toContainText('rules: 2');
+
+    await sidebar.getByRole('link', { name: 'RoleBindings', exact: true }).click();
+    const binding = window.getByTestId('rolebindings-table').locator('[data-rolebinding="reader-binding"]');
+    await expect(binding).toContainText('Role/reader');
+
+    await sidebar.getByRole('link', { name: 'ClusterRoles', exact: true }).click();
+    const clusterRole = window.getByTestId('clusterroles-table').locator('[data-clusterrole="cluster-admin"]');
+    await clusterRole.getByRole('link').click();
+    const page = window.getByTestId('clusterrole-page');
+    // The rule count of the built-in role is the cluster's business; assert only that it has some.
+    await expect(page).toContainText(/rules: [1-9]/);
+
+    await sidebar.getByRole('link', { name: 'ClusterRoleBindings', exact: true }).click();
+    await expect(
+        window.getByTestId('clusterrolebindings-table').locator('[data-clusterrolebinding="cluster-admin"]'),
+    ).toContainText('ClusterRole/cluster-admin');
+});

@@ -3,6 +3,13 @@ import { STREAM_CHANNELS, type AllowedStream } from './ipc-channels.js';
 import type { LogLine } from './k8s/logs.js';
 import { podSchema } from './k8s/pods.js';
 import { endpointsSchema, ingressSchema, networkPolicySchema, serviceSchema } from './k8s/network.js';
+import {
+    clusterRoleBindingSchema,
+    clusterRoleSchema,
+    roleBindingSchema,
+    roleSchema,
+    serviceAccountSchema,
+} from './k8s/access.js';
 import type { Kind } from './k8s/registry.js';
 import { claimSchema, storageClassSchema, volumeSchema } from './k8s/storage.js';
 import { resourceListInputSchema, type ResourceListInput } from './k8s/resources.js';
@@ -55,6 +62,11 @@ export const watchEventSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('PersistentVolume'), type: watchType, item: volumeSchema }),
     z.object({ kind: z.literal('PersistentVolumeClaim'), type: watchType, item: claimSchema }),
     z.object({ kind: z.literal('StorageClass'), type: watchType, item: storageClassSchema }),
+    z.object({ kind: z.literal('ServiceAccount'), type: watchType, item: serviceAccountSchema }),
+    z.object({ kind: z.literal('Role'), type: watchType, item: roleSchema }),
+    z.object({ kind: z.literal('RoleBinding'), type: watchType, item: roleBindingSchema }),
+    z.object({ kind: z.literal('ClusterRole'), type: watchType, item: clusterRoleSchema }),
+    z.object({ kind: z.literal('ClusterRoleBinding'), type: watchType, item: clusterRoleBindingSchema }),
 ]);
 
 export type WatchEvent = z.infer<typeof watchEventSchema>;

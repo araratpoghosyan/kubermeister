@@ -1,4 +1,10 @@
-import { makeInformer, type KubernetesObject, type V1StorageClass } from '@kubernetes/client-node';
+import {
+    makeInformer,
+    type KubernetesObject,
+    type V1ClusterRoleBinding,
+    type V1RoleBinding,
+    type V1StorageClass,
+} from '@kubernetes/client-node';
 import type { Kind } from '../../shared/k8s/registry.js';
 import type { RowOf } from '../../shared/k8s/resources.js';
 import { streamSchemas, type StreamController, type StreamSend, type WatchEvent } from '../../shared/streams.js';
@@ -6,6 +12,7 @@ import { apis, kubeConfig, resolveNamespace } from './client.js';
 import { K8sError } from './errors.js';
 import { toConfigMap, toSecret } from './resources/config.js';
 import { toEndpoints, toIngress, toNetworkPolicy, toService } from './resources/network.js';
+import { toClusterRole, toClusterRoleBinding, toRole, toRoleBinding, toServiceAccount } from './resources/access.js';
 import { toPod, usageFor } from './resources/pods.js';
 import { toClaim, toStorageClass, toVolume } from './resources/storage.js';
 import { toAutoscaler, toCronJob, toDaemonSet, toDeployment, toJob, toStatefulSet } from './resources/workloads.js';
@@ -143,6 +150,44 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
                 ? () => apis().core.listNamespacedPersistentVolumeClaim({ namespace: ns })
                 : () => apis().core.listPersistentVolumeClaimForAllNamespaces(),
         toRow: (claim) => toClaim(claim),
+    },
+    ServiceAccount: {
+        path: (ns) => (ns ? `/api/v1/namespaces/${ns}/serviceaccounts` : '/api/v1/serviceaccounts'),
+        list: (ns) =>
+            ns
+                ? () => apis().core.listNamespacedServiceAccount({ namespace: ns })
+                : () => apis().core.listServiceAccountForAllNamespaces(),
+        toRow: (account) => toServiceAccount(account),
+    },
+    Role: {
+        path: (ns) =>
+            ns
+                ? `/apis/rbac.authorization.k8s.io/v1/namespaces/${ns}/roles`
+                : `/apis/rbac.authorization.k8s.io/v1/roles`,
+        list: (ns) =>
+            ns ? () => apis().rbac.listNamespacedRole({ namespace: ns }) : () => apis().rbac.listRoleForAllNamespaces(),
+        toRow: (role) => toRole(role),
+    },
+    RoleBinding: {
+        path: (ns) =>
+            ns
+                ? `/apis/rbac.authorization.k8s.io/v1/namespaces/${ns}/rolebindings`
+                : `/apis/rbac.authorization.k8s.io/v1/rolebindings`,
+        list: (ns) =>
+            ns
+                ? () => apis().rbac.listNamespacedRoleBinding({ namespace: ns })
+                : () => apis().rbac.listRoleBindingForAllNamespaces(),
+        toRow: (binding) => toRoleBinding(binding as V1RoleBinding),
+    },
+    ClusterRole: {
+        path: () => `/apis/rbac.authorization.k8s.io/v1/clusterroles`,
+        list: () => () => apis().rbac.listClusterRole(),
+        toRow: (role) => toClusterRole(role),
+    },
+    ClusterRoleBinding: {
+        path: () => `/apis/rbac.authorization.k8s.io/v1/clusterrolebindings`,
+        list: () => () => apis().rbac.listClusterRoleBinding(),
+        toRow: (binding) => toClusterRoleBinding(binding as V1ClusterRoleBinding),
     },
     StorageClass: {
         path: () => '/apis/storage.k8s.io/v1/storageclasses',

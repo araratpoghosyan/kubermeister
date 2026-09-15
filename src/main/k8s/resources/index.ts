@@ -18,6 +18,18 @@ import {
     listNetworkPolicies,
     listServices,
 } from './network.js';
+import {
+    getClusterRole,
+    getClusterRoleBinding,
+    getRole,
+    getRoleBinding,
+    getServiceAccount,
+    listClusterRoleBindings,
+    listClusterRoles,
+    listRoleBindings,
+    listRoles,
+    listServiceAccounts,
+} from './access.js';
 import { getPod, listPods } from './pods.js';
 import {
     getClaim,
@@ -68,6 +80,11 @@ const SOURCES: { [K in Kind]: Source<K> } = {
     PersistentVolumeClaim: { list: listClaims, get: getClaim },
     StorageClass: { list: () => listStorageClasses(), get: (name) => getStorageClass(name) },
     VolumeSnapshot: { list: listSnapshots, get: getSnapshot },
+    ServiceAccount: { list: listServiceAccounts, get: getServiceAccount },
+    Role: { list: listRoles, get: getRole },
+    RoleBinding: { list: listRoleBindings, get: getRoleBinding },
+    ClusterRole: { list: () => listClusterRoles(), get: (name) => getClusterRole(name) },
+    ClusterRoleBinding: { list: () => listClusterRoleBindings(), get: (name) => getClusterRoleBinding(name) },
 };
 
 export async function listResources(input: ResourceListInput): Promise<ResourceListOutput> {
@@ -109,6 +126,16 @@ export async function listResources(input: ResourceListInput): Promise<ResourceL
             return { kind: 'StorageClass', items: await SOURCES.StorageClass.list() };
         case 'VolumeSnapshot':
             return { kind: 'VolumeSnapshot', items: await SOURCES.VolumeSnapshot.list(input.namespace) };
+        case 'ServiceAccount':
+            return { kind: 'ServiceAccount', items: await SOURCES.ServiceAccount.list(input.namespace) };
+        case 'Role':
+            return { kind: 'Role', items: await SOURCES.Role.list(input.namespace) };
+        case 'RoleBinding':
+            return { kind: 'RoleBinding', items: await SOURCES.RoleBinding.list(input.namespace) };
+        case 'ClusterRole':
+            return { kind: 'ClusterRole', items: await SOURCES.ClusterRole.list() };
+        case 'ClusterRoleBinding':
+            return { kind: 'ClusterRoleBinding', items: await SOURCES.ClusterRoleBinding.list() };
     }
 }
 
@@ -154,5 +181,15 @@ export async function getResource(input: ResourceGetInput): Promise<ResourceGetO
             return { kind: 'StorageClass', item: await SOURCES.StorageClass.get(input.name) };
         case 'VolumeSnapshot':
             return { kind: 'VolumeSnapshot', item: await SOURCES.VolumeSnapshot.get(input.name, input.namespace) };
+        case 'ServiceAccount':
+            return { kind: 'ServiceAccount', item: await SOURCES.ServiceAccount.get(input.name, input.namespace) };
+        case 'Role':
+            return { kind: 'Role', item: await SOURCES.Role.get(input.name, input.namespace) };
+        case 'RoleBinding':
+            return { kind: 'RoleBinding', item: await SOURCES.RoleBinding.get(input.name, input.namespace) };
+        case 'ClusterRole':
+            return { kind: 'ClusterRole', item: await SOURCES.ClusterRole.get(input.name) };
+        case 'ClusterRoleBinding':
+            return { kind: 'ClusterRoleBinding', item: await SOURCES.ClusterRoleBinding.get(input.name) };
     }
 }

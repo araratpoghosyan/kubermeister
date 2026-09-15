@@ -132,3 +132,30 @@ spec:
   resources:
     requests:
       storage: 128Mi
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: reader
+  namespace: km-e2e
+rules:
+  - apiGroups: ['']
+    resources: ['pods']
+    verbs: ['get', 'list']
+  - apiGroups: ['']
+    resources: ['configmaps']
+    verbs: ['get']
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: reader-binding
+  namespace: km-e2e
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: reader
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: km-e2e
