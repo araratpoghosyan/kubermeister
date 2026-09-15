@@ -2,6 +2,29 @@
 
 A fast, native desktop client for browsing and managing Kubernetes clusters.
 
+It reads your existing kubeconfig and needs nothing else installed: no `kubectl`, no plugins. The
+kubeconfig itself is never written, so switching context or namespace in the app changes only the
+app's own settings.
+
+## What it does
+
+- **Cluster at a glance.** A summary of nodes, workloads and capacity, live CPU and memory
+  sparklines from metrics-server, alerts for what needs attention, and a stream of recent events.
+- **Every common kind.** Pods, Deployments, StatefulSets, DaemonSets, Jobs, CronJobs and
+  autoscalers; config maps and secrets; services, ingresses, endpoints and network policies;
+  volumes, claims, storage classes and snapshots; service accounts, roles and bindings; custom
+  resource definitions and the Helm releases installed in the cluster.
+- **Lists that stay current.** Each list follows a watch, so objects appear, change and disappear
+  as the cluster changes, with search, sorting and column control on top.
+- **Details that explain.** Every object has an overview, its events, labels and annotations, and
+  the live manifest as YAML. Pods add logs, an interactive shell and port forwarding; deployments
+  add rollout history and replica sets; services add ports and endpoints.
+- **Changes when you need them.** Create from a template or a pasted manifest, edit the manifest in
+  place, scale, and delete one object or a selection. Every write can be checked first with a dry
+  run, and an edit that lost a race to another writer is reported rather than silently applied.
+- **Secrets stay secret.** Secret values are never read for the list or detail views; they appear
+  only in the manifest, where the cluster itself stores them.
+
 ## Installation
 
 Kubermeister ships in two channels. Both can be installed side by side; they are separate apps

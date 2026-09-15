@@ -44,10 +44,10 @@ export default defineConfig({
             ],
             // Ratchet: raise these as coverage grows, never lower them.
             thresholds: {
-                statements: 95,
+                statements: 96,
                 branches: 90,
-                functions: 95,
-                lines: 95,
+                functions: 96,
+                lines: 97,
             },
             reporter: ['text', 'lcov'],
         },
