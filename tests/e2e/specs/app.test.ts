@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CONTEXT_NAME, NAMESPACE, clusterKubectl } from '../harness/cluster';
 import { launchApp, type LaunchedApp } from '../harness/launch';
@@ -406,4 +407,19 @@ test('creates a config map from the editor, scales the deployment, then deletes 
     await expect(dialog).toContainText('Delete ConfigMap?');
     await dialog.getByRole('button', { name: 'Delete' }).click();
     await expect(window.getByTestId('configmaps-table').locator('[data-configmap="my-config"]')).toHaveCount(0);
+});
+
+test('stops at the startup screen when the kubeconfig path names nothing', async () => {
+    const missing = join(tmpdir(), `km-e2e-missing-${Date.now()}.yaml`);
+    const bad = await launchApp({ kubeconfigPath: missing });
+    try {
+        const panel = bad.window.getByTestId('startup-error');
+        await expect(panel).toContainText('Kubermeister cannot start yet');
+        await expect(panel.locator('[data-check="kubeconfig"][data-status="error"]')).toBeVisible();
+        await expect(panel).toContainText('Fix or clear the kubeconfig path in Settings.');
+        // Nothing cluster-shaped is reached: the shell never mounts.
+        await expect(bad.window.getByTestId('app-shell')).toHaveCount(0);
+    } finally {
+        await bad.app.close();
+    }
 });

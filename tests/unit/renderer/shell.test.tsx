@@ -98,6 +98,11 @@ describe('app shell', () => {
 
     it('renders an unknown route as not found', async () => {
         renderRoutes(routeTree, '/nowhere');
-        expect(await screen.findByText('This page does not exist.')).toBeInTheDocument();
+        const page = await screen.findByTestId('page-not-found');
+        expect(page).toHaveTextContent('Page not found');
+        expect(within(page).getByRole('link', { name: /Back to overview/ })).toHaveAttribute(
+            'href',
+            '/overview/summary',
+        );
     });
 });

@@ -14,6 +14,7 @@ describe('parseSettings', () => {
             session: { lastContext: 'prod', lastNamespace: 'default', restoreOnLaunch: true },
             connection: { kubeconfigPath: '/tmp/kubeconfig' },
             data: { refreshIntervalSec: 30 },
+            window: { bounds: { x: 0, y: 0, width: 1200, height: 800 } },
         };
         expect(parseSettings(valid)).toEqual(valid);
     });
@@ -47,7 +48,16 @@ describe('parseSettings', () => {
             session: { lastContext: 'staging', lastNamespace: null, restoreOnLaunch: true },
             connection: { kubeconfigPath: null },
             data: { refreshIntervalSec: 12 },
+            window: { bounds: null },
         });
+    });
+
+    it('forgets saved window bounds that are not a full rectangle', () => {
+        expect(parseSettings({ version: 1, window: { bounds: { x: 0, y: 0, width: 800 } } }).window).toEqual({
+            bounds: null,
+        });
+        const bounds = { x: 10, y: 20, width: 800, height: 600 };
+        expect(parseSettings({ version: 1, window: { bounds } }).window).toEqual({ bounds });
     });
 
     it('resets a refresh interval that is not a positive integer', () => {
