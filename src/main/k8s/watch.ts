@@ -2,9 +2,11 @@ import {
     makeInformer,
     type KubernetesObject,
     type V1ClusterRoleBinding,
+    type V1CronJob,
     type V1CustomResourceDefinition,
     type V1RoleBinding,
     type V1StorageClass,
+    type V2HorizontalPodAutoscaler,
 } from '@kubernetes/client-node';
 import type { Kind } from '../../shared/k8s/registry.js';
 import type { RowOf } from '../../shared/k8s/resources.js';
@@ -75,7 +77,9 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
             ns
                 ? () => apis().batch.listNamespacedCronJob({ namespace: ns })
                 : () => apis().batch.listCronJobForAllNamespaces(),
-        toRow: (cronJob) => toCronJob(cronJob),
+        // The client's own types require `spec` on these two; the informer hands over the generic
+        // object type, and the transforms read every field defensively.
+        toRow: (cronJob) => toCronJob(cronJob as V1CronJob),
     },
     HorizontalPodAutoscaler: {
         path: (ns) =>
@@ -86,7 +90,7 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
             ns
                 ? () => apis().hpa.listNamespacedHorizontalPodAutoscaler({ namespace: ns })
                 : () => apis().hpa.listHorizontalPodAutoscalerForAllNamespaces(),
-        toRow: (autoscaler) => toAutoscaler(autoscaler),
+        toRow: (autoscaler) => toAutoscaler(autoscaler as V2HorizontalPodAutoscaler),
     },
     ConfigMap: {
         path: (ns) => (ns ? `/api/v1/namespaces/${ns}/configmaps` : '/api/v1/configmaps'),
