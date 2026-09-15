@@ -38,3 +38,13 @@ test('keeps all per-user state inside the throwaway data directory', async () =>
     expect(actual).toBe(userData);
     expect(existsSync(join(userData, 'settings.json'))).toBe(true);
 });
+
+test('reads the cluster node list through the bridge', async () => {
+    const { window } = launched;
+    const result = await window.evaluate(() => window.km.invoke('nodes.list', {}));
+    expect(result).toMatchObject({ ok: true });
+    const nodes = (result as { data: Array<{ name: string; status: string; role: string }> }).data;
+    expect(nodes).toHaveLength(1);
+    expect(nodes[0]).toMatchObject({ status: 'Ready' });
+    expect(nodes[0]?.role).toContain('control-plane');
+});

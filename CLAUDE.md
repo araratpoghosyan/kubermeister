@@ -60,6 +60,12 @@ Body: why the change is needed, what a reader of the history cannot learn from t
 - **IPC contract:** every channel is declared in `src/shared/ipc.ts` with zod input and output
   schemas and listed in `src/shared/ipc-channels.ts`. Main validates both directions; the
   renderer reaches the bridge only through `src/renderer/lib/ipc.ts` (ESLint enforces this).
+  Every invoke resolves to the result envelope `{ ok: true, data } | { ok: false, error }`: a
+  classified `K8sError` becomes `ok: false` with `kind`, `detail` and `op`, and the renderer's
+  `invoke` rethrows it as a typed `IpcError`. Unexpected exceptions still reject; those are bugs.
+- **Resource reads** (`src/main/k8s/resources/*`) are pure transforms from Kubernetes objects to
+  view models, exported and unit tested on their own, plus thin readers that fetch and delegate.
+  Keep it that way so a watch stream can feed the same transforms later.
 - **Kubernetes access** lives in `src/main/k8s`. The kubeconfig is read-only: switching context
   or namespace changes memory and the app's own settings, never the file. Every cluster call goes
   through `withK8s` (timeout plus `[kind]`-prefixed `K8sError`). No `kubectl` dependency; the

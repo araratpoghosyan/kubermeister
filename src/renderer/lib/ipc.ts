@@ -1,9 +1,28 @@
-import type { IpcChannel, IpcInput, IpcOutput } from '../../shared/ipc';
+import type { IpcChannel, IpcInput, IpcOutput, IpcResult } from '../../shared/ipc';
+import type { IpcError as IpcErrorShape, K8sErrorKind } from '../../shared/k8s/errors';
+
+/** A classified failure returned by the main process, rethrown with its structure intact. */
+export class IpcError extends Error {
+    readonly kind: K8sErrorKind;
+    readonly detail: string;
+    readonly op: string;
+
+    constructor(error: IpcErrorShape) {
+        super(error.detail);
+        this.name = 'IpcError';
+        this.kind = error.kind;
+        this.detail = error.detail;
+        this.op = error.op;
+    }
+}
 
 /**
- * Typed wrapper over the untyped `window.km` bridge. The one place the renderer casts `unknown`;
- * every other module gets per-channel input and output types from the shared contract.
+ * Typed wrapper over the untyped `window.km` bridge and the one place the renderer casts
+ * `unknown`. Every other module gets per-channel input and output types from the shared contract,
+ * and expected failures arrive as {@link IpcError} rather than a message string to parse.
  */
 export async function invoke<C extends IpcChannel>(channel: C, input: IpcInput<C>): Promise<IpcOutput<C>> {
-    return window.km.invoke(channel, input) as Promise<IpcOutput<C>>;
+    const result = (await window.km.invoke(channel, input)) as IpcResult<IpcOutput<C>>;
+    if (!result.ok) throw new IpcError(result.error);
+    return result.data;
 }

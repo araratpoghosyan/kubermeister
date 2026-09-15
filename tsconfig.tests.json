@@ -1,8 +1,8 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "lib": ["ESNext"],
+    "lib": ["ESNext", "DOM"],
     "types": ["node"]
   },
-  "include": ["tests/**/*.ts", "vitest.config.ts", "playwright.config.ts"]
+  "include": ["tests/**/*.ts", "vitest.config.ts", "playwright.config.ts", "src/renderer/env.d.ts"]
 }
