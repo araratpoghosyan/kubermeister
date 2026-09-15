@@ -68,4 +68,22 @@ describe('IPC contract', () => {
         expect(output.safeParse({ ok: true }).success).toBe(true);
         expect(output.safeParse({ ok: 'yes' }).success).toBe(false);
     });
+
+    it('types the log snapshot and object events inputs', () => {
+        const snapshot = ipcSchemas['pods.logSnapshot'].input;
+        expect(snapshot.safeParse({ name: 'web-1', namespace: 'team-a' }).success).toBe(true);
+        expect(snapshot.safeParse({ name: 'web-1', namespace: 'team-a', sinceSeconds: 0 }).success).toBe(false);
+        expect(snapshot.safeParse({ name: 'web-1' }).success).toBe(false);
+        const events = ipcSchemas['events.forObject'];
+        expect(events.input.safeParse({ kind: 'Pod', name: 'web-1' }).success).toBe(true);
+        expect(events.input.safeParse({ kind: 'Pod', name: '' }).success).toBe(false);
+        expect(
+            events.output.safeParse([{ time: '12:00:00', type: 'Warning', reason: 'r', object: 'pod/x', message: 'm' }])
+                .success,
+        ).toBe(true);
+        expect(
+            events.output.safeParse([{ time: '12:00:00', type: 'Odd', reason: 'r', object: 'pod/x', message: 'm' }])
+                .success,
+        ).toBe(false);
+    });
 });

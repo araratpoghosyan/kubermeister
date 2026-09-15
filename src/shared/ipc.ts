@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import type { AllowedChannel } from './ipc-channels.js';
 import { kubeContextSchema } from './k8s/contexts.js';
+import { clusterEventSchema, objectEventsInputSchema } from './k8s/events.js';
+import { logLineSchema, podLogSnapshotInputSchema } from './k8s/logs.js';
 import { ipcErrorSchema } from './k8s/errors.js';
 import { clusterSchema, namespaceSchema } from './k8s/cluster.js';
 import { nodeDetailSchema, nodeSchema } from './k8s/nodes.js';
@@ -81,6 +83,8 @@ export const ipcSchemas = {
     'nodes.get': { input: z.object({ name: z.string().min(1) }), output: nodeDetailSchema.nullable() },
     'resources.list': { input: resourceListInputSchema, output: resourceListOutputSchema },
     'resources.get': { input: resourceGetInputSchema, output: resourceGetOutputSchema },
+    'pods.logSnapshot': { input: podLogSnapshotInputSchema, output: z.array(logLineSchema) },
+    'events.forObject': { input: objectEventsInputSchema, output: z.array(clusterEventSchema) },
 } as const;
 
 /**

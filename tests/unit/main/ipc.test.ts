@@ -27,6 +27,8 @@ const resources = {
 };
 const nodesMod = { listNodes: vi.fn(), getNode: vi.fn() };
 const generic = { listResources: vi.fn(), getResource: vi.fn() };
+const logsMod = { readPodLogSnapshot: vi.fn() };
+const eventsMod = { listEventsForObject: vi.fn() };
 vi.mock('../../../src/main/updater.js', () => updater);
 vi.mock('../../../src/main/k8s/client.js', () => client);
 vi.mock('../../../src/main/k8s/context.js', () => context);
@@ -35,6 +37,8 @@ vi.mock('../../../src/main/startup/checks.js', () => startup);
 vi.mock('../../../src/main/k8s/resources/cluster.js', () => resources);
 vi.mock('../../../src/main/k8s/resources/nodes.js', () => nodesMod);
 vi.mock('../../../src/main/k8s/resources/index.js', () => generic);
+vi.mock('../../../src/main/k8s/logs.js', () => logsMod);
+vi.mock('../../../src/main/k8s/resources/events.js', () => eventsMod);
 
 const { registerHandlers } = await import('../../../src/main/ipc/index.js');
 const { ipcSchemas } = await import('../../../src/shared/ipc.js');
@@ -222,6 +226,28 @@ describe('registerHandlers', () => {
             item: null,
         });
         await expect(invoke('resources.list', { kind: 'Deployment' })).rejects.toThrow();
+    });
+
+    it('forwards the log snapshot and object events channels with their inputs', async () => {
+        const line = { level: 'INFO', timestamp: 't', message: 'm' };
+        logsMod.readPodLogSnapshot.mockResolvedValue([line]);
+        await expect(
+            invoke('pods.logSnapshot', { name: 'web-1', namespace: 'team-a', container: 'app', sinceSeconds: 300 }),
+        ).resolves.toEqual([line]);
+        expect(logsMod.readPodLogSnapshot).toHaveBeenCalledWith({
+            name: 'web-1',
+            namespace: 'team-a',
+            container: 'app',
+            sinceSeconds: 300,
+        });
+        await expect(invoke('pods.logSnapshot', { name: 'web-1' })).rejects.toThrow();
+
+        const ev = { time: '12:00:00', type: 'Warning', reason: 'BackOff', object: 'pod/web-1', message: 'x' };
+        eventsMod.listEventsForObject.mockResolvedValue([ev]);
+        await expect(invoke('events.forObject', { kind: 'Pod', name: 'web-1', namespace: 'team-a' })).resolves.toEqual([
+            ev,
+        ]);
+        await expect(invoke('events.forObject', { kind: '', name: 'web-1' })).rejects.toThrow();
     });
 
     it('resets to the default kubeconfig and reloads', async () => {
