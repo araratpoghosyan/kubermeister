@@ -1,11 +1,13 @@
-import { makeInformer, type KubernetesObject } from '@kubernetes/client-node';
+import { makeInformer, type KubernetesObject, type V1StorageClass } from '@kubernetes/client-node';
 import type { Kind } from '../../shared/k8s/registry.js';
 import type { RowOf } from '../../shared/k8s/resources.js';
 import { streamSchemas, type StreamController, type StreamSend, type WatchEvent } from '../../shared/streams.js';
 import { apis, kubeConfig, resolveNamespace } from './client.js';
+import { K8sError } from './errors.js';
 import { toConfigMap, toSecret } from './resources/config.js';
 import { toEndpoints, toIngress, toNetworkPolicy, toService } from './resources/network.js';
 import { toPod, usageFor } from './resources/pods.js';
+import { toClaim, toStorageClass, toVolume } from './resources/storage.js';
 import { toAutoscaler, toCronJob, toDaemonSet, toDeployment, toJob, toStatefulSet } from './resources/workloads.js';
 
 /** How long to wait before restarting an informer after its watch connection failed. */
@@ -17,8 +19,11 @@ interface WatchSource<K extends Kind> {
     toRow: (object: KubernetesObject) => RowOf<K>;
 }
 
-/** Same transforms as the list readers, so a watched row and a listed row are identical. */
-const WATCH_SOURCES: { [K in Kind]: WatchSource<K> } = {
+/**
+ * Same transforms as the list readers, so a watched row and a listed row are identical. Kinds
+ * without an entry (the snapshot CRD, which a cluster need not have) are polled instead.
+ */
+const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
     Pod: {
         path: (ns) => (ns ? `/api/v1/namespaces/${ns}/pods` : '/api/v1/pods'),
         list: (ns) =>
@@ -126,6 +131,25 @@ const WATCH_SOURCES: { [K in Kind]: WatchSource<K> } = {
                 : () => apis().net.listNetworkPolicyForAllNamespaces(),
         toRow: (policy) => toNetworkPolicy(policy),
     },
+    PersistentVolume: {
+        path: () => '/api/v1/persistentvolumes',
+        list: () => () => apis().core.listPersistentVolume(),
+        toRow: (volume) => toVolume(volume),
+    },
+    PersistentVolumeClaim: {
+        path: (ns) => (ns ? `/api/v1/namespaces/${ns}/persistentvolumeclaims` : '/api/v1/persistentvolumeclaims'),
+        list: (ns) =>
+            ns
+                ? () => apis().core.listNamespacedPersistentVolumeClaim({ namespace: ns })
+                : () => apis().core.listPersistentVolumeClaimForAllNamespaces(),
+        toRow: (claim) => toClaim(claim),
+    },
+    StorageClass: {
+        path: () => '/apis/storage.k8s.io/v1/storageclasses',
+        list: () => () => apis().storage.listStorageClass(),
+        // A StorageClass carries `provisioner` at the top level, which the generic object type omits.
+        toRow: (storageClass) => toStorageClass(storageClass as V1StorageClass),
+    },
 };
 
 /**
@@ -136,7 +160,8 @@ const WATCH_SOURCES: { [K in Kind]: WatchSource<K> } = {
 export async function startResourceWatch(rawInput: unknown, send: StreamSend): Promise<StreamController> {
     const input = streamSchemas['resources.watch'].parse(rawInput);
     const namespace = resolveNamespace(input.namespace);
-    const source = WATCH_SOURCES[input.kind] as WatchSource<Kind>;
+    const source = WATCH_SOURCES[input.kind] as WatchSource<Kind> | undefined;
+    if (!source) throw new K8sError('invalid', `${input.kind} is not watchable`, 'resources.watch');
     const informer = makeInformer(kubeConfig(), source.path(namespace), source.list(namespace));
 
     let active = true;

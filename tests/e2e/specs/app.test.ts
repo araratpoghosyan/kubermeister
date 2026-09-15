@@ -276,3 +276,21 @@ test('lists the seeded service and opens its ports and endpoints', async () => {
     await window.getByRole('tab', { name: /Selector/ }).click();
     await expect(page).toContainText('app');
 });
+
+test('lists the default storage class and the seeded claim', async () => {
+    const { window } = launched;
+    await window.getByTestId('sidebar').getByRole('link', { name: 'StorageClasses' }).click();
+    const classes = window.getByTestId('storageclasses-table');
+    await expect(classes.locator('[data-storageclass="local-path"]')).toContainText('default');
+    await expect(classes).toContainText('rancher.io/local-path');
+
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Claims' }).click();
+    const claim = window.getByTestId('claims-table').locator('[data-claim="data"]');
+    // local-path binds on first use, so the claim may still be Pending here.
+    await expect(claim).toContainText(/Pending|Bound/);
+    await claim.getByRole('link').click();
+    await expect(window.getByTestId('claim-page')).toContainText('namespace: km-e2e');
+
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Snapshots' }).click();
+    await expect(window.getByText(/may not have the VolumeSnapshot CRD installed/)).toBeVisible();
+});

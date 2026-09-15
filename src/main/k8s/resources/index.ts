@@ -20,6 +20,16 @@ import {
 } from './network.js';
 import { getPod, listPods } from './pods.js';
 import {
+    getClaim,
+    getSnapshot,
+    getStorageClass,
+    getVolume,
+    listClaims,
+    listSnapshots,
+    listStorageClasses,
+    listVolumes,
+} from './storage.js';
+import {
     getAutoscaler,
     getCronJob,
     getDaemonSet,
@@ -54,6 +64,10 @@ const SOURCES: { [K in Kind]: Source<K> } = {
     Ingress: { list: listIngresses, get: getIngress },
     Endpoints: { list: listEndpoints, get: getEndpoints },
     NetworkPolicy: { list: listNetworkPolicies, get: getNetworkPolicy },
+    PersistentVolume: { list: () => listVolumes(), get: (name) => getVolume(name) },
+    PersistentVolumeClaim: { list: listClaims, get: getClaim },
+    StorageClass: { list: () => listStorageClasses(), get: (name) => getStorageClass(name) },
+    VolumeSnapshot: { list: listSnapshots, get: getSnapshot },
 };
 
 export async function listResources(input: ResourceListInput): Promise<ResourceListOutput> {
@@ -87,6 +101,14 @@ export async function listResources(input: ResourceListInput): Promise<ResourceL
             return { kind: 'Endpoints', items: await SOURCES.Endpoints.list(input.namespace) };
         case 'NetworkPolicy':
             return { kind: 'NetworkPolicy', items: await SOURCES.NetworkPolicy.list(input.namespace) };
+        case 'PersistentVolume':
+            return { kind: 'PersistentVolume', items: await SOURCES.PersistentVolume.list() };
+        case 'PersistentVolumeClaim':
+            return { kind: 'PersistentVolumeClaim', items: await SOURCES.PersistentVolumeClaim.list(input.namespace) };
+        case 'StorageClass':
+            return { kind: 'StorageClass', items: await SOURCES.StorageClass.list() };
+        case 'VolumeSnapshot':
+            return { kind: 'VolumeSnapshot', items: await SOURCES.VolumeSnapshot.list(input.namespace) };
     }
 }
 
@@ -121,5 +143,16 @@ export async function getResource(input: ResourceGetInput): Promise<ResourceGetO
             return { kind: 'Endpoints', item: await SOURCES.Endpoints.get(input.name, input.namespace) };
         case 'NetworkPolicy':
             return { kind: 'NetworkPolicy', item: await SOURCES.NetworkPolicy.get(input.name, input.namespace) };
+        case 'PersistentVolume':
+            return { kind: 'PersistentVolume', item: await SOURCES.PersistentVolume.get(input.name) };
+        case 'PersistentVolumeClaim':
+            return {
+                kind: 'PersistentVolumeClaim',
+                item: await SOURCES.PersistentVolumeClaim.get(input.name, input.namespace),
+            };
+        case 'StorageClass':
+            return { kind: 'StorageClass', item: await SOURCES.StorageClass.get(input.name) };
+        case 'VolumeSnapshot':
+            return { kind: 'VolumeSnapshot', item: await SOURCES.VolumeSnapshot.get(input.name, input.namespace) };
     }
 }

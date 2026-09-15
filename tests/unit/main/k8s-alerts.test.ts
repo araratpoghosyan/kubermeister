@@ -4,8 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const listPodForAllNamespaces = vi.fn();
 const listNode = vi.fn();
 const listJobForAllNamespaces = vi.fn();
+const listPersistentVolumeClaimForAllNamespaces = vi.fn();
 vi.mock('../../../src/main/k8s/client.js', () => ({
-    apis: () => ({ core: { listPodForAllNamespaces, listNode }, batch: { listJobForAllNamespaces } }),
+    apis: () => ({
+        core: { listPodForAllNamespaces, listNode, listPersistentVolumeClaimForAllNamespaces },
+        batch: { listJobForAllNamespaces },
+    }),
 }));
 vi.mock('../../../src/main/k8s/sampler.js', () => ({ ensureSampler: vi.fn(), podUsage: vi.fn(), percent: vi.fn() }));
 
@@ -50,6 +54,8 @@ describe('alerts', () => {
         listPodForAllNamespaces.mockResolvedValue({ items: [] });
         listJobForAllNamespaces.mockReset();
         listJobForAllNamespaces.mockResolvedValue({ items: [] });
+        listPersistentVolumeClaimForAllNamespaces.mockReset();
+        listPersistentVolumeClaimForAllNamespaces.mockResolvedValue({ items: [] });
     });
 
     it('derives pod alerts by status and restarts across all namespaces', async () => {
@@ -114,5 +120,25 @@ describe('alerts', () => {
         ]);
         listJobForAllNamespaces.mockRejectedValue(new Error('forbidden'));
         expect(await alerts.jobAlerts()).toEqual([]);
+    });
+
+    it('reports claims that are pending or lost', async () => {
+        listPersistentVolumeClaimForAllNamespaces.mockResolvedValue({
+            items: [
+                {
+                    metadata: { name: 'data', namespace: 'team-a' },
+                    spec: { storageClassName: 'local-path' },
+                    status: { phase: 'Pending' },
+                },
+                { metadata: { name: 'gone', namespace: 'team-a' }, spec: {}, status: { phase: 'Lost' } },
+                { metadata: { name: 'ok', namespace: 'team-a' }, spec: {}, status: { phase: 'Bound' } },
+            ],
+        });
+        expect(await alerts.claimAlerts()).toEqual([
+            { tone: 'warn', title: 'PVC Pending: data', detail: 'local-path — team-a/data' },
+            { tone: 'danger', title: 'PVC Lost: gone', detail: '— — team-a/gone' },
+        ]);
+        listPersistentVolumeClaimForAllNamespaces.mockRejectedValue(new Error('denied'));
+        expect(await alerts.claimAlerts()).toEqual([]);
     });
 });

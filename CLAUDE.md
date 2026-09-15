@@ -124,7 +124,11 @@ Body: why the change is needed, what a reader of the history cannot learn from t
   `list/index.tsx` plus `list/$namespace.$name.tsx` route pair, a navigation item and a tone map.
   Deployments also have `deployments.replicaSets`, `deployments.rollouts` and
   `metrics.deploymentSeries` (the sum of the selected pods' tracked series). Batch kinds read
-  through `apis().batch`, autoscalers through `apis().hpa`. **Secret values never cross the bridge**:
+  through `apis().batch`, autoscalers through `apis().hpa`. Cluster-scoped kinds ignore the active
+  namespace in their readers and watch paths, and their detail routes use the `list_.$name.tsx`
+  naming. A kind whose CRD a cluster need not have (volume snapshots) has no watch source and is
+  polled through `usePolledList`; `startResourceWatch` refuses a kind without one.
+  **Secret values never cross the bridge**:
   `secrets.entries` returns key names with a fixed mask, and no channel ever reads a secret's data. Aggregates that are not a plain
   kind (cluster summary, namespaces with pod counts, nodes, events, quotas, limit ranges) keep
   bespoke channels; quotas and limit ranges flatten to one row per resource. Detail routes

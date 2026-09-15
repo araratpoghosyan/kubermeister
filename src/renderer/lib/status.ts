@@ -1,6 +1,7 @@
 import type { ClusterStatus, NodeStatus } from '../../shared/k8s/status';
 import type { NamespaceTone } from '../../shared/k8s/cluster';
 import type { EndpointReady, NetworkStatus } from '../../shared/k8s/network';
+import type { ClaimStatus, SnapshotReady, VolumeStatus } from '../../shared/k8s/storage';
 import type { ContainerState, PodStatus } from '../../shared/k8s/pods';
 import type { DeploymentStatus, JobStatus, RolloutState } from '../../shared/k8s/workloads';
 
@@ -36,6 +37,21 @@ export const DEPLOYMENT_TONE: Record<DeploymentStatus, StatusTone> = {
 export const ROLLOUT_TONE: Record<RolloutState, StatusTone> = { Current: 'ok', Superseded: 'neutral' };
 export const NETWORK_TONE: Record<NetworkStatus, StatusTone> = { Active: 'ok', Pending: 'warn' };
 export const ENDPOINT_TONE: Record<EndpointReady, StatusTone> = { Ready: 'ok', NotReady: 'warn' };
+export const VOLUME_TONE: Record<VolumeStatus, StatusTone> = {
+    Bound: 'ok',
+    Available: 'accent',
+    Released: 'neutral',
+    Pending: 'warn',
+    Failed: 'danger',
+    Unknown: 'neutral',
+};
+export const CLAIM_TONE: Record<ClaimStatus, StatusTone> = {
+    Bound: 'ok',
+    Pending: 'warn',
+    Lost: 'danger',
+    Unknown: 'neutral',
+};
+export const SNAPSHOT_TONE: Record<SnapshotReady, StatusTone> = { Ready: 'ok', Pending: 'warn' };
 export const JOB_TONE: Record<JobStatus, StatusTone> = { Complete: 'ok', Running: 'accent', Failed: 'danger' };
 
 /** Tone for a resource-usage percentage: ok below 75, warn from 75, danger above 90. */
