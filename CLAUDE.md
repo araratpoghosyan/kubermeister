@@ -114,13 +114,26 @@ Body: why the change is needed, what a reader of the history cannot learn from t
   usage and empty series, never an error. Alerts (`alerts.ts`) derive from cluster state, cluster-wide.
 - **Resource reads** (`src/main/k8s/resources/*`) are pure transforms from Kubernetes objects to
   view models, exported and unit tested on their own, plus thin readers that fetch and delegate.
-  Keep it that way so a watch stream can feed the same transforms later.
+  Keep it that way: the watch stream feeds the very same transforms.
+- **Writes** (`src/main/k8s/resources/write.ts`) are `resources.create` / `replace` / `delete` /
+  `scale`. Create and replace go through `apis().objects`, which derives the API path from the
+  manifest's own `apiVersion`/`kind`, so a CRD rides the same call as a Pod; a replace must carry
+  the `metadata.resourceVersion` it was read with, which is what turns a concurrent change into a
+  `conflict` instead of a silent overwrite. **Destructive writes fail closed on targeting:** a
+  namespaced kind resolves its namespace explicit → active and is rejected as `invalid` when
+  neither applies, never guessing a same-named object elsewhere. Manifests are serialized by
+  `src/main/k8s/yaml.ts` with plain js-yaml, never the client library's typed dump, which drops
+  fields it does not know. Renderer side: every write goes through `useIpcMutation`
+  (`src/renderer/lib/query.ts`) with per-domain invalidation, never a blanket one, and every
+  rejection surfaces through the shared mutation-error toast.
 - **Kinds go through the generic channels.** `src/shared/k8s/registry.ts` holds one entry per kind;
   `resources.list` and `resources.get` take a `kind` and return a union discriminated on it
   (`src/shared/k8s/resources.ts`), with per-kind fetchers registered in
   `src/main/k8s/resources/index.ts`. Adding a kind: registry entry, view-model schema (a row and,
   when the detail shows more, a detail extension with label pairs), transforms plus readers, union
-  members in `resources.ts` and `streams.ts`, fetcher entry, watch source in `watch.ts`, a
+  members in `resources.ts` and `streams.ts`, fetcher entry, watch source in `watch.ts`, a list
+  entry in `resources/manifest.ts` (typed over every kind, so a new one fails to compile until its
+  manifest is readable too), a
   `list/index.tsx` plus `list/$namespace.$name.tsx` route pair, a navigation item and a tone map.
   Deployments also have `deployments.replicaSets`, `deployments.rollouts` and
   `metrics.deploymentSeries` (the sum of the selected pods' tracked series). Batch kinds read
