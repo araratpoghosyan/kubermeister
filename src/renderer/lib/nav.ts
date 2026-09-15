@@ -33,7 +33,7 @@ export const DOMAINS: Domain[] = [
             {
                 label: null,
                 items: [
-                    { id: 'summary', label: 'Summary', path: '/overview/summary', icon: GaugeIcon },
+                    { id: 'summary', label: 'Cluster summary', path: '/overview/summary', icon: GaugeIcon },
                     { id: 'nodes', label: 'Nodes', path: '/overview/nodes', icon: ServerIcon },
                     { id: 'namespaces', label: 'Namespaces', path: '/overview/namespaces', icon: BoxesIcon },
                 ],

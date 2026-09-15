@@ -59,10 +59,10 @@ describe('app shell', () => {
         expect(within(summary).getByText('Healthy', { selector: '[data-tone]' })).toHaveAttribute('data-tone', 'ok');
         expect(summary).toHaveTextContent('k3s · v1.36.4 · —');
         expect(screen.getByTestId('sidebar')).toHaveTextContent('Kubermeister');
-        expect(screen.getByRole('link', { name: 'Summary' })).toHaveAttribute('aria-current', 'page');
+        expect(screen.getByRole('link', { name: 'Cluster summary' })).toHaveAttribute('aria-current', 'page');
         expect(await screen.findByTestId('active-namespace')).toHaveTextContent('team-a · 4 pods');
         expect(await screen.findByTestId('context-selector')).toHaveTextContent('alpha');
-        expect(screen.getByTestId('breadcrumbs')).toHaveTextContent('Summary');
+        expect(screen.getByTestId('breadcrumbs')).toHaveTextContent('Cluster summary');
         expect(screen.queryByTestId('update-banner')).not.toBeInTheDocument();
     });
 

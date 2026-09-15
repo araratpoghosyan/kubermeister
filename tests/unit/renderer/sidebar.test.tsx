@@ -42,9 +42,12 @@ describe('Sidebar', () => {
         const section = (name: string) => within(sidebar).getByRole('button', { name });
         await userEvent.click(section('Workloads'));
         expect(within(sidebar).queryByRole('link', { name: 'Pods' })).not.toBeInTheDocument();
-        await userEvent.click(within(sidebar).getByRole('link', { name: 'Summary' }));
+        await userEvent.click(within(sidebar).getByRole('link', { name: 'Cluster summary' }));
         await waitFor(() =>
-            expect(within(sidebar).getByRole('link', { name: 'Summary' })).toHaveAttribute('aria-current', 'page'),
+            expect(within(sidebar).getByRole('link', { name: 'Cluster summary' })).toHaveAttribute(
+                'aria-current',
+                'page',
+            ),
         );
         expect(section('Workloads')).toHaveAttribute('aria-expanded', 'false');
         await userEvent.click(section('Workloads'));
