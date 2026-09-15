@@ -1,0 +1,179 @@
+import { ApiException } from '@kubernetes/client-node';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_SETTINGS, type Settings } from '../../../src/shared/settings';
+
+const FIXTURE = resolve('tests/unit/fixtures/kubeconfig.yaml');
+
+let settings: Settings;
+vi.mock('../../../src/main/settings/store.js', () => ({
+    getSettings: () => settings,
+    updateSettings: vi.fn(),
+}));
+
+async function loadClient() {
+    vi.resetModules();
+    return import('../../../src/main/k8s/client.js');
+}
+
+function withSettings(patch: Partial<Settings['session']>, kubeconfigPath: string | null = FIXTURE): void {
+    settings = {
+        version: 1,
+        session: { ...DEFAULT_SETTINGS.session, ...patch },
+        connection: { kubeconfigPath },
+    };
+}
+
+describe('kubeConfig', () => {
+    beforeEach(() => withSettings({}));
+
+    it('loads the configured file and seeds the namespace from its current context', async () => {
+        const { kubeConfig, getActiveNamespace } = await loadClient();
+        expect(kubeConfig().getCurrentContext()).toBe('alpha');
+        expect(getActiveNamespace()).toBe('team-a');
+    });
+
+    it('restores the remembered context and namespace without writing the file', async () => {
+        withSettings({ lastContext: 'beta', lastNamespace: 'remembered' });
+        const { kubeConfig, getActiveNamespace } = await loadClient();
+        expect(kubeConfig().getCurrentContext()).toBe('beta');
+        expect(getActiveNamespace()).toBe('remembered');
+        const fresh = await import('@kubernetes/client-node');
+        const onDisk = new fresh.KubeConfig();
+        onDisk.loadFromFile(FIXTURE);
+        expect(onDisk.getCurrentContext()).toBe('alpha');
+    });
+
+    it('falls back to the remembered context default namespace, then to none', async () => {
+        withSettings({ lastContext: 'beta', lastNamespace: null });
+        const { getActiveNamespace } = await loadClient();
+        expect(getActiveNamespace()).toBeNull();
+    });
+
+    it('ignores a remembered context that no longer exists or when restore is off', async () => {
+        withSettings({ lastContext: 'gone' });
+        expect((await loadClient()).kubeConfig().getCurrentContext()).toBe('alpha');
+        withSettings({ lastContext: 'beta', restoreOnLaunch: false });
+        expect((await loadClient()).kubeConfig().getCurrentContext()).toBe('alpha');
+    });
+
+    it('memoises the config and API clients until invalidated or reloaded', async () => {
+        const { kubeConfig, apis, invalidateApis, reloadKubeConfig, setActiveNamespace, getActiveNamespace } =
+            await loadClient();
+        const first = kubeConfig();
+        const bundle = apis();
+        expect(kubeConfig()).toBe(first);
+        expect(apis()).toBe(bundle);
+        expect(Object.keys(bundle).sort()).toEqual(
+            [
+                'apiextensions',
+                'apps',
+                'batch',
+                'core',
+                'customObjects',
+                'hpa',
+                'net',
+                'objects',
+                'rbac',
+                'storage',
+                'version',
+            ].sort(),
+        );
+        invalidateApis();
+        expect(apis()).not.toBe(bundle);
+        expect(kubeConfig()).toBe(first);
+        setActiveNamespace('manual');
+        reloadKubeConfig();
+        expect(kubeConfig()).not.toBe(first);
+        expect(getActiveNamespace()).toBe('team-a');
+    });
+});
+
+describe('kubeconfigError', () => {
+    let dir: string;
+    beforeEach(() => {
+        dir = mkdtempSync(join(tmpdir(), 'km-kc-'));
+    });
+    afterEach(() => rmSync(dir, { recursive: true, force: true }));
+
+    it('accepts a valid configured file', async () => {
+        withSettings({});
+        expect((await loadClient()).kubeconfigError()).toBeNull();
+    });
+
+    it('reports a missing configured file by path', async () => {
+        withSettings({}, join(dir, 'missing'));
+        expect((await loadClient()).kubeconfigError()).toBe(`No file exists at ${join(dir, 'missing')}.`);
+    });
+
+    it('reports an unparseable configured file without leaking its contents', async () => {
+        const bad = join(dir, 'bad.yaml');
+        writeFileSync(bad, 'secret-token: [unterminated');
+        withSettings({}, bad);
+        const message = (await loadClient()).kubeconfigError();
+        expect(message).toBe(`${bad} could not be parsed as a kubeconfig file.`);
+        expect(message).not.toContain('secret-token');
+    });
+
+    it('reports an unusable default kubeconfig in general terms', async () => {
+        // tests/setup.ts points $KUBECONFIG at a file that does not exist.
+        withSettings({}, null);
+        expect((await loadClient()).kubeconfigError()).toBe(
+            'The default kubeconfig ($KUBECONFIG or ~/.kube/config) could not be parsed.',
+        );
+    });
+});
+
+describe('namespace helpers', () => {
+    beforeEach(() => withSettings({}));
+
+    it('resolves explicit, active, then all', async () => {
+        const { resolveNamespace, resolveObjectNamespace, setActiveNamespace } = await loadClient();
+        expect(resolveNamespace('explicit')).toBe('explicit');
+        expect(resolveNamespace()).toBe('team-a');
+        setActiveNamespace(null);
+        expect(resolveNamespace()).toBeUndefined();
+        expect(resolveObjectNamespace()).toBeNull();
+        expect(resolveObjectNamespace('x')).toBe('x');
+    });
+
+    it('listItems dispatches to the namespaced or the cluster-wide reader', async () => {
+        const { listItems, setActiveNamespace } = await loadClient();
+        const namespaced = vi.fn(async (ns: string) => ({ items: [`ns:${ns}`] }));
+        const all = vi.fn(async () => ({ items: ['all'] }));
+        expect(await listItems(undefined, namespaced, all)).toEqual({ items: ['ns:team-a'] });
+        expect(await listItems('other', namespaced, all)).toEqual({ items: ['ns:other'] });
+        expect(await listItems('other', namespaced, all, true)).toEqual({ items: ['all'] });
+        setActiveNamespace(null);
+        expect(await listItems(undefined, namespaced, all)).toEqual({ items: ['all'] });
+    });
+
+    it('isSafeSelectorValue accepts DNS-1123 names and rejects selector syntax', async () => {
+        const { isSafeSelectorValue } = await loadClient();
+        expect(isSafeSelectorValue('web-7d9f.v2')).toBe(true);
+        for (const bad of ['a,b', 'a=b', 'a b', '', 'ns/name', '$(id)']) expect(isSafeSelectorValue(bad)).toBe(false);
+    });
+
+    it('readOrNull maps a 404 to undefined and rethrows anything else', async () => {
+        const { readOrNull } = await loadClient();
+        await expect(readOrNull(() => Promise.reject(new ApiException(404, 'x', null, {})))).resolves.toBeUndefined();
+        await expect(readOrNull(() => Promise.reject(new ApiException(403, 'x', null, {})))).rejects.toBeInstanceOf(
+            ApiException,
+        );
+        await expect(readOrNull(() => Promise.resolve('found'))).resolves.toBe('found');
+    });
+
+    it('getNamespaced reads directly with a namespace and lists by name without one', async () => {
+        const { getNamespaced, setActiveNamespace } = await loadClient();
+        const readOne = vi.fn(async (name: string, ns: string) => `${ns}/${name}`);
+        const listByName = vi.fn(async (selector: string) => ({ items: [`listed:${selector}`] }));
+        expect(await getNamespaced('web', 'explicit', readOne, listByName)).toBe('explicit/web');
+        expect(await getNamespaced('web', undefined, readOne, listByName)).toBe('team-a/web');
+        setActiveNamespace(null);
+        expect(await getNamespaced('web', undefined, readOne, listByName)).toBe('listed:metadata.name=web');
+        expect(await getNamespaced('web,evil=1', undefined, readOne, listByName)).toBeUndefined();
+        expect(listByName).toHaveBeenCalledTimes(1);
+    });
+});

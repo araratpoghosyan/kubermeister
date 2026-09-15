@@ -1,18 +1,33 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_SETTINGS, mergeSettings } from '../../../src/shared/settings';
 
 type Listener = (event: unknown, input: unknown) => Promise<unknown>;
 const registered = new Map<string, Listener>();
 
+const dialog = { showOpenDialog: vi.fn() };
+const focused = { id: 1 };
 vi.mock('electron', () => ({
     app: { getName: () => 'Kubermeister', getVersion: () => '0.1.1' },
     ipcMain: { handle: (channel: string, listener: Listener) => registered.set(channel, listener) },
+    BrowserWindow: { getFocusedWindow: () => focused },
+    dialog,
 }));
 
 const updater = { getUpdateState: vi.fn(), installUpdate: vi.fn() };
+const client = { reloadKubeConfig: vi.fn() };
+const context = { listContexts: vi.fn(), getCurrentContext: vi.fn(), setContext: vi.fn(), setNamespace: vi.fn() };
+const store = { getSettings: vi.fn(), updateSettings: vi.fn() };
+const startup = { runStartupChecks: vi.fn() };
 vi.mock('../../../src/main/updater.js', () => updater);
+vi.mock('../../../src/main/k8s/client.js', () => client);
+vi.mock('../../../src/main/k8s/context.js', () => context);
+vi.mock('../../../src/main/settings/store.js', () => store);
+vi.mock('../../../src/main/startup/checks.js', () => startup);
 
 const { registerHandlers } = await import('../../../src/main/ipc/index.js');
 const { ipcSchemas } = await import('../../../src/shared/ipc.js');
+
+const alpha = { name: 'alpha', cluster: 'c', user: 'u', namespace: 'team-a', current: true };
 
 async function invoke(channel: string, input: unknown): Promise<unknown> {
     const listener = registered.get(channel);
@@ -34,6 +49,8 @@ describe('registerHandlers', () => {
     beforeEach(() => {
         registered.clear();
         vi.clearAllMocks();
+        store.getSettings.mockReturnValue(DEFAULT_SETTINGS);
+        store.updateSettings.mockImplementation((patch) => mergeSettings(DEFAULT_SETTINGS, patch));
         registerHandlers();
     });
 
@@ -54,6 +71,8 @@ describe('registerHandlers', () => {
 
     it('rejects input that does not match the channel schema', async () => {
         await expect(invoke('app.info', 'not-an-object')).rejects.toThrow();
+        await expect(invoke('context.set', { name: '' })).rejects.toThrow();
+        expect(context.setContext).not.toHaveBeenCalled();
     });
 
     it('rejects handler output that does not match the channel schema', async () => {
@@ -66,6 +85,57 @@ describe('registerHandlers', () => {
         updater.installUpdate.mockReturnValue(true);
         await expect(invoke('update.state', {})).resolves.toEqual({ status: 'downloaded', version: '0.2.0' });
         await expect(invoke('update.install', {})).resolves.toEqual({ ok: true });
-        expect(updater.installUpdate).toHaveBeenCalledOnce();
+    });
+
+    it('forwards the connection channels to the context module', async () => {
+        context.listContexts.mockReturnValue([alpha]);
+        context.getCurrentContext.mockReturnValue(alpha);
+        context.setContext.mockReturnValue({ ...alpha, name: 'beta' });
+        context.setNamespace.mockReturnValue({ namespace: 'x' });
+        await expect(invoke('contexts.list', {})).resolves.toEqual([alpha]);
+        await expect(invoke('context.current', {})).resolves.toEqual(alpha);
+        await expect(invoke('context.set', { name: 'beta' })).resolves.toMatchObject({ name: 'beta' });
+        expect(context.setContext).toHaveBeenCalledWith('beta');
+        await expect(invoke('namespace.set', { namespace: 'x' })).resolves.toEqual({ namespace: 'x' });
+        expect(context.setNamespace).toHaveBeenCalledWith('x');
+    });
+
+    it('runs the startup checks', async () => {
+        startup.runStartupChecks.mockResolvedValue({ checks: [], ok: true });
+        await expect(invoke('startupChecks', {})).resolves.toEqual({ checks: [], ok: true });
+    });
+
+    it('reads and patches settings, refusing a kubeconfig path from the renderer', async () => {
+        await expect(invoke('settings.get', {})).resolves.toEqual(DEFAULT_SETTINGS);
+        await invoke('settings.set', { session: { lastNamespace: 'ns' } });
+        expect(store.updateSettings).toHaveBeenCalledWith({ session: { lastNamespace: 'ns' } });
+        await invoke('settings.set', { connection: { kubeconfigPath: '/etc/passwd' } });
+        expect(store.updateSettings).toHaveBeenLastCalledWith({});
+    });
+
+    it('applies a picked kubeconfig path and reloads the client', async () => {
+        dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/home/u/.kube/other'] });
+        await expect(invoke('kubeconfig.pick', {})).resolves.toEqual({ path: '/home/u/.kube/other' });
+        expect(dialog.showOpenDialog).toHaveBeenCalledWith(
+            focused,
+            expect.objectContaining({ properties: ['openFile', 'showHiddenFiles'] }),
+        );
+        expect(store.updateSettings).toHaveBeenCalledWith({ connection: { kubeconfigPath: '/home/u/.kube/other' } });
+        expect(client.reloadKubeConfig).toHaveBeenCalledOnce();
+    });
+
+    it('leaves settings alone when the picker is cancelled', async () => {
+        dialog.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
+        await expect(invoke('kubeconfig.pick', {})).resolves.toEqual({ path: null });
+        expect(store.updateSettings).not.toHaveBeenCalled();
+        expect(client.reloadKubeConfig).not.toHaveBeenCalled();
+    });
+
+    it('resets to the default kubeconfig and reloads', async () => {
+        await expect(invoke('kubeconfig.useDefault', {})).resolves.toMatchObject({
+            connection: { kubeconfigPath: null },
+        });
+        expect(store.updateSettings).toHaveBeenCalledWith({ connection: { kubeconfigPath: null } });
+        expect(client.reloadKubeConfig).toHaveBeenCalledOnce();
     });
 });

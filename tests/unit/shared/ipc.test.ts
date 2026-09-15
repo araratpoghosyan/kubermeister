@@ -9,8 +9,9 @@ describe('IPC contract', () => {
 
     it('every channel declares an input and an output schema', () => {
         for (const schema of Object.values(ipcSchemas)) {
-            expect(schema.input.safeParse({}).success).toBe(true);
+            expect(typeof schema.input.safeParse).toBe('function');
             expect(typeof schema.output.safeParse).toBe('function');
+            expect(schema.input.safeParse('not an object').success).toBe(false);
         }
     });
 
@@ -29,6 +30,25 @@ describe('IPC contract', () => {
         expect(output.safeParse({ status: 'downloading', percent: 42 }).success).toBe(true);
         expect(output.safeParse({ status: 'downloading', percent: 101 }).success).toBe(false);
         expect(output.safeParse({ status: 'rebooting' }).success).toBe(false);
+    });
+
+    it('context.set requires a non-empty name and namespace.set allows clearing', () => {
+        expect(ipcSchemas['context.set'].input.safeParse({ name: 'prod' }).success).toBe(true);
+        expect(ipcSchemas['context.set'].input.safeParse({ name: '' }).success).toBe(false);
+        expect(ipcSchemas['namespace.set'].input.safeParse({ namespace: null }).success).toBe(true);
+        expect(ipcSchemas['namespace.set'].input.safeParse({}).success).toBe(false);
+    });
+
+    it('startupChecks output only knows the two check ids and three statuses', () => {
+        const output = ipcSchemas['startupChecks'].output;
+        const ok = { checks: [{ id: 'kubeconfig', label: 'Kubeconfig file', status: 'ok' }], ok: true };
+        expect(output.safeParse(ok).success).toBe(true);
+        expect(output.safeParse({ checks: [{ id: 'kubectl', label: 'x', status: 'ok' }], ok: true }).success).toBe(
+            false,
+        );
+        expect(output.safeParse({ checks: [{ id: 'cluster', label: 'x', status: 'meh' }], ok: true }).success).toBe(
+            false,
+        );
     });
 
     it('update.install reports a boolean result', () => {

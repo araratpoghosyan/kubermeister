@@ -1,0 +1,211 @@
+import {
+    ApiException,
+    ApiextensionsV1Api,
+    AppsV1Api,
+    AutoscalingV2Api,
+    BatchV1Api,
+    CoreV1Api,
+    CustomObjectsApi,
+    KubeConfig,
+    KubernetesObjectApi,
+    NetworkingV1Api,
+    RbacAuthorizationV1Api,
+    StorageV1Api,
+    VersionApi,
+} from '@kubernetes/client-node';
+import { existsSync } from 'node:fs';
+import { getSettings } from '../settings/store.js';
+
+/**
+ * Owns the mutable connection state: which kube-context is read from and the active namespace.
+ * The `KubeConfig` loads lazily from disk and is never written back; the typed API clients are
+ * memoised and rebuilt whenever the context changes.
+ */
+
+let kc: KubeConfig | null = null;
+let apiCache: ApiBundle | null = null;
+let activeNamespace: string | null = null;
+
+export interface ApiBundle {
+    core: CoreV1Api;
+    apps: AppsV1Api;
+    batch: BatchV1Api;
+    net: NetworkingV1Api;
+    rbac: RbacAuthorizationV1Api;
+    storage: StorageV1Api;
+    hpa: AutoscalingV2Api;
+    version: VersionApi;
+    apiextensions: ApiextensionsV1Api;
+    customObjects: CustomObjectsApi;
+    /** Generic object client for writes: derives the API path from a manifest's own apiVersion/kind. */
+    objects: KubernetesObjectApi;
+}
+
+/**
+ * Apply the remembered session on top of a freshly loaded kubeconfig and return the namespace that
+ * should be active. With `restoreOnLaunch` and a remembered context that still exists, the
+ * in-memory config is pointed at it (the file is untouched) so the app reopens where the user left
+ * off; otherwise the kubeconfig's own current-context wins.
+ */
+function applyStartupSelection(next: KubeConfig): string | null {
+    const { session } = getSettings();
+    if (session.restoreOnLaunch && session.lastContext) {
+        const remembered = next.getContextObject(session.lastContext);
+        if (remembered) {
+            next.setCurrentContext(session.lastContext);
+            return session.lastNamespace ?? remembered.namespace ?? null;
+        }
+    }
+    return next.getContextObject(next.getCurrentContext())?.namespace ?? null;
+}
+
+function loadKubeConfig(): KubeConfig {
+    const next = new KubeConfig();
+    const { kubeconfigPath } = getSettings().connection;
+    if (kubeconfigPath) next.loadFromFile(kubeconfigPath);
+    else next.loadFromDefault();
+    return next;
+}
+
+/** Lazily load the kubeconfig: the settings path when set, else the default ($KUBECONFIG, ~/.kube/config). */
+export function kubeConfig(): KubeConfig {
+    if (!kc) {
+        const next = loadKubeConfig();
+        activeNamespace = applyStartupSelection(next);
+        kc = next;
+    }
+    return kc;
+}
+
+/**
+ * Validate the kubeconfig the app will load, without touching the memoised state. Returns a
+ * human-readable reason or null. A missing default kubeconfig is not an error (the app opens
+ * offline); an unparseable one is. Messages deliberately omit the parser's own text, which embeds
+ * a snippet of the file and would leak its contents to the renderer.
+ */
+export function kubeconfigError(): string | null {
+    const { kubeconfigPath } = getSettings().connection;
+    if (kubeconfigPath) {
+        if (!existsSync(kubeconfigPath)) return `No file exists at ${kubeconfigPath}.`;
+        try {
+            new KubeConfig().loadFromFile(kubeconfigPath);
+            return null;
+        } catch {
+            return `${kubeconfigPath} could not be parsed as a kubeconfig file.`;
+        }
+    }
+    try {
+        new KubeConfig().loadFromDefault();
+        return null;
+    } catch {
+        return 'The default kubeconfig ($KUBECONFIG or ~/.kube/config) could not be parsed.';
+    }
+}
+
+export function apis(): ApiBundle {
+    if (!apiCache) {
+        const c = kubeConfig();
+        apiCache = {
+            core: c.makeApiClient(CoreV1Api),
+            apps: c.makeApiClient(AppsV1Api),
+            batch: c.makeApiClient(BatchV1Api),
+            net: c.makeApiClient(NetworkingV1Api),
+            rbac: c.makeApiClient(RbacAuthorizationV1Api),
+            storage: c.makeApiClient(StorageV1Api),
+            hpa: c.makeApiClient(AutoscalingV2Api),
+            version: c.makeApiClient(VersionApi),
+            apiextensions: c.makeApiClient(ApiextensionsV1Api),
+            customObjects: c.makeApiClient(CustomObjectsApi),
+            objects: KubernetesObjectApi.makeApiClient(c),
+        };
+    }
+    return apiCache;
+}
+
+/** Drop the memoised API clients so the next `apis()` call rebuilds them against the current context. */
+export function invalidateApis(): void {
+    apiCache = null;
+}
+
+/** Forget the loaded kubeconfig so the next access re-reads it from disk. */
+export function reloadKubeConfig(): void {
+    kc = null;
+    apiCache = null;
+    activeNamespace = null;
+}
+
+export function getActiveNamespace(): string | null {
+    kubeConfig(); // seeds activeNamespace from the context's default on first access
+    return activeNamespace;
+}
+
+export function setActiveNamespace(namespace: string | null): void {
+    kubeConfig(); // load first, or the lazy load would overwrite this selection with the context default
+    activeNamespace = namespace;
+}
+
+/** Namespace a list call targets: explicit argument, else the active selection, else all (undefined). */
+export function resolveNamespace(explicit?: string): string | undefined {
+    return explicit ?? getActiveNamespace() ?? undefined;
+}
+
+/**
+ * Run a namespaced-or-all list read. `allNamespaces` forces the cluster-wide path regardless of the
+ * active namespace, for reads whose meaning is cluster-scoped.
+ */
+export async function listItems<T>(
+    namespace: string | undefined,
+    namespacedFn: (namespace: string) => Promise<{ items: T[] }>,
+    allFn: () => Promise<{ items: T[] }>,
+    allNamespaces = false,
+): Promise<{ items: T[] }> {
+    if (allNamespaces) return allFn();
+    const ns = resolveNamespace(namespace);
+    return ns ? namespacedFn(ns) : allFn();
+}
+
+/**
+ * Namespace a single-object read targets: explicit, else the active selection, else null, which
+ * means the caller must disambiguate by name across namespaces.
+ */
+export function resolveObjectNamespace(explicit?: string): string | null {
+    return explicit ?? getActiveNamespace();
+}
+
+/**
+ * DNS-1123 and Kind characters only. Such a value cannot contain the `,` or `=` separators of a
+ * fieldSelector, so it is safe to interpolate into `metadata.name=<value>`. Anything else is a
+ * malformed or injected identifier and is rejected rather than allowed to smuggle selector terms.
+ */
+const FIELD_SELECTOR_SAFE = /^[A-Za-z0-9.-]+$/;
+
+export function isSafeSelectorValue(value: string): boolean {
+    return FIELD_SELECTOR_SAFE.test(value);
+}
+
+/** Run a single-object GET, mapping a 404 to `undefined` so a deleted object reads as "not found". */
+export async function readOrNull<T>(read: () => Promise<T>): Promise<T | undefined> {
+    try {
+        return await read();
+    } catch (error) {
+        if (error instanceof ApiException && error.code === 404) return undefined;
+        throw error;
+    }
+}
+
+/**
+ * Resolve one namespaced object by name: a direct GET when the namespace is known, else a
+ * server-filtered list by `metadata.name` whose first match wins, gated by
+ * {@link isSafeSelectorValue}. Returns `undefined` when nothing matches.
+ */
+export async function getNamespaced<T>(
+    name: string,
+    namespace: string | undefined,
+    readOne: (name: string, namespace: string) => Promise<T>,
+    listByName: (fieldSelector: string) => Promise<{ items: T[] }>,
+): Promise<T | undefined> {
+    const ns = resolveObjectNamespace(namespace);
+    if (ns) return readOrNull(() => readOne(name, ns));
+    if (!isSafeSelectorValue(name)) return undefined;
+    return (await listByName(`metadata.name=${name}`)).items[0];
+}

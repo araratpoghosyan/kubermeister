@@ -1,15 +1,26 @@
 import { invoke } from './lib/ipc';
-import type { UpdateState } from '../shared/ipc';
+import type { StartupCheck, UpdateState } from '../shared/ipc';
 
 const UPDATE_POLL_MS = 30_000;
 
 const root = document.getElementById('app');
 if (!root) throw new Error('renderer root element missing');
 
-const info = await invoke('app.info', {});
+function el<K extends keyof HTMLElementTagNameMap>(
+    tag: K,
+    text?: string,
+    attrs: Record<string, string> = {},
+): HTMLElementTagNameMap[K] {
+    const node = document.createElement(tag);
+    if (text !== undefined) node.textContent = text;
+    for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+    return node;
+}
 
-const heading = document.createElement('h1');
-heading.textContent = `${info.name} ${info.version}`;
+// --- App identity -------------------------------------------------------------------------------
+
+const info = await invoke('app.info', {});
+const heading = el('h1', `${info.name} ${info.version}`);
 
 const rows: Array<[label: string, value: string]> = [
     ['Electron', info.electron],
@@ -17,21 +28,58 @@ const rows: Array<[label: string, value: string]> = [
     ['Node', info.node],
     ['Platform', info.platform],
 ];
+const list = el('dl');
+for (const [label, value] of rows) list.append(el('dt', label), el('dd', value));
 
-const list = document.createElement('dl');
-for (const [label, value] of rows) {
-    const dt = document.createElement('dt');
-    dt.textContent = label;
-    const dd = document.createElement('dd');
-    dd.textContent = value;
-    list.append(dt, dd);
+// --- Startup checks -----------------------------------------------------------------------------
+
+const checksSection = el('section', undefined, { id: 'startup-checks' });
+checksSection.append(el('h2', 'Startup checks'));
+const checksList = el('ul');
+checksSection.append(checksList);
+
+function renderCheck(check: StartupCheck): HTMLLIElement {
+    const item = el('li', undefined, { 'data-check': check.id, 'data-status': check.status });
+    item.append(el('strong', `${check.label}: `), el('span', check.status));
+    if (check.detail) item.append(el('span', ` ${check.detail}`, { class: 'detail' }));
+    if (check.hint) item.append(el('em', ` ${check.hint}`));
+    return item;
 }
 
-// Update banner: main owns the updater and exposes its state; the renderer polls and renders it.
-const banner = document.createElement('p');
-banner.id = 'update';
-const restart = document.createElement('button');
-restart.textContent = 'Restart to update';
+// --- Connection ---------------------------------------------------------------------------------
+
+const connection = el('section', undefined, { id: 'connection' });
+connection.append(el('h2', 'Connection'));
+const currentContext = el('p', undefined, { id: 'current-context' });
+const contextSelect = el('select', undefined, { id: 'context-select', 'aria-label': 'Kubernetes context' });
+const namespaceLabel = el('p', undefined, { id: 'current-namespace' });
+connection.append(currentContext, contextSelect, namespaceLabel);
+
+async function refreshConnection(): Promise<void> {
+    const [contexts, current, settings] = await Promise.all([
+        invoke('contexts.list', {}),
+        invoke('context.current', {}),
+        invoke('settings.get', {}),
+    ]);
+    currentContext.textContent = current ? `Context: ${current.name} (${current.cluster})` : 'No current context';
+    contextSelect.replaceChildren(
+        ...contexts.map((context) => {
+            const option = el('option', context.name, { value: context.name });
+            option.selected = context.current;
+            return option;
+        }),
+    );
+    namespaceLabel.textContent = `Namespace: ${settings.session.lastNamespace ?? current?.namespace ?? 'all'}`;
+}
+
+contextSelect.addEventListener('change', () => {
+    void invoke('context.set', { name: contextSelect.value }).then(refreshConnection);
+});
+
+// --- Updates ------------------------------------------------------------------------------------
+
+const banner = el('p', undefined, { id: 'update' });
+const restart = el('button', 'Restart to update');
 restart.hidden = true;
 restart.addEventListener('click', () => {
     void invoke('update.install', {});
@@ -61,6 +109,15 @@ async function refreshUpdateBanner(): Promise<void> {
     restart.hidden = update.status !== 'downloaded';
 }
 
-root.append(heading, list, banner, restart);
+// --- Boot ---------------------------------------------------------------------------------------
+
+root.append(heading, list, checksSection, connection, banner, restart);
+
+const report = await invoke('startupChecks', {});
+checksList.replaceChildren(...report.checks.map(renderCheck));
+checksSection.dataset.ok = String(report.ok);
+if (report.ok) await refreshConnection();
+else connection.hidden = true;
+
 await refreshUpdateBanner();
 setInterval(() => void refreshUpdateBanner(), UPDATE_POLL_MS);
