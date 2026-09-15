@@ -1,0 +1,174 @@
+import { EventEmitter } from 'node:events';
+import type { Writable } from 'node:stream';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const log = vi.fn();
+vi.mock('@kubernetes/client-node', async () => ({
+    ...(await vi.importActual<typeof import('@kubernetes/client-node')>('@kubernetes/client-node')),
+    Log: class {
+        log = log;
+    },
+}));
+const target = vi.fn();
+vi.mock('../../../src/main/k8s/pod-target.js', async () => ({
+    ...(await vi.importActual<typeof import('../../../src/main/k8s/pod-target.js')>(
+        '../../../src/main/k8s/pod-target.js',
+    )),
+    resolvePodTarget: target,
+}));
+vi.mock('../../../src/main/k8s/client.js', () => ({ kubeConfig: () => ({}), apis: vi.fn(), readOrNull: vi.fn() }));
+
+const logs = await import('../../../src/main/k8s/logs.js');
+
+describe('log line parsing', () => {
+    it('guesses the level from recognisable tokens, defaulting to INFO', () => {
+        expect(logs.guessLevel('level=error msg=boom')).toBe('ERROR');
+        expect(logs.guessLevel('FATAL: out of memory')).toBe('ERROR');
+        expect(logs.guessLevel('[warn] disk nearly full')).toBe('WARN');
+        expect(logs.guessLevel('WARNING something')).toBe('WARN');
+        expect(logs.guessLevel('debug: cache hit')).toBe('DEBUG');
+        expect(logs.guessLevel('TRACE enter')).toBe('DEBUG');
+        expect(logs.guessLevel('INFO started')).toBe('INFO');
+        expect(logs.guessLevel('km-e2e-marker')).toBe('INFO');
+        expect(logs.guessLevel('errorsfound and errorprone are not tokens')).toBe('INFO');
+    });
+
+    it('splits the API timestamp from the message', () => {
+        expect(logs.parseLogLine('2026-09-15T12:00:00.123Z GET /healthz 200')).toEqual({
+            level: 'INFO',
+            timestamp: '2026-09-15T12:00:00.123Z',
+            message: 'GET /healthz 200',
+        });
+        expect(logs.parseLogLine('no-timestamp-here')).toEqual({
+            level: 'INFO',
+            timestamp: '',
+            message: 'no-timestamp-here',
+        });
+        expect(logs.parseLogLine(' leading space')).toEqual({
+            level: 'INFO',
+            timestamp: '',
+            message: ' leading space',
+        });
+    });
+
+    it('reassembles lines split across chunks and flushes the tail', () => {
+        const lines: string[] = [];
+        const splitter = logs.createLineSplitter((line) => lines.push(line));
+        splitter.push('alpha\nbe');
+        splitter.push('ta\n\ngam');
+        expect(lines).toEqual(['alpha', 'beta']);
+        splitter.push('ma');
+        expect(lines).toEqual(['alpha', 'beta']);
+        splitter.flush();
+        expect(lines).toEqual(['alpha', 'beta', 'gamma']);
+        splitter.flush();
+        expect(lines).toHaveLength(3);
+    });
+});
+
+describe('startPodLogStream', () => {
+    const controller = { abort: vi.fn() };
+    let sink: Writable | undefined;
+
+    beforeEach(() => {
+        log.mockReset();
+        controller.abort.mockReset();
+        target.mockReset();
+        target.mockResolvedValue({ name: 'web-1', namespace: 'team-a', container: 'web' });
+        log.mockImplementation(async (_ns: string, _pod: string, _c: string, stream: Writable) => {
+            sink = stream;
+            return controller;
+        });
+    });
+
+    it('follows the resolved container with the requested window and streams parsed lines', async () => {
+        const send = vi.fn();
+        const ctl = await logs.startPodLogStream(
+            { name: 'web-1', namespace: 'team-a', tailLines: 50, sinceSeconds: 600 },
+            send,
+        );
+        expect(log).toHaveBeenCalledWith('team-a', 'web-1', 'web', expect.anything(), {
+            follow: true,
+            tailLines: 50,
+            sinceSeconds: 600,
+            timestamps: true,
+        });
+        sink!.write(Buffer.from('2026-09-15T12:00:00Z hello\n2026-09-15T12:00:01Z ERR'));
+        sink!.write(Buffer.from('OR boom\n'));
+        expect(send.mock.calls.map((c) => c[0])).toEqual([
+            { type: 'data', data: { level: 'INFO', timestamp: '2026-09-15T12:00:00Z', message: 'hello' } },
+            { type: 'data', data: { level: 'ERROR', timestamp: '2026-09-15T12:00:01Z', message: 'ERROR boom' } },
+        ]);
+        ctl.stop();
+        expect(controller.abort).toHaveBeenCalledOnce();
+    });
+
+    it('defaults the tail to 500 lines and ends when the container output finishes', async () => {
+        const send = vi.fn();
+        await logs.startPodLogStream({ name: 'web-1', namespace: 'team-a' }, send);
+        expect(log.mock.calls[0]![4]).toMatchObject({ tailLines: 500, sinceSeconds: undefined });
+        sink!.write(Buffer.from('2026-09-15T12:00:02Z tail'));
+        sink!.end();
+        await new Promise((resolve) => setImmediate(resolve));
+        expect(send).toHaveBeenCalledWith({
+            type: 'data',
+            data: { level: 'INFO', timestamp: '2026-09-15T12:00:02Z', message: 'tail' },
+        });
+        expect(send).toHaveBeenLastCalledWith({ type: 'end' });
+    });
+
+    it('reports a sink error instead of throwing', async () => {
+        const send = vi.fn();
+        await logs.startPodLogStream({ name: 'web-1', namespace: 'team-a' }, send);
+        sink!.emit('error', new Error('broken pipe'));
+        expect(send).toHaveBeenCalledWith({ type: 'error', message: 'broken pipe' });
+    });
+
+    it('reports a missing pod or container as an error followed by end without opening a log', async () => {
+        target.mockResolvedValue(null);
+        const send = vi.fn();
+        const ctl = await logs.startPodLogStream({ name: 'gone', namespace: 'team-a', container: 'x' }, send);
+        expect(send.mock.calls.map((c) => c[0])).toEqual([
+            { type: 'error', message: 'container "x" of pod "team-a/gone" not found' },
+            { type: 'end' },
+        ]);
+        expect(log).not.toHaveBeenCalled();
+        expect(() => ctl.stop()).not.toThrow();
+    });
+
+    it('rejects invalid input before touching the cluster', async () => {
+        await expect(
+            logs.startPodLogStream({ name: 'web-1', namespace: 'team-a', tailLines: -1 }, vi.fn()),
+        ).rejects.toThrow();
+        await expect(logs.startPodLogStream({ name: 'web-1' }, vi.fn())).rejects.toThrow();
+        expect(target).not.toHaveBeenCalled();
+    });
+});
+
+describe('resolvePodTarget', () => {
+    it('picks the requested container, else the first, and rejects unknown ones', async () => {
+        const actual = await vi.importActual<typeof import('../../../src/main/k8s/pod-target.js')>(
+            '../../../src/main/k8s/pod-target.js',
+        );
+        const client = await import('../../../src/main/k8s/client.js');
+        const pod = { spec: { containers: [{ name: 'web' }, { name: 'sidecar' }] } };
+        vi.mocked(client.readOrNull).mockResolvedValue(pod);
+        vi.mocked(client.apis).mockReturnValue({ core: { readNamespacedPod: vi.fn() } } as never);
+        await expect(actual.resolvePodTarget('web-1', 'team-a')).resolves.toEqual({
+            name: 'web-1',
+            namespace: 'team-a',
+            container: 'web',
+        });
+        await expect(actual.resolvePodTarget('web-1', 'team-a', 'sidecar')).resolves.toMatchObject({
+            container: 'sidecar',
+        });
+        await expect(actual.resolvePodTarget('web-1', 'team-a', 'nope')).resolves.toBeNull();
+        vi.mocked(client.readOrNull).mockResolvedValue(undefined);
+        await expect(actual.resolvePodTarget('gone', 'team-a')).resolves.toBeNull();
+        vi.mocked(client.readOrNull).mockResolvedValue({ spec: { containers: [] } });
+        await expect(actual.resolvePodTarget('empty', 'team-a')).resolves.toBeNull();
+    });
+});
+
+// Keep EventEmitter referenced for the fake websocket shape used by sibling tests.
+void EventEmitter;

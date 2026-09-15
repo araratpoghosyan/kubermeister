@@ -7,6 +7,9 @@ import {
     type StreamController,
     type StreamSend,
 } from '../../shared/streams.js';
+import { startPodExecStream } from '../k8s/exec.js';
+import { startPodLogStream } from '../k8s/logs.js';
+import { startPodPortForward } from '../k8s/port-forward.js';
 import { startResourceWatch } from '../k8s/watch.js';
 
 /** A stream handler starts pushing through `send` and returns how to stop (and optionally write). */
@@ -14,6 +17,9 @@ export type StreamHandler = (input: unknown, send: StreamSend) => Promise<Stream
 
 const HANDLERS: Record<StreamChannel, StreamHandler> = {
     'resources.watch': startResourceWatch,
+    'pods.logs': startPodLogStream,
+    'pods.exec': startPodExecStream,
+    'pods.portForward': startPodPortForward,
 };
 
 /**

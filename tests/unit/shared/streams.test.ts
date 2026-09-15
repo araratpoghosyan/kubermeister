@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+    podExecInputSchema,
+    podLogsInputSchema,
+    podPortForwardInputSchema,
     STREAM_CHANNELS,
     streamSchemas,
     streamSendSchema,
@@ -36,7 +39,7 @@ describe('stream contract', () => {
             streamStartSchema.safeParse({ channel: 'resources.watch', subId: 'stream:resources.watch:1', input: {} })
                 .success,
         ).toBe(true);
-        expect(streamStartSchema.safeParse({ channel: 'pods.exec', subId: 'x', input: {} }).success).toBe(false);
+        expect(streamStartSchema.safeParse({ channel: 'pods.nope', subId: 'x', input: {} }).success).toBe(false);
         expect(
             streamStartSchema.safeParse({ channel: 'resources.watch', subId: 'evil channel/../x', input: {} }).success,
         ).toBe(false);
@@ -45,5 +48,22 @@ describe('stream contract', () => {
         ).toBe(false);
         expect(streamSendSchema.safeParse({ subId: 'stream:x:1', data: 'ls\n' }).success).toBe(true);
         expect(streamStopSchema.safeParse({ subId: '' }).success).toBe(false);
+    });
+
+    it('bounds the pod stream inputs', () => {
+        expect(
+            podLogsInputSchema.safeParse({ name: 'w', namespace: 'n', tailLines: 100, sinceSeconds: 60 }).success,
+        ).toBe(true);
+        expect(podLogsInputSchema.safeParse({ name: 'w', namespace: '', tailLines: 100 }).success).toBe(false);
+        expect(podLogsInputSchema.safeParse({ name: 'w', namespace: 'n', tailLines: 10_001 }).success).toBe(false);
+        expect(podExecInputSchema.safeParse({ name: 'w', namespace: 'n', command: ['sh'] }).success).toBe(true);
+        expect(podExecInputSchema.safeParse({ name: 'w', namespace: 'n', command: [''] }).success).toBe(false);
+        expect(
+            podPortForwardInputSchema.safeParse({ name: 'w', namespace: 'n', targetPort: 8080, localPort: 8080 })
+                .success,
+        ).toBe(true);
+        expect(
+            podPortForwardInputSchema.safeParse({ name: 'w', namespace: 'n', targetPort: 65536, localPort: 1 }).success,
+        ).toBe(false);
     });
 });
