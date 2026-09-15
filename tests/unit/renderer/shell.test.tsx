@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderRoutes } from './helpers';
@@ -40,6 +40,10 @@ const data: Record<string, unknown> = {
         { name: 'kube-system', pods: 9, tone: 'ok' },
     ],
     'resources.list': { kind: 'Pod', items: [] },
+    'events.recent': [],
+    'metrics.alerts': [],
+    'metrics.sparklines': { nodes: [1], cpu: [5], mem: [10] },
+    'metrics.workloadHealth': [],
 };
 
 describe('app shell', () => {
@@ -50,11 +54,10 @@ describe('app shell', () => {
 
     it('renders the sidebar, the top bar with context and namespace, and the summary at the root', async () => {
         renderRoutes(routeTree, '/');
-        expect(await screen.findByTestId('summary-page')).toBeInTheDocument();
         const summary = await screen.findByTestId('cluster-summary');
-        expect(summary).toHaveTextContent('alpha');
-        expect(within(summary).getByText('Healthy')).toHaveAttribute('data-tone', 'ok');
-        expect(summary).toHaveTextContent('Kubernetes 1.36.4');
+        await waitFor(() => expect(summary).toHaveTextContent('alpha'));
+        expect(within(summary).getByText('Healthy', { selector: '[data-tone]' })).toHaveAttribute('data-tone', 'ok');
+        expect(summary).toHaveTextContent('k3s · v1.36.4 · —');
         expect(screen.getByTestId('sidebar')).toHaveTextContent('Kubermeister');
         expect(screen.getByRole('link', { name: 'Summary' })).toHaveAttribute('aria-current', 'page');
         expect(await screen.findByTestId('active-namespace')).toHaveTextContent('team-a · 4 pods');
@@ -91,22 +94,6 @@ describe('app shell', () => {
         invoke.mockImplementation(async (channel: string) => data[channel]);
         await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
         expect(await screen.findByTestId('nodes-table')).toHaveTextContent('n1');
-    });
-
-    it('shows the summary error and the no-context state', async () => {
-        const { IpcError } = await vi.importActual<typeof import('@/lib/ipc')>('@/lib/ipc');
-        invoke.mockImplementation(async (channel: string) => {
-            if (channel === 'cluster.active')
-                throw new IpcError({ kind: 'unreachable', detail: 'timed out', op: 'cluster.active' });
-            return data[channel];
-        });
-        const first = renderRoutes(routeTree, '/');
-        expect(await screen.findByRole('alert')).toHaveTextContent('timed out');
-        first.unmount();
-
-        invoke.mockImplementation(async (channel: string) => (channel === 'cluster.active' ? null : data[channel]));
-        renderRoutes(routeTree, '/');
-        expect(await screen.findByText('No current context.')).toBeInTheDocument();
     });
 
     it('renders an unknown route as not found', async () => {

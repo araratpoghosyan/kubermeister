@@ -32,5 +32,9 @@ export async function launchApp(): Promise<LaunchedApp> {
         env: { ...process.env, KUBERMEISTER_USER_DATA: userData, KUBECONFIG: KUBECONFIG_PATH },
     });
     const window = await app.firstWindow();
+    // The first window is handed over while index.html may still be loading; a spec that evaluates
+    // or clicks before the load settles would hit a destroyed execution context.
+    await window.waitForLoadState('domcontentloaded');
+    await window.getByTestId('app-shell').waitFor();
     return { app, window, userData };
 }
