@@ -46,6 +46,7 @@ const helmMod = {
     getReleaseRevisions: vi.fn(),
     listHelmCharts: vi.fn(),
 };
+const manifestMod = { getObjectYaml: vi.fn() };
 const alertsMod = { listAlerts: vi.fn() };
 vi.mock('../../../src/main/updater.js', () => updater);
 vi.mock('../../../src/main/k8s/client.js', () => client);
@@ -64,6 +65,7 @@ vi.mock('../../../src/main/k8s/resources/config.js', () => configMod);
 vi.mock('../../../src/main/k8s/resources/overview.js', () => overviewMod);
 vi.mock('../../../src/main/k8s/resources/network.js', () => networkMod);
 vi.mock('../../../src/main/k8s/resources/helm.js', () => helmMod);
+vi.mock('../../../src/main/k8s/resources/manifest.js', () => manifestMod);
 
 const { registerHandlers } = await import('../../../src/main/ipc/index.js');
 const { ipcSchemas } = await import('../../../src/shared/ipc.js');
@@ -385,6 +387,18 @@ describe('registerHandlers', () => {
         expect(helmMod.getReleaseRevisions).toHaveBeenCalledWith('traefik', undefined);
         await expect(invoke('helmCharts.list', {})).resolves.toHaveLength(1);
         await expect(invoke('releases.get', { name: '' })).rejects.toThrow();
+    });
+
+    it('forwards the manifest read and rejects an unknown kind', async () => {
+        manifestMod.getObjectYaml.mockResolvedValue({ yaml: 'kind: Pod\n', kind: 'Pod', namespace: 'team-a' });
+        await expect(
+            invoke('resources.getYaml', { kind: 'Pod', name: 'web-1', namespace: 'team-a' }),
+        ).resolves.toMatchObject({ kind: 'Pod' });
+        expect(manifestMod.getObjectYaml).toHaveBeenCalledWith('Pod', 'web-1', 'team-a');
+        // Nodes are not a registered kind but their manifest is readable all the same.
+        await expect(invoke('resources.getYaml', { kind: 'Node', name: 'node-1' })).resolves.toBeTruthy();
+        await expect(invoke('resources.getYaml', { kind: 'ReplicaSet', name: 'web' })).rejects.toThrow();
+        await expect(invoke('resources.getYaml', { kind: 'Pod', name: '' })).rejects.toThrow();
     });
 
     it('resets to the default kubeconfig and reloads', async () => {

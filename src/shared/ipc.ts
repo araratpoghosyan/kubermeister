@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { AllowedChannel } from './ipc-channels.js';
 import { helmChartSchema, releaseRevisionSchema, releaseSchema, releaseTargetSchema } from './k8s/addons.js';
 import { kubeContextSchema } from './k8s/contexts.js';
+import { manifestInputSchema, manifestSchema } from './k8s/manifest.js';
 import { clusterEventSchema, objectEventsInputSchema } from './k8s/events.js';
 import { ingressRuleSchema, serviceEndpointSchema, servicePortSchema } from './k8s/network.js';
 import { limitRangeSchema, resourceQuotaSchema } from './k8s/overview.js';
@@ -128,6 +129,7 @@ export const ipcSchemas = {
     'releases.get': { input: releaseTargetSchema, output: releaseSchema.nullable() },
     'releases.revisions': { input: releaseTargetSchema, output: z.array(releaseRevisionSchema) },
     'helmCharts.list': { input: noInput, output: z.array(helmChartSchema) },
+    'resources.getYaml': { input: manifestInputSchema, output: manifestSchema },
 } as const;
 
 /**
