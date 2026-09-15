@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index';
 import { Route as OverviewNamespacesRouteImport } from './routes/overview/namespaces';
 import { Route as OverviewNodesRouteImport } from './routes/overview/nodes';
 import { Route as OverviewSummaryRouteImport } from './routes/overview/summary';
+import { Route as OverviewNodesNameRouteImport } from './routes/overview/nodes_.$name';
 import { Route as WorkloadsPodsIndexRouteImport } from './routes/workloads/pods/index';
 import { Route as WorkloadsPodsNamespaceNameRouteImport } from './routes/workloads/pods/$namespace.$name';
 
@@ -36,6 +37,11 @@ const OverviewSummaryRoute = OverviewSummaryRouteImport.update({
   path: '/overview/summary',
   getParentRoute: () => rootRouteImport,
 } as any);
+const OverviewNodesNameRoute = OverviewNodesNameRouteImport.update({
+  id: '/overview/nodes_/$name',
+  path: '/overview/nodes/$name',
+  getParentRoute: () => rootRouteImport,
+} as any);
 const WorkloadsPodsIndexRoute = WorkloadsPodsIndexRouteImport.update({
   id: '/workloads/pods/',
   path: '/workloads/pods/',
@@ -53,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/overview/namespaces': typeof OverviewNamespacesRoute;
   '/overview/nodes': typeof OverviewNodesRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
+  '/overview/nodes/$name': typeof OverviewNodesNameRoute;
   '/workloads/pods/': typeof WorkloadsPodsIndexRoute;
   '/workloads/pods/$namespace/$name': typeof WorkloadsPodsNamespaceNameRoute;
 }
@@ -61,6 +68,7 @@ export interface FileRoutesByTo {
   '/overview/namespaces': typeof OverviewNamespacesRoute;
   '/overview/nodes': typeof OverviewNodesRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
+  '/overview/nodes/$name': typeof OverviewNodesNameRoute;
   '/workloads/pods': typeof WorkloadsPodsIndexRoute;
   '/workloads/pods/$namespace/$name': typeof WorkloadsPodsNamespaceNameRoute;
 }
@@ -70,6 +78,7 @@ export interface FileRoutesById {
   '/overview/namespaces': typeof OverviewNamespacesRoute;
   '/overview/nodes': typeof OverviewNodesRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
+  '/overview/nodes_/$name': typeof OverviewNodesNameRoute;
   '/workloads/pods/': typeof WorkloadsPodsIndexRoute;
   '/workloads/pods/$namespace/$name': typeof WorkloadsPodsNamespaceNameRoute;
 }
@@ -80,6 +89,7 @@ export interface FileRouteTypes {
     | '/overview/namespaces'
     | '/overview/nodes'
     | '/overview/summary'
+    | '/overview/nodes/$name'
     | '/workloads/pods/'
     | '/workloads/pods/$namespace/$name';
   fileRoutesByTo: FileRoutesByTo;
@@ -88,6 +98,7 @@ export interface FileRouteTypes {
     | '/overview/namespaces'
     | '/overview/nodes'
     | '/overview/summary'
+    | '/overview/nodes/$name'
     | '/workloads/pods'
     | '/workloads/pods/$namespace/$name';
   id:
@@ -96,6 +107,7 @@ export interface FileRouteTypes {
     | '/overview/namespaces'
     | '/overview/nodes'
     | '/overview/summary'
+    | '/overview/nodes_/$name'
     | '/workloads/pods/'
     | '/workloads/pods/$namespace/$name';
   fileRoutesById: FileRoutesById;
@@ -105,6 +117,7 @@ export interface RootRouteChildren {
   OverviewNamespacesRoute: typeof OverviewNamespacesRoute;
   OverviewNodesRoute: typeof OverviewNodesRoute;
   OverviewSummaryRoute: typeof OverviewSummaryRoute;
+  OverviewNodesNameRoute: typeof OverviewNodesNameRoute;
   WorkloadsPodsIndexRoute: typeof WorkloadsPodsIndexRoute;
   WorkloadsPodsNamespaceNameRoute: typeof WorkloadsPodsNamespaceNameRoute;
 }
@@ -139,6 +152,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OverviewSummaryRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/overview/nodes_/$name': {
+      id: '/overview/nodes_/$name';
+      path: '/overview/nodes/$name';
+      fullPath: '/overview/nodes/$name';
+      preLoaderRoute: typeof OverviewNodesNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/workloads/pods/': {
       id: '/workloads/pods/';
       path: '/workloads/pods';
@@ -161,6 +181,7 @@ const rootRouteChildren: RootRouteChildren = {
   OverviewNamespacesRoute: OverviewNamespacesRoute,
   OverviewNodesRoute: OverviewNodesRoute,
   OverviewSummaryRoute: OverviewSummaryRoute,
+  OverviewNodesNameRoute: OverviewNodesNameRoute,
   WorkloadsPodsIndexRoute: WorkloadsPodsIndexRoute,
   WorkloadsPodsNamespaceNameRoute: WorkloadsPodsNamespaceNameRoute,
 };

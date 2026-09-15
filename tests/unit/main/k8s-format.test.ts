@@ -14,6 +14,7 @@ import {
     memToMi,
     quantityToNumber,
     readyRatio,
+    toPairs,
 } from '../../../src/main/k8s/format';
 
 const NOW = Date.parse('2026-05-29T12:00:00Z');
@@ -144,5 +145,12 @@ describe('quantityToNumber / formatQuantityDelta', () => {
         expect(formatQuantityDelta('pods', '5', '5')).toBe('0');
         expect(formatQuantityDelta('cpu', undefined, '1')).toBe('—');
         expect(formatQuantityDelta('cpu', '')).toBe('—');
+    });
+
+    it('turns label maps into pairs and drops the last-applied blob', () => {
+        expect(toPairs({ app: 'web', 'kubectl.kubernetes.io/last-applied-configuration': '{}' })).toEqual([
+            ['app', 'web'],
+        ]);
+        expect(toPairs(undefined)).toEqual([]);
     });
 });

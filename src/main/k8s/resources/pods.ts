@@ -11,7 +11,9 @@ import type {
 import type { Usage } from '../../../shared/k8s/metrics.js';
 import { apis, listItems, readOrNull, resolveObjectNamespace } from '../client.js';
 import { withK8s } from '../errors.js';
-import { age, ago, cpuToMillicores, dash, memToMi } from '../format.js';
+import { age, ago, cpuToMillicores, dash, memToMi, toPairs } from '../format.js';
+
+export { toPairs };
 import { ensureSampler, podUsage } from '../sampler.js';
 
 /*
@@ -113,13 +115,6 @@ export function toConditions(pod: V1Pod, now = Date.now()): PodCondition[] {
         ok: c.status === 'True',
         time: c.lastTransitionTime ? ago(c.lastTransitionTime, now) : '—',
     }));
-}
-
-const LAST_APPLIED = 'kubectl.kubernetes.io/last-applied-configuration';
-
-/** Label or annotation pairs, minus the last-applied blob that would dwarf everything else. */
-export function toPairs(record?: Record<string, string>): Array<[string, string]> {
-    return Object.entries(record ?? {}).filter(([key]) => key !== LAST_APPLIED);
 }
 
 export function toPodDetail(pod: V1Pod, now = Date.now(), usage?: Usage): PodDetail {

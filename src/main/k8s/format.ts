@@ -177,3 +177,10 @@ export function formatQuantityDelta(resource: string, hard?: string | null, used
     if (resource.includes('memory') || resource.includes('storage')) return formatBytes(remaining);
     return String(remaining);
 }
+
+const LAST_APPLIED = 'kubectl.kubernetes.io/last-applied-configuration';
+
+/** Label or annotation pairs, minus the last-applied blob that would dwarf everything else. */
+export function toPairs(record?: Record<string, string>): Array<[string, string]> {
+    return Object.entries(record ?? {}).filter(([key]) => key !== LAST_APPLIED);
+}

@@ -39,6 +39,8 @@ export const nodeInfoSchema = z.object({
 export const nodeDetailSchema = nodeSchema.extend({
     conditions: z.array(nodeConditionSchema),
     info: nodeInfoSchema,
+    labels: z.array(z.tuple([z.string(), z.string()])),
+    annotations: z.array(z.tuple([z.string(), z.string()])),
 });
 
 export type Node = z.infer<typeof nodeSchema>;

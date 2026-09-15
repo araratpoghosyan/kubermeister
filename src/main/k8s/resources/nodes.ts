@@ -3,7 +3,7 @@ import type { Usage } from '../../../shared/k8s/metrics.js';
 import type { Node, NodeDetail } from '../../../shared/k8s/nodes.js';
 import { apis } from '../client.js';
 import { withK8s } from '../errors.js';
-import { age, cpuToCores, cpuToMillicores, dash, memToGiB, memToMi } from '../format.js';
+import { age, cpuToCores, cpuToMillicores, dash, memToGiB, memToMi, toPairs } from '../format.js';
 import { ensureSampler, nodeUsage, percent } from '../sampler.js';
 import { countBy, nodeReady } from './cluster.js';
 
@@ -75,6 +75,8 @@ export function toNodeDetail(
             kubeletVersion: dash(info?.kubeletVersion),
             architecture: dash(info?.architecture),
         },
+        labels: toPairs(node.metadata?.labels),
+        annotations: toPairs(node.metadata?.annotations),
     };
 }
 

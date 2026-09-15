@@ -34,7 +34,7 @@ test('shows the cluster summary for the test context', async () => {
 
 test('lists the k3s node as Ready and the seeded namespace', async () => {
     const { window } = launched;
-    await window.getByRole('link', { name: 'Nodes' }).click();
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Nodes' }).click();
     const nodes = window.getByTestId('nodes-table');
     await expect(nodes.getByRole('row')).toHaveCount(2);
     await expect(nodes).toContainText('Ready');
@@ -43,6 +43,15 @@ test('lists the k3s node as Ready and the seeded namespace', async () => {
     await expect(
         nodes.getByRole('progressbar', { name: 'CPU usage' }).or(nodes.getByText('no data').first()),
     ).toBeVisible();
+
+    await nodes.locator('[data-node]').first().getByRole('link').click();
+    const nodePage = window.getByTestId('node-page');
+    await expect(nodePage).toContainText('role: control-plane');
+    await window.getByRole('tab', { name: 'System info' }).click();
+    await expect(nodePage.getByTestId('system-info')).toContainText('v1.36.4+k3s1');
+    await window.getByRole('tab', { name: /Conditions/ }).click();
+    await expect(nodePage.getByTestId('node-conditions')).toContainText('Ready: True');
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Nodes' }).click();
 
     await window.getByRole('link', { name: 'Namespaces' }).click();
     const namespaces = window.getByTestId('namespaces-table');
