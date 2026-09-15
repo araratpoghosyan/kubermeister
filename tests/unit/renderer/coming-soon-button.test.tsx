@@ -19,6 +19,8 @@ describe('ComingSoonButton', () => {
         await userEvent.click(button);
         expect(onClick).not.toHaveBeenCalled();
         // The reason is announced on focus, which is why the button is aria-disabled instead of disabled.
+        // The click above left focus on the button, so step away and tab back in.
+        button.blur();
         await userEvent.tab();
         expect(button).toHaveFocus();
         expect(await screen.findByRole('tooltip', {}, { timeout: 3000 })).toHaveTextContent('Restart arrives later');
