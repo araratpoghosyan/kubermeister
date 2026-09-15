@@ -1,6 +1,7 @@
 import { app, BrowserWindow, shell } from 'electron';
 import { join } from 'node:path';
 import { registerHandlers } from './ipc/index.js';
+import { registerStreamHandlers } from './ipc/streams.js';
 import { isExternalWebUrl, isInternalNavigation } from './security.js';
 import { startUpdater } from './updater.js';
 
@@ -52,6 +53,7 @@ function createWindow(): BrowserWindow {
 
 void app.whenReady().then(() => {
     registerHandlers();
+    registerStreamHandlers();
     startUpdater();
     createWindow();
 
