@@ -8,7 +8,8 @@ import { listAlerts } from '../k8s/alerts.js';
 import { readPodLogSnapshot } from '../k8s/logs.js';
 import { getActiveCluster, getActiveNamespaceInfo, listClusters, listNamespaces } from '../k8s/resources/cluster.js';
 import { getConfigMapEntries, getSecretEntries } from '../k8s/resources/config.js';
-import { listEventsForObject, listRecentEvents } from '../k8s/resources/events.js';
+import { listEvents, listEventsForObject, listRecentEvents } from '../k8s/resources/events.js';
+import { listLimits, listQuotas } from '../k8s/resources/overview.js';
 import {
     getDeploymentSeries,
     getNodeSeries,
@@ -75,6 +76,9 @@ const handlers: Handlers = {
     'pods.logSnapshot': (input) => readPodLogSnapshot(input),
     'events.forObject': (input) => listEventsForObject(input),
     'events.recent': () => listRecentEvents(),
+    'events.list': ({ namespace }) => listEvents(namespace),
+    'quotas.list': ({ namespace }) => listQuotas(namespace),
+    'limits.list': ({ namespace }) => listLimits(namespace),
     'metrics.sparklines': () => getSparklines(),
     'metrics.workloadHealth': () => getWorkloadHealth(),
     'metrics.alerts': () => listAlerts(),
