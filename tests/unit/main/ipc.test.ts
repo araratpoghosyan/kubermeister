@@ -34,7 +34,9 @@ const metricsMod = {
     getWorkloadHealth: vi.fn(),
     getPodSeries: vi.fn(),
     getNodeSeries: vi.fn(),
+    getDeploymentSeries: vi.fn(),
 };
+const workloadsMod = { getDeploymentReplicaSets: vi.fn(), getDeploymentRollouts: vi.fn() };
 const alertsMod = { listAlerts: vi.fn() };
 vi.mock('../../../src/main/updater.js', () => updater);
 vi.mock('../../../src/main/k8s/client.js', () => client);
@@ -48,6 +50,7 @@ vi.mock('../../../src/main/k8s/logs.js', () => logsMod);
 vi.mock('../../../src/main/k8s/resources/events.js', () => eventsMod);
 vi.mock('../../../src/main/k8s/resources/metrics.js', () => metricsMod);
 vi.mock('../../../src/main/k8s/alerts.js', () => alertsMod);
+vi.mock('../../../src/main/k8s/resources/workloads.js', () => workloadsMod);
 
 const { registerHandlers } = await import('../../../src/main/ipc/index.js');
 const { ipcSchemas } = await import('../../../src/shared/ipc.js');
@@ -238,7 +241,7 @@ describe('registerHandlers', () => {
             kind: 'Pod',
             item: null,
         });
-        await expect(invoke('resources.list', { kind: 'Deployment' })).rejects.toThrow();
+        await expect(invoke('resources.list', { kind: 'Nope' })).rejects.toThrow();
     });
 
     it('forwards the log snapshot and object events channels with their inputs', async () => {
@@ -281,6 +284,23 @@ describe('registerHandlers', () => {
         expect(metricsMod.getPodSeries).toHaveBeenCalledWith('team-a', 'web-1');
         await expect(invoke('metrics.nodeSeries', { name: 'n1' })).resolves.toEqual({ cpu: [3], mem: [4] });
         await expect(invoke('metrics.podSeries', { name: 'web-1' })).rejects.toThrow();
+    });
+
+    it('forwards the deployment extras and their series', async () => {
+        const rs = { name: 'web-1', desired: 1, current: 1, ready: 1, age: '1h' };
+        const rollout = { rev: '1', state: 'Current', image: 'x', by: '—', when: '1h ago', duration: '1h' };
+        workloadsMod.getDeploymentReplicaSets.mockResolvedValue([rs]);
+        workloadsMod.getDeploymentRollouts.mockResolvedValue([rollout]);
+        metricsMod.getDeploymentSeries.mockResolvedValue({ cpu: [1], mem: [2] });
+        await expect(invoke('deployments.replicaSets', { name: 'web', namespace: 'team-a' })).resolves.toEqual([rs]);
+        expect(workloadsMod.getDeploymentReplicaSets).toHaveBeenCalledWith('web', 'team-a');
+        await expect(invoke('deployments.rollouts', { name: 'web', namespace: 'team-a' })).resolves.toEqual([rollout]);
+        await expect(invoke('metrics.deploymentSeries', { namespace: 'team-a', name: 'web' })).resolves.toEqual({
+            cpu: [1],
+            mem: [2],
+        });
+        expect(metricsMod.getDeploymentSeries).toHaveBeenCalledWith('team-a', 'web');
+        await expect(invoke('deployments.rollouts', { name: 'web' })).rejects.toThrow();
     });
 
     it('resets to the default kubeconfig and reloads', async () => {

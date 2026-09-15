@@ -6,6 +6,7 @@ import { logLineSchema, podLogSnapshotInputSchema } from './k8s/logs.js';
 import {
     alertSchema,
     clusterSparklinesSchema,
+    deploymentSeriesInputSchema,
     healthPointSchema,
     nodeSeriesInputSchema,
     podSeriesInputSchema,
@@ -21,6 +22,7 @@ import {
     resourceListOutputSchema,
 } from './k8s/resources.js';
 import { settingsInputSchema, settingsSchema } from './settings.js';
+import { namespacedNameSchema, replicaSetSchema, rolloutSchema } from './k8s/workloads.js';
 
 const noInput = z.object({});
 
@@ -99,6 +101,9 @@ export const ipcSchemas = {
     'metrics.alerts': { input: noInput, output: z.array(alertSchema) },
     'metrics.podSeries': { input: podSeriesInputSchema, output: resourceSeriesSchema },
     'metrics.nodeSeries': { input: nodeSeriesInputSchema, output: resourceSeriesSchema },
+    'metrics.deploymentSeries': { input: deploymentSeriesInputSchema, output: resourceSeriesSchema },
+    'deployments.replicaSets': { input: namespacedNameSchema, output: z.array(replicaSetSchema) },
+    'deployments.rollouts': { input: namespacedNameSchema, output: z.array(rolloutSchema) },
 } as const;
 
 /**

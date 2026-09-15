@@ -1,6 +1,14 @@
 import { z } from 'zod';
 import { podDetailSchema, podSchema } from './pods.js';
 import { kindSchema } from './registry.js';
+import {
+    daemonSetDetailSchema,
+    daemonSetSchema,
+    deploymentDetailSchema,
+    deploymentSchema,
+    statefulSetDetailSchema,
+    statefulSetSchema,
+} from './workloads.js';
 
 /**
  * The generic resource channels. One `resources.list` and one `resources.get` serve every kind;
@@ -21,10 +29,16 @@ export const resourceGetInputSchema = z.object({
 
 export const resourceListOutputSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('Pod'), items: z.array(podSchema) }),
+    z.object({ kind: z.literal('Deployment'), items: z.array(deploymentSchema) }),
+    z.object({ kind: z.literal('StatefulSet'), items: z.array(statefulSetSchema) }),
+    z.object({ kind: z.literal('DaemonSet'), items: z.array(daemonSetSchema) }),
 ]);
 
 export const resourceGetOutputSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('Pod'), item: podDetailSchema.nullable() }),
+    z.object({ kind: z.literal('Deployment'), item: deploymentDetailSchema.nullable() }),
+    z.object({ kind: z.literal('StatefulSet'), item: statefulSetDetailSchema.nullable() }),
+    z.object({ kind: z.literal('DaemonSet'), item: daemonSetDetailSchema.nullable() }),
 ]);
 
 export type ResourceListInput = z.infer<typeof resourceListInputSchema>;

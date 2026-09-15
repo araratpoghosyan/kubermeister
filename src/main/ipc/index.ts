@@ -8,7 +8,14 @@ import { listAlerts } from '../k8s/alerts.js';
 import { readPodLogSnapshot } from '../k8s/logs.js';
 import { getActiveCluster, getActiveNamespaceInfo, listClusters, listNamespaces } from '../k8s/resources/cluster.js';
 import { listEventsForObject, listRecentEvents } from '../k8s/resources/events.js';
-import { getNodeSeries, getPodSeries, getSparklines, getWorkloadHealth } from '../k8s/resources/metrics.js';
+import {
+    getDeploymentSeries,
+    getNodeSeries,
+    getPodSeries,
+    getSparklines,
+    getWorkloadHealth,
+} from '../k8s/resources/metrics.js';
+import { getDeploymentReplicaSets, getDeploymentRollouts } from '../k8s/resources/workloads.js';
 import { getResource, listResources } from '../k8s/resources/index.js';
 import { getNode, listNodes } from '../k8s/resources/nodes.js';
 import { getSettings, updateSettings } from '../settings/store.js';
@@ -72,6 +79,9 @@ const handlers: Handlers = {
     'metrics.alerts': () => listAlerts(),
     'metrics.podSeries': ({ namespace, name }) => getPodSeries(namespace, name),
     'metrics.nodeSeries': ({ name }) => getNodeSeries(name),
+    'metrics.deploymentSeries': ({ namespace, name }) => getDeploymentSeries(namespace, name),
+    'deployments.replicaSets': ({ name, namespace }) => getDeploymentReplicaSets(name, namespace),
+    'deployments.rollouts': ({ name, namespace }) => getDeploymentRollouts(name, namespace),
     'kubeconfig.useDefault': async () => {
         const settings = updateSettings({ connection: { kubeconfigPath: null } });
         reloadKubeConfig();
