@@ -26,6 +26,7 @@ const resources = {
     listClusters: vi.fn(),
 };
 const nodesMod = { listNodes: vi.fn(), getNode: vi.fn() };
+const generic = { listResources: vi.fn(), getResource: vi.fn() };
 vi.mock('../../../src/main/updater.js', () => updater);
 vi.mock('../../../src/main/k8s/client.js', () => client);
 vi.mock('../../../src/main/k8s/context.js', () => context);
@@ -33,6 +34,7 @@ vi.mock('../../../src/main/settings/store.js', () => store);
 vi.mock('../../../src/main/startup/checks.js', () => startup);
 vi.mock('../../../src/main/k8s/resources/cluster.js', () => resources);
 vi.mock('../../../src/main/k8s/resources/nodes.js', () => nodesMod);
+vi.mock('../../../src/main/k8s/resources/index.js', () => generic);
 
 const { registerHandlers } = await import('../../../src/main/ipc/index.js');
 const { ipcSchemas } = await import('../../../src/shared/ipc.js');
@@ -198,6 +200,28 @@ describe('registerHandlers', () => {
         await expect(invoke('nodes.list', {})).resolves.toEqual([nodeRow]);
         await expect(invoke('nodes.get', { name: 'missing' })).resolves.toBeNull();
         expect(nodesMod.getNode).toHaveBeenCalledWith('missing');
+    });
+
+    it('forwards the generic resource channels and validates the kind', async () => {
+        const row = {
+            name: 'web-1',
+            namespace: 'team-a',
+            status: 'Running',
+            ready: '1/1',
+            restarts: 0,
+            age: '3d',
+            node: 'n1',
+            cpuLimit: 0,
+            memLimit: 0,
+        };
+        generic.listResources.mockResolvedValue({ kind: 'Pod', items: [row] });
+        generic.getResource.mockResolvedValue({ kind: 'Pod', item: null });
+        await expect(invoke('resources.list', { kind: 'Pod' })).resolves.toEqual({ kind: 'Pod', items: [row] });
+        await expect(invoke('resources.get', { kind: 'Pod', name: 'web-1', namespace: 'team-a' })).resolves.toEqual({
+            kind: 'Pod',
+            item: null,
+        });
+        await expect(invoke('resources.list', { kind: 'Deployment' })).rejects.toThrow();
     });
 
     it('resets to the default kubeconfig and reloads', async () => {

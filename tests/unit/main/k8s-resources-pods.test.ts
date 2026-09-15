@@ -1,0 +1,289 @@
+import { ApiException, type V1Container, type V1ContainerStatus, type V1Pod } from '@kubernetes/client-node';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const client = {
+    apis: vi.fn(),
+    getActiveNamespace: vi.fn<() => string | null>(),
+    resolveNamespace: (explicit?: string) => explicit ?? client.getActiveNamespace() ?? undefined,
+    resolveObjectNamespace: (explicit?: string) => explicit ?? client.getActiveNamespace(),
+    listItems: async <T>(
+        ns: string | undefined,
+        namespaced: (ns: string) => Promise<{ items: T[] }>,
+        all: () => Promise<{ items: T[] }>,
+    ) => {
+        const resolved = ns ?? client.getActiveNamespace() ?? undefined;
+        return resolved ? namespaced(resolved) : all();
+    },
+    readOrNull: async <T>(read: () => Promise<T>) => {
+        try {
+            return await read();
+        } catch (error) {
+            if (error instanceof ApiException && error.code === 404) return undefined;
+            throw error;
+        }
+    },
+};
+vi.mock('../../../src/main/k8s/client.js', () => client);
+
+const pods = await import('../../../src/main/k8s/resources/pods.js');
+
+const NOW = Date.parse('2026-09-15T12:00:00Z');
+const HOUR = 3600 * 1000;
+
+function status(overrides: Partial<V1ContainerStatus> = {}): V1ContainerStatus {
+    return {
+        name: 'app',
+        ready: true,
+        restartCount: 0,
+        image: 'nginx',
+        imageID: 'docker://sha256@abc',
+        state: { running: { startedAt: new Date(NOW - 2 * HOUR) } },
+        ...overrides,
+    } as V1ContainerStatus;
+}
+function container(overrides: Partial<V1Container> = {}): V1Container {
+    return {
+        name: 'app',
+        image: 'nginx:1.27',
+        ports: [{ containerPort: 80 }],
+        resources: { requests: { cpu: '100m' }, limits: { cpu: '500m', memory: '128Mi' } },
+        ...overrides,
+    } as V1Container;
+}
+function pod(overrides: Partial<V1Pod> = {}): V1Pod {
+    return {
+        metadata: {
+            name: 'web-1',
+            namespace: 'team-a',
+            creationTimestamp: new Date(NOW - 3 * 24 * HOUR),
+            labels: { app: 'web', 'kubectl.kubernetes.io/last-applied-configuration': '{...}' },
+            annotations: { note: 'x' },
+        },
+        spec: { nodeName: 'n1', containers: [container()], serviceAccountName: 'default', dnsPolicy: 'ClusterFirst' },
+        status: {
+            phase: 'Running',
+            podIP: '10.0.0.5',
+            hostIP: '192.168.1.2',
+            qosClass: 'Burstable',
+            containerStatuses: [status()],
+            conditions: [{ type: 'Ready', status: 'True', lastTransitionTime: new Date(NOW - HOUR) }],
+        },
+        ...overrides,
+    } as V1Pod;
+}
+
+describe('derivePodStatus', () => {
+    it('lets termination and waiting reasons outrank the phase', () => {
+        expect(pods.derivePodStatus(pod())).toBe('Running');
+        expect(pods.derivePodStatus(pod({ metadata: { deletionTimestamp: new Date() } }))).toBe('Terminating');
+        expect(
+            pods.derivePodStatus(
+                pod({
+                    status: {
+                        phase: 'Running',
+                        containerStatuses: [status({ state: { waiting: { reason: 'CrashLoopBackOff' } } })],
+                    },
+                }),
+            ),
+        ).toBe('CrashLoop');
+        for (const reason of ['ImagePullBackOff', 'ErrImagePull']) {
+            expect(
+                pods.derivePodStatus(
+                    pod({
+                        status: { phase: 'Pending', containerStatuses: [status({ state: { waiting: { reason } } })] },
+                    }),
+                ),
+            ).toBe('Error');
+        }
+    });
+
+    it('maps the remaining phases and falls back to Unknown', () => {
+        for (const [phase, expected] of [
+            ['Pending', 'Pending'],
+            ['Succeeded', 'Succeeded'],
+            ['Failed', 'Failed'],
+            ['Weird', 'Unknown'],
+            [undefined, 'Unknown'],
+        ] as const) {
+            expect(pods.derivePodStatus(pod({ status: { phase } }))).toBe(expected);
+        }
+    });
+});
+
+describe('toPod', () => {
+    it('builds the row with ready ratio, restarts, age, node and summed limits', () => {
+        expect(pods.toPod(pod(), NOW)).toEqual({
+            name: 'web-1',
+            namespace: 'team-a',
+            status: 'Running',
+            ready: '1/1',
+            restarts: 0,
+            age: '3d',
+            node: 'n1',
+            cpuLimit: 500,
+            memLimit: 128,
+        });
+    });
+
+    it('counts ready containers and restarts across containers and tolerates missing fields', () => {
+        const two = pod({
+            spec: { containers: [container(), container({ name: 'sidecar', resources: {} })] },
+            status: {
+                phase: 'Running',
+                containerStatuses: [status(), status({ name: 'sidecar', ready: false, restartCount: 3 })],
+            },
+        });
+        expect(pods.toPod(two, NOW)).toMatchObject({
+            ready: '1/2',
+            restarts: 3,
+            node: '—',
+            cpuLimit: 500,
+            memLimit: 128,
+        });
+        expect(pods.toPod({ metadata: {} } as V1Pod, NOW)).toMatchObject({
+            name: '',
+            namespace: 'default',
+            ready: '0/0',
+            restarts: 0,
+            age: '—',
+            status: 'Unknown',
+        });
+    });
+});
+
+describe('container and probe transforms', () => {
+    it('describes each probe type with its period', () => {
+        expect(pods.probeSpec({ httpGet: { path: '/healthz', port: 8080 }, periodSeconds: 10 })).toBe(
+            'httpGet /healthz:8080 · 10s',
+        );
+        expect(pods.probeSpec({ httpGet: { port: 80 } })).toBe('httpGet /:80');
+        expect(pods.probeSpec({ tcpSocket: { port: 5432 } })).toBe('tcpSocket :5432');
+        expect(pods.probeSpec({ exec: { command: ['cat', '/tmp/ok'] }, periodSeconds: 5 })).toBe(
+            'exec cat /tmp/ok · 5s',
+        );
+        expect(pods.probeSpec({ grpc: { port: 9090 } })).toBe('grpc :9090');
+        expect(pods.probeSpec({ periodSeconds: 3 })).toBe('probe · 3s');
+        expect(pods.probeSpec(undefined)).toBeNull();
+    });
+
+    it('lists only the probes a container defines, in a fixed order', () => {
+        const c = container({
+            readinessProbe: { tcpSocket: { port: 80 } },
+            startupProbe: { exec: { command: ['true'] } },
+        });
+        expect(pods.containerProbes(c)).toEqual([
+            { kind: 'Readiness', spec: 'tcpSocket :80' },
+            { kind: 'Startup', spec: 'exec true' },
+        ]);
+        expect(pods.containerProbes(container())).toEqual([]);
+    });
+
+    it('derives the container state from its status', () => {
+        expect(pods.containerState(undefined)).toBe('Unknown');
+        expect(pods.containerState(status())).toBe('Running');
+        expect(pods.containerState(status({ state: { terminated: { reason: 'Completed', exitCode: 0 } } }))).toBe(
+            'Completed',
+        );
+        expect(pods.containerState(status({ state: { terminated: { reason: 'OOMKilled', exitCode: 137 } } }))).toBe(
+            'Failed',
+        );
+        expect(pods.containerState(status({ state: { waiting: { reason: 'CrashLoopBackOff' } } }))).toBe('CrashLoop');
+        expect(pods.containerState(status({ state: { waiting: { reason: 'ContainerCreating' } } }))).toBe('Pending');
+        expect(pods.containerState(status({ state: {} }))).toBe('Unknown');
+    });
+
+    it('builds the container view with resources, ports, image id and start time', () => {
+        expect(pods.toContainer(container(), status(), NOW)).toEqual({
+            name: 'app',
+            image: 'nginx:1.27',
+            imageId: 'abc',
+            pullPolicy: 'IfNotPresent',
+            state: 'Running',
+            started: '2h ago',
+            restarts: 0,
+            cpuRequest: '100m',
+            cpuLimit: '500m',
+            memRequest: '—',
+            memLimit: '128Mi',
+            ports: ['80/TCP'],
+            probes: [],
+        });
+        expect(
+            pods.toContainer(
+                container({ imagePullPolicy: 'Always', ports: [{ containerPort: 53, protocol: 'UDP' }] }),
+                undefined,
+                NOW,
+            ),
+        ).toMatchObject({ pullPolicy: 'Always', state: 'Unknown', started: '—', imageId: '—', ports: ['53/UDP'] });
+    });
+});
+
+describe('toPodDetail', () => {
+    it('adds placement, networking, conditions, containers and filtered metadata', () => {
+        const detail = pods.toPodDetail(pod(), NOW);
+        expect(detail).toMatchObject({
+            podIP: '10.0.0.5',
+            hostIP: '192.168.1.2',
+            qos: 'Burstable',
+            dnsPolicy: 'ClusterFirst',
+            serviceAccount: 'default',
+        });
+        expect(detail.conditions).toEqual([{ type: 'Ready', ok: true, time: '1h ago' }]);
+        expect(detail.containers.map((c) => c.name)).toEqual(['app']);
+        expect(detail.labels).toEqual([['app', 'web']]);
+        expect(detail.annotations).toEqual([['note', 'x']]);
+        expect(
+            pods.toConditions(pod({ status: { conditions: [{ type: 'PodScheduled', status: 'False' }] } }), NOW),
+        ).toEqual([{ type: 'PodScheduled', ok: false, time: '—' }]);
+        expect(pods.toPairs(undefined)).toEqual([]);
+    });
+});
+
+describe('readers', () => {
+    const listNamespacedPod = vi.fn();
+    const listPodForAllNamespaces = vi.fn();
+    const readNamespacedPod = vi.fn();
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        client.getActiveNamespace.mockReturnValue('team-a');
+        client.apis.mockReturnValue({ core: { listNamespacedPod, listPodForAllNamespaces, readNamespacedPod } });
+        listNamespacedPod.mockResolvedValue({ items: [pod()] });
+        listPodForAllNamespaces.mockResolvedValue({
+            items: [pod(), pod({ metadata: { name: 'other', namespace: 'kube-system' } })],
+        });
+    });
+
+    it('lists the explicit or active namespace, or everything when none is selected', async () => {
+        expect((await pods.listPods('explicit')).map((p) => p.name)).toEqual(['web-1']);
+        expect(listNamespacedPod).toHaveBeenCalledWith({ namespace: 'explicit' });
+        await pods.listPods();
+        expect(listNamespacedPod).toHaveBeenLastCalledWith({ namespace: 'team-a' });
+        client.getActiveNamespace.mockReturnValue(null);
+        expect((await pods.listPods()).map((p) => p.namespace)).toEqual(['team-a', 'kube-system']);
+    });
+
+    it('gets a pod directly, returns null for a missing one, and refuses without a namespace', async () => {
+        readNamespacedPod.mockResolvedValue(pod());
+        await expect(pods.getPod('web-1', 'team-a')).resolves.toMatchObject({
+            name: 'web-1',
+            containers: [{ name: 'app' }],
+        });
+        expect(readNamespacedPod).toHaveBeenCalledWith({ name: 'web-1', namespace: 'team-a' });
+        readNamespacedPod.mockRejectedValue(new ApiException(404, 'x', null, {}));
+        await expect(pods.getPod('gone')).resolves.toBeNull();
+        client.getActiveNamespace.mockReturnValue(null);
+        await expect(pods.getPod('web-1')).resolves.toBeNull();
+        expect(readNamespacedPod).toHaveBeenCalledTimes(2);
+    });
+
+    it('classifies API failures under the generic operation names', async () => {
+        listNamespacedPod.mockRejectedValue(new ApiException(403, 'x', { message: 'denied' }, {}));
+        await expect(pods.listPods()).rejects.toMatchObject({ kind: 'forbidden', op: 'resources.list' });
+        readNamespacedPod.mockRejectedValue(Object.assign(new Error('x'), { code: 'ECONNREFUSED' }));
+        await expect(pods.getPod('web-1', 'team-a')).rejects.toMatchObject({
+            kind: 'unreachable',
+            op: 'resources.get',
+        });
+    });
+});

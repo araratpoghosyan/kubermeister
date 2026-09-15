@@ -5,6 +5,7 @@ import { reloadKubeConfig } from '../k8s/client.js';
 import { getCurrentContext, listContexts, setContext, setNamespace } from '../k8s/context.js';
 import { K8sError } from '../k8s/errors.js';
 import { getActiveCluster, getActiveNamespaceInfo, listClusters, listNamespaces } from '../k8s/resources/cluster.js';
+import { getResource, listResources } from '../k8s/resources/index.js';
 import { getNode, listNodes } from '../k8s/resources/nodes.js';
 import { getSettings, updateSettings } from '../settings/store.js';
 import { runStartupChecks } from '../startup/checks.js';
@@ -57,6 +58,8 @@ const handlers: Handlers = {
     'clusters.list': () => listClusters(),
     'nodes.list': () => listNodes(),
     'nodes.get': ({ name }) => getNode(name),
+    'resources.list': (input) => listResources(input),
+    'resources.get': (input) => getResource(input),
     'kubeconfig.useDefault': async () => {
         const settings = updateSettings({ connection: { kubeconfigPath: null } });
         reloadKubeConfig();
