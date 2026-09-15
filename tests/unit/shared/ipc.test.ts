@@ -86,4 +86,16 @@ describe('IPC contract', () => {
                 .success,
         ).toBe(false);
     });
+
+    it('types the metrics series inputs and alert tones', () => {
+        expect(ipcSchemas['metrics.podSeries'].input.safeParse({ namespace: 'team-a', name: 'web-1' }).success).toBe(
+            true,
+        );
+        expect(ipcSchemas['metrics.podSeries'].input.safeParse({ name: 'web-1' }).success).toBe(false);
+        expect(ipcSchemas['metrics.nodeSeries'].input.safeParse({ name: '' }).success).toBe(false);
+        expect(ipcSchemas['metrics.alerts'].output.safeParse([{ tone: 'info', title: 't', detail: 'd' }]).success).toBe(
+            false,
+        );
+        expect(ipcSchemas['metrics.sparklines'].output.safeParse({ nodes: [], cpu: [], mem: [] }).success).toBe(true);
+    });
 });

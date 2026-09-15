@@ -29,6 +29,13 @@ const nodesMod = { listNodes: vi.fn(), getNode: vi.fn() };
 const generic = { listResources: vi.fn(), getResource: vi.fn() };
 const logsMod = { readPodLogSnapshot: vi.fn() };
 const eventsMod = { listEventsForObject: vi.fn() };
+const metricsMod = {
+    getSparklines: vi.fn(),
+    getWorkloadHealth: vi.fn(),
+    getPodSeries: vi.fn(),
+    getNodeSeries: vi.fn(),
+};
+const alertsMod = { listAlerts: vi.fn() };
 vi.mock('../../../src/main/updater.js', () => updater);
 vi.mock('../../../src/main/k8s/client.js', () => client);
 vi.mock('../../../src/main/k8s/context.js', () => context);
@@ -39,6 +46,8 @@ vi.mock('../../../src/main/k8s/resources/nodes.js', () => nodesMod);
 vi.mock('../../../src/main/k8s/resources/index.js', () => generic);
 vi.mock('../../../src/main/k8s/logs.js', () => logsMod);
 vi.mock('../../../src/main/k8s/resources/events.js', () => eventsMod);
+vi.mock('../../../src/main/k8s/resources/metrics.js', () => metricsMod);
+vi.mock('../../../src/main/k8s/alerts.js', () => alertsMod);
 
 const { registerHandlers } = await import('../../../src/main/ipc/index.js');
 const { ipcSchemas } = await import('../../../src/shared/ipc.js');
@@ -187,6 +196,8 @@ describe('registerHandlers', () => {
             version: 'v1',
             cpu: 4,
             memory: 7.8,
+            cpuUsed: 25,
+            memUsed: null,
             pods: 2,
             age: '3d',
             instanceType: '—',
@@ -215,6 +226,8 @@ describe('registerHandlers', () => {
             restarts: 0,
             age: '3d',
             node: 'n1',
+            cpu: 0,
+            mem: 0,
             cpuLimit: 0,
             memLimit: 0,
         };
@@ -248,6 +261,24 @@ describe('registerHandlers', () => {
             ev,
         ]);
         await expect(invoke('events.forObject', { kind: '', name: 'web-1' })).rejects.toThrow();
+    });
+
+    it('forwards the metrics channels and validates their inputs', async () => {
+        metricsMod.getSparklines.mockResolvedValue({ nodes: [1], cpu: [10], mem: [20] });
+        metricsMod.getWorkloadHealth.mockResolvedValue([{ t: 1, cpu: 10, mem: 20 }]);
+        metricsMod.getPodSeries.mockResolvedValue({ cpu: [1], mem: [2] });
+        metricsMod.getNodeSeries.mockResolvedValue({ cpu: [3], mem: [4] });
+        alertsMod.listAlerts.mockResolvedValue([{ tone: 'warn', title: 't', detail: 'd' }]);
+        await expect(invoke('metrics.sparklines', {})).resolves.toEqual({ nodes: [1], cpu: [10], mem: [20] });
+        await expect(invoke('metrics.workloadHealth', {})).resolves.toEqual([{ t: 1, cpu: 10, mem: 20 }]);
+        await expect(invoke('metrics.alerts', {})).resolves.toEqual([{ tone: 'warn', title: 't', detail: 'd' }]);
+        await expect(invoke('metrics.podSeries', { namespace: 'team-a', name: 'web-1' })).resolves.toEqual({
+            cpu: [1],
+            mem: [2],
+        });
+        expect(metricsMod.getPodSeries).toHaveBeenCalledWith('team-a', 'web-1');
+        await expect(invoke('metrics.nodeSeries', { name: 'n1' })).resolves.toEqual({ cpu: [3], mem: [4] });
+        await expect(invoke('metrics.podSeries', { name: 'web-1' })).rejects.toThrow();
     });
 
     it('resets to the default kubeconfig and reloads', async () => {

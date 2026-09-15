@@ -73,6 +73,8 @@ const pod: PodDetailModel = {
     restarts: 0,
     age: '1d',
     node: 'n1',
+    cpu: 0,
+    mem: 0,
     cpuLimit: 0,
     memLimit: 0,
     podIP: '10.0.0.1',
@@ -308,7 +310,7 @@ describe('ShellTab', () => {
 
 describe('OverviewTab', () => {
     it('renders metric placeholders, conditions, and every container with facts and probes', () => {
-        renderWithQuery(<OverviewTab pod={pod} />);
+        renderWithQuery(<OverviewTab name="web-1" namespace="team-a" pod={pod} />);
         expect(screen.getByText('CPU')).toBeInTheDocument();
         expect(screen.getAllByText('no metrics yet')).toHaveLength(2);
         const conditions = screen.getByTestId('conditions');
@@ -328,8 +330,18 @@ describe('OverviewTab', () => {
         expect(screen.getByRole('button', { name: 'Restart' })).toHaveAttribute('aria-disabled', 'true');
     });
 
+    it('shows the latest sampled usage with sparklines once series arrive', async () => {
+        invoke.mockResolvedValue({ cpu: [100, 250], mem: [60, 96] });
+        renderWithQuery(<OverviewTab name="web-1" namespace="team-a" pod={pod} />);
+        expect(await screen.findByText('250m')).toBeInTheDocument();
+        expect(screen.getByText('96Mi')).toBeInTheDocument();
+        expect(screen.getAllByText('current usage')).toHaveLength(2);
+        expect(screen.getByText('250m').closest('[data-slot="card"]')?.querySelector('svg')).not.toBeNull();
+        expect(invoke).toHaveBeenCalledWith('metrics.podSeries', { namespace: 'team-a', name: 'web-1' });
+    });
+
     it('renders empty states before the pod resolves', () => {
-        renderWithQuery(<OverviewTab pod={null} />);
+        renderWithQuery(<OverviewTab name="web-1" namespace="team-a" pod={null} />);
         expect(screen.getByText('No conditions reported.')).toBeInTheDocument();
         expect(screen.getByTestId('containers')).toHaveTextContent('0');
     });

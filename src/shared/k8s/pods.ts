@@ -21,6 +21,10 @@ export const podSchema = z.object({
     restarts: z.number().int().nonnegative(),
     age: z.string(),
     node: z.string(),
+    /** Current CPU usage in millicores from metrics-server; 0 when no sample exists yet. */
+    cpu: z.number(),
+    /** Current memory usage in MiB from metrics-server; 0 when no sample exists yet. */
+    mem: z.number(),
     /** Sum of container CPU limits in millicores; 0 when unset. */
     cpuLimit: z.number(),
     /** Sum of container memory limits in MiB; 0 when unset. */

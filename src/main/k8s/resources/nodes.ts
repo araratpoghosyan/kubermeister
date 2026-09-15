@@ -1,8 +1,10 @@
 import type { V1Node } from '@kubernetes/client-node';
+import type { Usage } from '../../../shared/k8s/metrics.js';
 import type { Node, NodeDetail } from '../../../shared/k8s/nodes.js';
 import { apis } from '../client.js';
 import { withK8s } from '../errors.js';
-import { age, cpuToCores, dash, memToGiB } from '../format.js';
+import { age, cpuToCores, cpuToMillicores, dash, memToGiB, memToMi } from '../format.js';
+import { ensureSampler, nodeUsage, percent } from '../sampler.js';
 import { countBy, nodeReady } from './cluster.js';
 
 const ROLE_LABEL_PREFIX = 'node-role.kubernetes.io/';
@@ -33,7 +35,8 @@ export function instanceType(node: V1Node): string {
     return '—';
 }
 
-export function toNode(node: V1Node, podsByNode: Map<string, number>, now = Date.now()): Node {
+/** `usage` is the latest metrics-server sample for the node; percentages are null without one. */
+export function toNode(node: V1Node, podsByNode: Map<string, number>, now = Date.now(), usage?: Usage): Node {
     const allocatable = node.status?.allocatable ?? node.status?.capacity ?? {};
     const name = node.metadata?.name ?? '';
     return {
@@ -43,16 +46,23 @@ export function toNode(node: V1Node, podsByNode: Map<string, number>, now = Date
         version: dash(node.status?.nodeInfo?.kubeletVersion),
         cpu: cpuToCores(allocatable.cpu),
         memory: memToGiB(allocatable.memory),
+        cpuUsed: usage ? percent(usage.cpu, cpuToMillicores(allocatable.cpu)) : null,
+        memUsed: usage ? percent(usage.mem, memToMi(allocatable.memory)) : null,
         pods: podsByNode.get(name) ?? 0,
         age: age(node.metadata?.creationTimestamp, now),
         instanceType: instanceType(node),
     };
 }
 
-export function toNodeDetail(node: V1Node, podsByNode: Map<string, number>, now = Date.now()): NodeDetail {
+export function toNodeDetail(
+    node: V1Node,
+    podsByNode: Map<string, number>,
+    now = Date.now(),
+    usage?: Usage,
+): NodeDetail {
     const info = node.status?.nodeInfo;
     return {
-        ...toNode(node, podsByNode, now),
+        ...toNode(node, podsByNode, now, usage),
         conditions: (node.status?.conditions ?? []).map((c) => ({
             type: c.type,
             status: c.status,
@@ -76,7 +86,8 @@ async function podsPerNode(): Promise<Map<string, number>> {
 export function listNodes(): Promise<Node[]> {
     return withK8s('nodes.list', async () => {
         const [res, podsByNode] = await Promise.all([apis().core.listNode(), podsPerNode()]);
-        return res.items.map((node) => toNode(node, podsByNode));
+        ensureSampler();
+        return res.items.map((node) => toNode(node, podsByNode, Date.now(), nodeUsage(node.metadata?.name ?? '')));
     });
 }
 
@@ -85,6 +96,7 @@ export function getNode(name: string): Promise<NodeDetail | null> {
     return withK8s('nodes.get', async () => {
         const [res, podsByNode] = await Promise.all([apis().core.listNode(), podsPerNode()]);
         const node = res.items.find((n) => n.metadata?.name === name);
-        return node ? toNodeDetail(node, podsByNode) : null;
+        ensureSampler();
+        return node ? toNodeDetail(node, podsByNode, Date.now(), nodeUsage(name)) : null;
     });
 }

@@ -27,6 +27,11 @@ export const IPC_CHANNELS = [
     'resources.get',
     'pods.logSnapshot',
     'events.forObject',
+    'metrics.sparklines',
+    'metrics.workloadHealth',
+    'metrics.alerts',
+    'metrics.podSeries',
+    'metrics.nodeSeries',
 ] as const;
 
 export const SUBSCRIPTION_CHANNELS = ['update.state'] as const;

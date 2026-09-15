@@ -1,6 +1,7 @@
 import type { KubeContext } from '../../shared/k8s/contexts.js';
 import { updateSettings } from '../settings/store.js';
 import { getActiveNamespace, invalidateApis, kubeConfig, setActiveNamespace } from './client.js';
+import { resetHistory } from './sampler.js';
 
 function toKubeContext(
     name: string,
@@ -38,6 +39,8 @@ export function setContext(name: string): KubeContext {
     if (!ctx) throw new Error(`Unknown context: ${name}`);
     kc.setCurrentContext(name);
     invalidateApis();
+    // Sampled usage belongs to the previous cluster.
+    resetHistory();
     setActiveNamespace(ctx.namespace ?? null);
     updateSettings({ session: { lastContext: name, lastNamespace: ctx.namespace ?? null } });
     return toKubeContext(ctx.name, ctx.cluster, ctx.user, ctx.namespace, name);

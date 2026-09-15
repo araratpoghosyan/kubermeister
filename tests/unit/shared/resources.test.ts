@@ -15,6 +15,8 @@ const podRow = {
     restarts: 0,
     age: '3d',
     node: 'n1',
+    cpu: 0,
+    mem: 0,
     cpuLimit: 500,
     memLimit: 128,
 };

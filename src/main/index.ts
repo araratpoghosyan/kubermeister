@@ -2,6 +2,7 @@ import { app, BrowserWindow, shell } from 'electron';
 import { join } from 'node:path';
 import { registerHandlers } from './ipc/index.js';
 import { registerStreamHandlers } from './ipc/streams.js';
+import { stopSampler } from './k8s/sampler.js';
 import { isExternalWebUrl, isInternalNavigation } from './security.js';
 import { startUpdater } from './updater.js';
 
@@ -61,6 +62,8 @@ void app.whenReady().then(() => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
 });
+
+app.on('will-quit', () => stopSampler());
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();

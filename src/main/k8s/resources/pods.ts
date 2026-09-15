@@ -8,9 +8,11 @@ import type {
     PodProbe,
     PodStatus,
 } from '../../../shared/k8s/pods.js';
+import type { Usage } from '../../../shared/k8s/metrics.js';
 import { apis, listItems, readOrNull, resolveObjectNamespace } from '../client.js';
 import { withK8s } from '../errors.js';
 import { age, ago, cpuToMillicores, dash, memToMi } from '../format.js';
+import { ensureSampler, podUsage } from '../sampler.js';
 
 /*
  * Pure transforms first, exported for tests and for the watch stream; thin readers at the end.
@@ -36,7 +38,8 @@ export function derivePodStatus(pod: V1Pod): PodStatus {
     }
 }
 
-export function toPod(pod: V1Pod, now = Date.now()): Pod {
+/** `usage` is the latest metrics-server sample for the pod; zero usage when there is none yet. */
+export function toPod(pod: V1Pod, now = Date.now(), usage?: Usage): Pod {
     const statuses = pod.status?.containerStatuses ?? [];
     const containers = pod.spec?.containers ?? [];
     return {
@@ -47,6 +50,8 @@ export function toPod(pod: V1Pod, now = Date.now()): Pod {
         restarts: statuses.reduce((sum, cs) => sum + cs.restartCount, 0),
         age: age(pod.metadata?.creationTimestamp, now),
         node: dash(pod.spec?.nodeName),
+        cpu: usage?.cpu ?? 0,
+        mem: usage?.mem ?? 0,
         cpuLimit: containers.reduce((sum, c) => sum + cpuToMillicores(c.resources?.limits?.cpu), 0),
         memLimit: containers.reduce((sum, c) => sum + memToMi(c.resources?.limits?.memory), 0),
     };
@@ -117,10 +122,10 @@ export function toPairs(record?: Record<string, string>): Array<[string, string]
     return Object.entries(record ?? {}).filter(([key]) => key !== LAST_APPLIED);
 }
 
-export function toPodDetail(pod: V1Pod, now = Date.now()): PodDetail {
+export function toPodDetail(pod: V1Pod, now = Date.now(), usage?: Usage): PodDetail {
     const statuses = new Map((pod.status?.containerStatuses ?? []).map((cs) => [cs.name, cs]));
     return {
-        ...toPod(pod, now),
+        ...toPod(pod, now, usage),
         podIP: dash(pod.status?.podIP),
         hostIP: dash(pod.status?.hostIP),
         qos: dash(pod.status?.qosClass),
@@ -133,6 +138,12 @@ export function toPodDetail(pod: V1Pod, now = Date.now()): PodDetail {
     };
 }
 
+/** Latest sampled usage for a pod object; also makes sure sampling is running for the next read. */
+export function usageFor(pod: V1Pod): Usage | undefined {
+    ensureSampler();
+    return podUsage(pod.metadata?.namespace ?? 'default', pod.metadata?.name ?? '');
+}
+
 export function listPods(namespace?: string): Promise<Pod[]> {
     return withK8s('resources.list', async () => {
         const { items } = await listItems(
@@ -140,7 +151,7 @@ export function listPods(namespace?: string): Promise<Pod[]> {
             (ns) => apis().core.listNamespacedPod({ namespace: ns }),
             () => apis().core.listPodForAllNamespaces(),
         );
-        return items.map((pod) => toPod(pod));
+        return items.map((pod) => toPod(pod, Date.now(), usageFor(pod)));
     });
 }
 
@@ -154,6 +165,6 @@ export function getPod(name: string, namespace?: string): Promise<PodDetail | nu
         const ns = resolveObjectNamespace(namespace);
         if (!ns) return null;
         const pod = await readOrNull(() => apis().core.readNamespacedPod({ name, namespace: ns }));
-        return pod ? toPodDetail(pod) : null;
+        return pod ? toPodDetail(pod, Date.now(), usageFor(pod)) : null;
     });
 }

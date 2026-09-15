@@ -22,7 +22,12 @@ function PodDetailPage() {
         {
             label: 'OBSERVE',
             items: [
-                { id: 'overview', label: 'Overview', icon: HeartIcon, content: <OverviewTab pod={pod} /> },
+                {
+                    id: 'overview',
+                    label: 'Overview',
+                    icon: HeartIcon,
+                    content: <OverviewTab name={name} namespace={namespace} pod={pod} />,
+                },
                 {
                     id: 'logs',
                     label: 'Logs',

@@ -3,7 +3,7 @@ import type { Kind } from '../../shared/k8s/registry.js';
 import type { RowOf } from '../../shared/k8s/resources.js';
 import { streamSchemas, type StreamController, type StreamSend, type WatchEventOf } from '../../shared/streams.js';
 import { apis, kubeConfig, resolveNamespace } from './client.js';
-import { toPod } from './resources/pods.js';
+import { toPod, usageFor } from './resources/pods.js';
 
 /** How long to wait before restarting an informer after its watch connection failed. */
 export const WATCH_RETRY_MS = 5_000;
@@ -20,7 +20,7 @@ const WATCH_SOURCES: { Pod: WatchSource<'Pod', V1Pod> } = {
         path: (ns) => (ns ? `/api/v1/namespaces/${ns}/pods` : '/api/v1/pods'),
         list: (ns) =>
             ns ? () => apis().core.listNamespacedPod({ namespace: ns }) : () => apis().core.listPodForAllNamespaces(),
-        toRow: (pod) => toPod(pod),
+        toRow: (pod) => toPod(pod, Date.now(), usageFor(pod)),
     },
 };
 

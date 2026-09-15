@@ -76,7 +76,7 @@ Body: why the change is needed, what a reader of the history cannot learn from t
 - **Design system:** screens are compositions of templates, not bespoke markup. Lists render
   through `ResourceListPage` (`src/renderer/components/templates`) with columns from the
   `list-columns` factories (`nameColumn`, `statusColumn` with the kind's tone map, `ageColumn`,
-  `readyRatioColumn`, `textColumn`); details render through `ResourceDetail`: the shared header over a
+  `readyRatioColumn`, `textColumn`, `meterColumn` for usage percentages); details render through `ResourceDetail`: the shared header over a
   left rail of tabs in labeled groups (OBSERVE, INSPECT, CONNECT), built from the `overviewTab`,
   `labelsTab` and `eventsTab` factories plus bespoke tabs, with `fill` for panels that scroll
   themselves and `keepMounted` for panels holding live state. Cards inside tabs use `DetailCard`,
@@ -101,6 +101,12 @@ Body: why the change is needed, what a reader of the history cannot learn from t
   `src/renderer/lib/pod-streams.ts` with the log buffer capped at 2,000 lines. The Logs tab shows a
   one-shot `pods.logSnapshot` read until the user turns Live on, then follows the stream. Object
   events come from `events.forObject` (`src/main/k8s/resources/events.ts`), newest first.
+- **Usage metrics** come from metrics-server through an in-memory sampler (`src/main/k8s/sampler.ts`):
+  every 12 s it reads pod and node usage plus the node list and keeps bounded ring buffers for the
+  cluster aggregate, each node and up to 40 requested pods. Readers start it lazily, a context
+  switch resets it and quit stops it. Pod and node rows take their `cpu`/`mem` and `cpuUsed`/
+  `memUsed` from the latest sample so listed and watched rows agree; no metrics-server means zero
+  usage and empty series, never an error. Alerts (`alerts.ts`) derive from cluster state, cluster-wide.
 - **Resource reads** (`src/main/k8s/resources/*`) are pure transforms from Kubernetes objects to
   view models, exported and unit tested on their own, plus thin readers that fetch and delegate.
   Keep it that way so a watch stream can feed the same transforms later.
