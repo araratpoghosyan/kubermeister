@@ -79,7 +79,10 @@ Body: why the change is needed, what a reader of the history cannot learn from t
   reload or destroy. Lists stay live through `resources.watch` (`src/main/k8s/watch.ts`, the
   client's informer, same row transforms as the list) and `useWatchedList` in
   `src/renderer/lib/watch.ts`, which applies events into the list query's cache. Prefer a watch
-  over polling for anything that changes on its own.
+  over polling for anything that changes on its own. Pod streams (`src/main/k8s/logs.ts`,
+  `exec.ts`, `port-forward.ts`) resolve their target through `pod-target.ts` and report a missing
+  pod as an error followed by end rather than throwing; the renderer side lives in
+  `src/renderer/lib/pod-streams.ts` with the log buffer capped at 2,000 lines.
 - **Resource reads** (`src/main/k8s/resources/*`) are pure transforms from Kubernetes objects to
   view models, exported and unit tested on their own, plus thin readers that fetch and delegate.
   Keep it that way so a watch stream can feed the same transforms later.

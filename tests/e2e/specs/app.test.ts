@@ -101,3 +101,31 @@ test('keeps the pod list live: a deleted pod disappears and its replacement appe
     await expect(replacement).toContainText('Running', { timeout: 60_000 });
     expect(await replacement.getAttribute('data-pod')).not.toBe(victim);
 });
+
+test('follows pod logs, runs a command in the pod shell, and starts a port-forward', async () => {
+    const { window } = launched;
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Pods' }).click();
+    await window.getByTestId('pods-table').locator('[data-pod^="web-"]').getByRole('link').click();
+    await expect(window.getByTestId('pod-detail')).toBeVisible();
+
+    await window.getByRole('tab', { name: 'Logs' }).click();
+    const viewer = window.getByTestId('log-viewer');
+    await expect(viewer).toHaveAttribute('data-live', 'true', { timeout: 30_000 });
+    await expect(viewer.getByRole('list', { name: 'Log lines' })).toContainText('km-e2e-marker');
+
+    await window.getByRole('tab', { name: 'Shell' }).click();
+    const terminal = window.getByTestId('terminal-host');
+    await expect(terminal.locator('.xterm')).toBeVisible();
+    await terminal.click();
+    await window.keyboard.type('echo km-shell-$((6*7))\n');
+    await expect(terminal).toContainText('km-shell-42', { timeout: 30_000 });
+
+    await window.getByRole('tab', { name: 'Network' }).click();
+    await window.getByRole('textbox', { name: 'Local port' }).fill('38080');
+    await window.getByRole('button', { name: 'Start' }).click();
+    await expect(window.getByTestId('port-forward-status')).toContainText('Listening on 127.0.0.1:38080 → 8080', {
+        timeout: 15_000,
+    });
+    await window.getByRole('button', { name: 'Stop' }).click();
+    await expect(window.getByRole('button', { name: 'Start' })).toBeVisible();
+});
