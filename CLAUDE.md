@@ -14,8 +14,8 @@ Desktop Kubernetes client (Electron).
 - `npm run package` builds the current OS's installers into `release/` (`package:dir` for a fast
   unpacked bundle). The artifact name pattern in `electron-builder.yml` is load-bearing for the
   release workflows; change both together.
-- After every change run `npm run lint`, `npm run typecheck`, and `npm run format`. ESLint does not
-  type-check, and Prettier covers the whole repo including Markdown and JSON.
+- After every change run `npm run lint`, `npm run typecheck`, `npm run format`, and `npm run test`.
+  ESLint does not type-check, and Prettier covers the whole repo including Markdown and JSON.
 
 ## Git workflow
 
@@ -83,6 +83,28 @@ never export an empty `CSC_LINK`. In-app updates: `src/main/updater.ts` (electro
 feed electron-builder embeds at package time, so each app only follows its own channel; macOS
 updates need the `zip` target next to the dmg. Icons regenerate from `resources/icon.svg` and
 `resources/icon-tip.svg` with `resources/build-icon.sh`.
+
+## Testing
+
+- **Tests come first.** A feature is specified by its tests before it is wired in, and every
+  feature PR ships with them. Behaviors include error paths, not only the happy path.
+- **Unit tests: Vitest** (`vitest.config.ts`, Node environment), `tests/unit/` mirrors `src/`
+  (`tests/unit/main/updater.test.ts` tests `src/main/updater.ts`). Main-process modules mock
+  `electron` and other runtime packages at the module boundary with `vi.mock`; shared schemas are
+  tested directly. Pure renderer logic lives in `src/renderer/lib` so Vitest can reach it without a
+  DOM.
+- **Coverage** (`npm run test:coverage`, V8) covers `src/main` and `src/shared` except the window
+  bootstrap in `src/main/index.ts`. Thresholds in `vitest.config.ts` fail CI when missed and only
+  ever go up. Bootstrap, preload and DOM code are covered end to end.
+- **No test ever touches a real cluster or the developer's kubeconfig.** Unit tests mock the
+  Kubernetes client at the module boundary and never open a network connection. End-to-end tests
+  run against a disposable k3s container started by Testcontainers, with a kubeconfig written for
+  that container only and a throwaway settings directory that pins it; `~/.kube/config` and
+  `$KUBECONFIG` are never read. A guard in the end-to-end setup fails the whole suite if the active
+  context is anything but the test cluster's.
+- **End to end: Playwright** against the built app and that k3s container, ubuntu only in CI
+  (Docker needed). Arrives with the Kubernetes client.
+- Run one file: `npx vitest run tests/unit/main/updater.test.ts`. Watch: `npm run test:watch`.
 
 ## Code style
 
