@@ -5,7 +5,9 @@ const bridge = vi.fn();
 vi.stubGlobal('window', { km: { invoke: bridge } });
 
 describe('renderer invoke', () => {
-    afterEach(() => bridge.mockReset());
+    afterEach(() => {
+        bridge.mockReset();
+    });
 
     it('unwraps the ok envelope into the data', async () => {
         bridge.mockResolvedValue({ ok: true, data: { name: 'Kubermeister', version: '0.1.1' } });

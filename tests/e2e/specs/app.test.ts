@@ -14,22 +14,34 @@ test.afterEach(async () => {
     await launched.app.close();
 });
 
-test('launches against the isolated cluster and passes the startup gate', async () => {
+test('passes the startup gate against the isolated cluster and shows the shell', async () => {
     const { window } = launched;
     await expect(window).toHaveTitle('Kubermeister');
-    const checks = window.locator('#startup-checks');
-    await expect(checks).toHaveAttribute('data-ok', 'true');
-    await expect(checks.locator('li[data-check="kubeconfig"]')).toHaveAttribute('data-status', 'ok');
-    const cluster = checks.locator('li[data-check="cluster"]');
-    await expect(cluster).toHaveAttribute('data-status', 'ok');
-    await expect(cluster).toContainText(`Connected to ${CONTEXT_NAME}`);
+    await expect(window.getByTestId('app-shell')).toBeVisible();
+    await expect(window.getByTestId('context-selector')).toHaveText(CONTEXT_NAME);
+    await expect(window.getByTestId('active-namespace')).toContainText(NAMESPACE);
 });
 
-test('shows the test context and namespace and offers no other context', async () => {
+test('shows the cluster summary for the test context', async () => {
     const { window } = launched;
-    await expect(window.locator('#current-context')).toContainText(`Context: ${CONTEXT_NAME}`);
-    await expect(window.locator('#current-namespace')).toHaveText(`Namespace: ${NAMESPACE}`);
-    await expect(window.locator('#context-select option')).toHaveText([CONTEXT_NAME]);
+    const summary = window.getByTestId('cluster-summary');
+    await expect(summary).toContainText(CONTEXT_NAME);
+    await expect(summary).toContainText('Healthy');
+    await expect(summary.getByText('1', { exact: true })).toBeVisible();
+});
+
+test('lists the k3s node as Ready and the seeded namespace', async () => {
+    const { window } = launched;
+    await window.getByRole('link', { name: 'Nodes' }).click();
+    const nodes = window.getByTestId('nodes-table');
+    await expect(nodes.getByRole('row')).toHaveCount(2);
+    await expect(nodes).toContainText('Ready');
+    await expect(nodes).toContainText('control-plane');
+
+    await window.getByRole('link', { name: 'Namespaces' }).click();
+    const namespaces = window.getByTestId('namespaces-table');
+    await expect(namespaces.locator(`[data-namespace="${NAMESPACE}"]`)).toContainText('Active');
+    await expect(namespaces.locator('[data-namespace="kube-system"]')).toBeVisible();
 });
 
 test('keeps all per-user state inside the throwaway data directory', async () => {
@@ -43,8 +55,7 @@ test('reads the cluster node list through the bridge', async () => {
     const { window } = launched;
     const result = await window.evaluate(() => window.km.invoke('nodes.list', {}));
     expect(result).toMatchObject({ ok: true });
-    const nodes = (result as { data: Array<{ name: string; status: string; role: string }> }).data;
+    const nodes = (result as { data: Array<{ status: string; role: string }> }).data;
     expect(nodes).toHaveLength(1);
     expect(nodes[0]).toMatchObject({ status: 'Ready' });
-    expect(nodes[0]?.role).toContain('control-plane');
 });

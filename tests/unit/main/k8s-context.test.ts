@@ -17,7 +17,9 @@ async function load() {
 }
 
 describe('contexts', () => {
-    beforeEach(() => updateSettings.mockReset());
+    beforeEach(() => {
+        updateSettings.mockReset();
+    });
 
     it('lists every context with its cluster, user, namespace and current flag', async () => {
         const { listContexts } = await load();
