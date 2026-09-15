@@ -82,3 +82,28 @@ type: Opaque
 data:
   # "super-secret-value"; the app must never read or render this value.
   password: c3VwZXItc2VjcmV0LXZhbHVl
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: team-quota
+  namespace: km-e2e
+spec:
+  hard:
+    pods: '20'
+    requests.cpu: '4'
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: team-limits
+  namespace: km-e2e
+spec:
+  limits:
+    - type: Container
+      min:
+        cpu: 10m
+      default:
+        cpu: 500m
+      max:
+        cpu: '2'
