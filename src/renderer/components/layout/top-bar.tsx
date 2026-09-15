@@ -1,5 +1,4 @@
 import { Fragment, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { useRouter, useRouterState } from '@tanstack/react-router';
 import { ArrowLeftIcon, ArrowRightIcon, CheckIcon, ChevronDownIcon, ChevronRightIcon, TagIcon } from 'lucide-react';
 import { StatusDot } from '@/components/data-display/status-dot';
@@ -14,9 +13,11 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { invoke } from '@/lib/ipc';
+import { ComingSoonButton } from '@/components/coming-soon-button';
 import { breadcrumbsForPath } from '@/lib/nav';
-import { invalidateClusterQueries, useIpcQuery } from '@/lib/query';
+import { useIpcQuery } from '@/lib/query';
+import { selectNamespace, switchContext } from '@/lib/scope';
+import { useRefreshIntervalMs } from '@/lib/settings';
 import { CLUSTER_TONE, type StatusTone } from '@/lib/status';
 import { cn } from '@/lib/utils';
 import { NavLink } from './nav-link';
@@ -66,6 +67,9 @@ export function TopBar() {
                 })}
             </nav>
             <div className="flex-1" />
+            <ComingSoonButton size="sm" tip="Creating resources arrives with the Create screen">
+                Create resource
+            </ComingSoonButton>
         </header>
     );
 }
@@ -78,9 +82,8 @@ const HEALTH_TITLE = {
 
 /** Switch kube-context; the dot carries the active cluster's health. */
 export function ContextSelector() {
-    const queryClient = useQueryClient();
     const contexts = useIpcQuery('contexts.list', {});
-    const cluster = useIpcQuery('cluster.active', {}, { refetchInterval: 15_000 });
+    const cluster = useIpcQuery('cluster.active', {}, { refetchInterval: useRefreshIntervalMs() });
     const current = contexts.data?.find((c) => c.current);
     const health = cluster.data
         ? { tone: CLUSTER_TONE[cluster.data.status], title: HEALTH_TITLE[cluster.data.status] }
@@ -91,9 +94,7 @@ export function ContextSelector() {
         if (name === current?.name) return;
         setSwitching(true);
         try {
-            await invoke('context.set', { name });
-            await queryClient.invalidateQueries({ queryKey: ['contexts.list'] });
-            await invalidateClusterQueries();
+            await switchContext(name);
         } finally {
             setSwitching(false);
         }
@@ -136,11 +137,10 @@ export function ContextSelector() {
     );
 }
 
-const ALL_NAMESPACES = 'All Namespaces';
+const ALL_NAMESPACES = 'All namespaces';
 
 /** Scope namespaced lists to one namespace or all, with a filter box and pod counts. */
 export function NamespaceSelector() {
-    const queryClient = useQueryClient();
     const namespaces = useIpcQuery('namespaces.list', {});
     const active = useIpcQuery('namespace.active', {});
     const [open, setOpen] = useState(false);
@@ -148,9 +148,7 @@ export function NamespaceSelector() {
 
     const select = async (namespace: string | null) => {
         setOpen(false);
-        await invoke('namespace.set', { namespace });
-        await queryClient.invalidateQueries({ queryKey: ['namespace.active'] });
-        await invalidateClusterQueries();
+        await selectNamespace(namespace);
     };
 
     return (

@@ -84,7 +84,9 @@ Body: why the change is needed, what a reader of the history cannot learn from t
   `PropertyGrid`, `KeyValueCard` and `DetailMetrics`. Status always goes through `StatusBadge`/`StatusDot` with a `StatusTone` from
   the per-kind maps in `src/renderer/lib/status.ts`. Navigation (sidebar, breadcrumbs) derives from
   `DOMAINS` in `src/renderer/lib/nav.ts`, typed against the generated route tree, so a new route is
-  added there once. Theme tokens live in `src/renderer/styles/globals.css`; `ThemeProvider` toggles
+  added there once; `ALL_DOMAINS` adds Settings, which the sidebar renders in its footer next to the
+  `⌘K` command palette (`components/layout/command-palette.tsx`). Live queries take their poll
+  cadence from `useRefreshIntervalMs` (the `data.refreshIntervalSec` setting), never a literal. Theme tokens live in `src/renderer/styles/globals.css`; `ThemeProvider` toggles
   the `dark`/`light` root class and persists under `km-theme`. `cn` in `lib/utils.ts` teaches
   tailwind-merge the theme font sizes (`text-body`, `text-meta`, ...) so they are not merged away as
   colors. `@tanstack/react-table` stays on v8 (v9 is a different API; Dependabot ignores the major).
@@ -125,7 +127,10 @@ Body: why the change is needed, what a reader of the history cannot learn from t
   through `withK8s` (timeout plus `[kind]`-prefixed `K8sError`). No `kubectl` dependency; the
   client library handles exec credential plugins itself.
 - **Settings** (`src/shared/settings.ts`, `src/main/settings/store.ts`) are a versioned JSON file
-  in Electron's `userData`, so the stable and tip apps never share state. The renderer can never
+  in Electron's `userData`, so the stable and tip apps never share state. The settings screen at
+  `/settings` edits them through `settings.set`; the application menu (`src/main/menu.ts`) opens it
+  with `Cmd+,` on macOS by pushing `open-settings`. Theme lives in renderer `localStorage`, not here,
+  because it must apply before first paint. The renderer can never
   set the kubeconfig path; that goes through the native dialog channel `kubeconfig.pick`.
   `KUBERMEISTER_USER_DATA` redirects `userData`, which is how tests isolate the app.
 

@@ -156,3 +156,30 @@ test('follows pod logs, runs a command in the pod shell, and starts a port-forwa
     await window.getByRole('button', { name: 'Stop' }).click();
     await expect(window.getByRole('button', { name: 'Start' })).toBeVisible();
 });
+
+test('opens the command palette from the keyboard and jumps to a screen', async () => {
+    const { window } = launched;
+    await window.keyboard.press(process.platform === 'darwin' ? 'Meta+k' : 'Control+k');
+    const palette = window.getByRole('dialog', { name: 'Quick actions' });
+    await expect(palette).toBeVisible();
+    await expect(palette.getByRole('option', { name: 'km-e2e-ctx' })).toBeVisible();
+    await palette.getByPlaceholder('Switch cluster, namespace or resource…').fill('nodes');
+    await palette.getByRole('option', { name: 'Nodes' }).click();
+    await expect(window.getByTestId('nodes-table')).toBeVisible();
+    await expect(palette).toBeHidden();
+});
+
+test('opens Settings from the sidebar and switches the theme', async () => {
+    const { window } = launched;
+    await window
+        .getByTestId('sidebar')
+        .getByRole('link', { name: /Settings/ })
+        .click();
+    const page = window.getByTestId('settings-page');
+    await expect(page).toContainText('Preferences for this Kubermeister install.');
+    await expect(page.getByTestId('kubeconfig-path')).toContainText('.kubeconfig');
+    await page.getByRole('radio', { name: /Light/ }).click();
+    await expect(window.locator('html')).toHaveClass(/light/);
+    await page.getByRole('radio', { name: /Dark/ }).click();
+    await expect(window.locator('html')).toHaveClass(/dark/);
+});

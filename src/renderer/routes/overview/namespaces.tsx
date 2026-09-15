@@ -6,6 +6,7 @@ import { StatusBadge } from '@/components/data-display/status-badge';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { nameColumn, textColumn } from '@/components/templates/list-columns';
 import { useIpcQuery } from '@/lib/query';
+import { useRefreshIntervalMs } from '@/lib/settings';
 import { NAMESPACE_TONE } from '@/lib/status';
 
 export const Route = createFileRoute('/overview/namespaces')({ component: NamespacesPage });
@@ -27,7 +28,7 @@ const columns: ColumnDef<Namespace>[] = [
 ];
 
 function NamespacesPage() {
-    const namespaces = useIpcQuery('namespaces.list', {}, { refetchInterval: 15_000 });
+    const namespaces = useIpcQuery('namespaces.list', {}, { refetchInterval: useRefreshIntervalMs() });
     return (
         <ResourceListPage
             icon={BoxesIcon}

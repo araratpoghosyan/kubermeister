@@ -6,13 +6,14 @@ import { ComingSoonButton } from '@/components/coming-soon-button';
 import { DetailMetrics } from '@/components/templates/detail-cards';
 import { ContainerRow } from '@/components/pod/container-row';
 import { useIpcQuery } from '@/lib/query';
+import { useRefreshIntervalMs } from '@/lib/settings';
 import { cn } from '@/lib/utils';
 
 const last = (series: number[]) => series.at(-1);
 
 /** Pod-detail Overview tab: live CPU and memory usage, conditions, and per-container detail. */
 export function OverviewTab({ name, namespace, pod }: { name: string; namespace: string; pod?: PodDetail | null }) {
-    const series = useIpcQuery('metrics.podSeries', { namespace, name }, { refetchInterval: 12_000 });
+    const series = useIpcQuery('metrics.podSeries', { namespace, name }, { refetchInterval: useRefreshIntervalMs() });
     const cpu = series.data?.cpu ?? [];
     const mem = series.data?.mem ?? [];
     const conditions = pod?.conditions ?? [];

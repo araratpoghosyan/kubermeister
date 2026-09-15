@@ -124,7 +124,7 @@ export function textColumn<T>(
 }
 
 /**
- * The Namespace column, for "All Namespaces" views where same-named objects in different namespaces
+ * The Namespace column, for "All namespaces" views where same-named objects in different namespaces
  * would otherwise be indistinguishable. `ResourceListPage` auto-injects this when rows span multiple
  * namespaces; screens with a bespoke namespace column keep their own.
  */

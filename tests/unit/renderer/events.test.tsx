@@ -60,7 +60,7 @@ describe('ObjectEvents', () => {
     });
 
     it('fetches the object events through the bridge and lists them without the object column', async () => {
-        invoke.mockResolvedValue(events);
+        invoke.mockImplementation(async (channel: string) => (channel === 'events.forObject' ? events : undefined));
         renderWithQuery(<ObjectEvents kind="Pod" name="web-1" namespace="team-a" />);
         expect(screen.getByText('Loading events…')).toBeInTheDocument();
         await waitFor(() => expect(screen.getByTestId('object-events')).toHaveTextContent('BackOff'));

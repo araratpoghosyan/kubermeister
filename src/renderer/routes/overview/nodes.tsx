@@ -5,6 +5,7 @@ import type { Node } from '../../../shared/k8s/nodes';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, meterColumn, nameColumn, statusColumn, textColumn } from '@/components/templates/list-columns';
 import { useIpcQuery } from '@/lib/query';
+import { useRefreshIntervalMs } from '@/lib/settings';
 import { NODE_TONE } from '@/lib/status';
 import { cn } from '@/lib/utils';
 
@@ -40,7 +41,7 @@ const columns: ColumnDef<Node>[] = [
 ];
 
 function NodesPage() {
-    const nodes = useIpcQuery('nodes.list', {}, { refetchInterval: 15_000 });
+    const nodes = useIpcQuery('nodes.list', {}, { refetchInterval: useRefreshIntervalMs() });
     return (
         <ResourceListPage
             icon={ServerIcon}
