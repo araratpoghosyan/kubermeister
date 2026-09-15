@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS, mergeSettings } from '../../../src/shared/settings';
+import { K8sError } from '../../../src/main/k8s/errors';
 
 type Listener = (event: unknown, input: unknown) => Promise<unknown>;
 const registered = new Map<string, Listener>();
@@ -18,21 +19,36 @@ const client = { reloadKubeConfig: vi.fn() };
 const context = { listContexts: vi.fn(), getCurrentContext: vi.fn(), setContext: vi.fn(), setNamespace: vi.fn() };
 const store = { getSettings: vi.fn(), updateSettings: vi.fn() };
 const startup = { runStartupChecks: vi.fn() };
+const resources = {
+    listNamespaces: vi.fn(),
+    getActiveNamespaceInfo: vi.fn(),
+    getActiveCluster: vi.fn(),
+    listClusters: vi.fn(),
+};
+const nodesMod = { listNodes: vi.fn(), getNode: vi.fn() };
 vi.mock('../../../src/main/updater.js', () => updater);
 vi.mock('../../../src/main/k8s/client.js', () => client);
 vi.mock('../../../src/main/k8s/context.js', () => context);
 vi.mock('../../../src/main/settings/store.js', () => store);
 vi.mock('../../../src/main/startup/checks.js', () => startup);
+vi.mock('../../../src/main/k8s/resources/cluster.js', () => resources);
+vi.mock('../../../src/main/k8s/resources/nodes.js', () => nodesMod);
 
 const { registerHandlers } = await import('../../../src/main/ipc/index.js');
 const { ipcSchemas } = await import('../../../src/shared/ipc.js');
 
 const alpha = { name: 'alpha', cluster: 'c', user: 'u', namespace: 'team-a', current: true };
 
-async function invoke(channel: string, input: unknown): Promise<unknown> {
+async function invokeRaw(channel: string, input: unknown): Promise<unknown> {
     const listener = registered.get(channel);
     if (!listener) throw new Error(`no handler for ${channel}`);
     return listener({}, input);
+}
+
+/** Unwraps the `ok: true` envelope; failures surface as the envelope itself for inspection. */
+async function invoke(channel: string, input: unknown): Promise<unknown> {
+    const result = (await invokeRaw(channel, input)) as { ok: boolean; data?: unknown; error?: unknown };
+    return result.ok ? result.data : result;
 }
 
 describe('registerHandlers', () => {
@@ -129,6 +145,59 @@ describe('registerHandlers', () => {
         await expect(invoke('kubeconfig.pick', {})).resolves.toEqual({ path: null });
         expect(store.updateSettings).not.toHaveBeenCalled();
         expect(client.reloadKubeConfig).not.toHaveBeenCalled();
+    });
+
+    it('wraps successes in the ok envelope', async () => {
+        await expect(invokeRaw('settings.get', {})).resolves.toEqual({ ok: true, data: DEFAULT_SETTINGS });
+    });
+
+    it('turns a classified cluster failure into an ok:false envelope instead of rejecting', async () => {
+        nodesMod.listNodes.mockRejectedValue(new K8sError('forbidden', 'Access denied (RBAC).', 'nodes.list'));
+        await expect(invokeRaw('nodes.list', {})).resolves.toEqual({
+            ok: false,
+            error: { kind: 'forbidden', detail: 'Access denied (RBAC).', op: 'nodes.list' },
+        });
+    });
+
+    it('still rejects on unexpected exceptions', async () => {
+        nodesMod.listNodes.mockRejectedValue(new TypeError('bug'));
+        await expect(invokeRaw('nodes.list', {})).rejects.toThrow('bug');
+    });
+
+    it('forwards the cluster, namespace and node channels', async () => {
+        const namespace = { name: 'team-a', pods: 2, tone: 'accent' };
+        const clusterInfo = {
+            name: 'alpha',
+            nodes: 1,
+            status: 'Healthy',
+            version: '1.36.4',
+            provider: 'k3s',
+            region: '—',
+        };
+        const nodeRow = {
+            name: 'n1',
+            status: 'Ready',
+            role: 'worker',
+            version: 'v1',
+            cpu: 4,
+            memory: 7.8,
+            pods: 2,
+            age: '3d',
+            instanceType: '—',
+        };
+        resources.listNamespaces.mockResolvedValue([namespace]);
+        resources.getActiveNamespaceInfo.mockResolvedValue(namespace);
+        resources.getActiveCluster.mockResolvedValue(clusterInfo);
+        resources.listClusters.mockResolvedValue([clusterInfo]);
+        nodesMod.listNodes.mockResolvedValue([nodeRow]);
+        nodesMod.getNode.mockResolvedValue(null);
+        await expect(invoke('namespaces.list', {})).resolves.toEqual([namespace]);
+        await expect(invoke('namespace.active', {})).resolves.toEqual(namespace);
+        await expect(invoke('cluster.active', {})).resolves.toEqual(clusterInfo);
+        await expect(invoke('clusters.list', {})).resolves.toEqual([clusterInfo]);
+        await expect(invoke('nodes.list', {})).resolves.toEqual([nodeRow]);
+        await expect(invoke('nodes.get', { name: 'missing' })).resolves.toBeNull();
+        expect(nodesMod.getNode).toHaveBeenCalledWith('missing');
     });
 
     it('resets to the default kubeconfig and reloads', async () => {

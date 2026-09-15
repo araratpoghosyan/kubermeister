@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { IPC_CHANNELS } from '../../../src/shared/ipc-channels';
-import { ipcSchemas } from '../../../src/shared/ipc';
+import { ipcResultSchema, ipcSchemas } from '../../../src/shared/ipc';
 
 describe('IPC contract', () => {
     it('allowlists exactly the channels that have schemas', () => {
@@ -49,6 +49,18 @@ describe('IPC contract', () => {
         expect(output.safeParse({ checks: [{ id: 'cluster', label: 'x', status: 'meh' }], ok: true }).success).toBe(
             false,
         );
+    });
+
+    it('the result envelope is ok with data or not ok with a classified error', () => {
+        expect(ipcResultSchema.safeParse({ ok: true, data: 42 }).success).toBe(true);
+        expect(
+            ipcResultSchema.safeParse({ ok: false, error: { kind: 'forbidden', detail: 'x', op: 'nodes.list' } })
+                .success,
+        ).toBe(true);
+        expect(
+            ipcResultSchema.safeParse({ ok: false, error: { kind: 'exploded', detail: 'x', op: 'y' } }).success,
+        ).toBe(false);
+        expect(ipcResultSchema.safeParse({ ok: false }).success).toBe(false);
     });
 
     it('update.install reports a boolean result', () => {

@@ -1,21 +1,25 @@
 import { ApiException } from '@kubernetes/client-node';
+import type { IpcError, K8sErrorKind } from '../../shared/k8s/errors.js';
 
-/** Coarse classification of why a cluster call failed, surfaced to the renderer. */
-export type K8sErrorKind =
-    'unreachable' | 'forbidden' | 'unauthorized' | 'notFound' | 'conflict' | 'invalid' | 'unknown';
+export type { K8sErrorKind };
 
 /**
- * A cluster call failure. `ipcRenderer.invoke` only conveys `error.message` across the bridge, so
- * the kind is encoded as a `[kind]` prefix in the message and the renderer parses it back out.
+ * A classified cluster call failure. The IPC registry turns it into the `ok: false` result
+ * envelope, so the renderer gets `kind`, `detail` and `op` as structure. The message keeps the
+ * `[kind]` prefix for logs.
  */
 export class K8sError extends Error {
     constructor(
         public readonly kind: K8sErrorKind,
-        detail: string,
+        public readonly detail: string,
         public readonly op: string,
     ) {
         super(`[${kind}] ${detail}`);
         this.name = 'K8sError';
+    }
+
+    toIpcError(): IpcError {
+        return { kind: this.kind, detail: this.detail, op: this.op };
     }
 }
 

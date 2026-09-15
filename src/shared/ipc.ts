@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import type { AllowedChannel } from './ipc-channels.js';
 import { kubeContextSchema } from './k8s/contexts.js';
+import { ipcErrorSchema } from './k8s/errors.js';
+import { clusterSchema, namespaceSchema } from './k8s/cluster.js';
+import { nodeDetailSchema, nodeSchema } from './k8s/nodes.js';
 import { settingsInputSchema, settingsSchema } from './settings.js';
 
 const noInput = z.object({});
@@ -64,7 +67,25 @@ export const ipcSchemas = {
     // Kubeconfig path changes are dialog-gated: the renderer never supplies a path string.
     'kubeconfig.pick': { input: noInput, output: z.object({ path: z.string().nullable() }) },
     'kubeconfig.useDefault': { input: noInput, output: settingsSchema },
+    'namespaces.list': { input: noInput, output: z.array(namespaceSchema) },
+    'namespace.active': { input: noInput, output: namespaceSchema.nullable() },
+    'cluster.active': { input: noInput, output: clusterSchema.nullable() },
+    'clusters.list': { input: noInput, output: z.array(clusterSchema) },
+    'nodes.list': { input: noInput, output: z.array(nodeSchema) },
+    'nodes.get': { input: z.object({ name: z.string().min(1) }), output: nodeDetailSchema.nullable() },
 } as const;
+
+/**
+ * Every invoke resolves to this envelope. Expected failures (a classified cluster error) travel as
+ * `ok: false` with structure the renderer can act on; unexpected exceptions still reject the
+ * invoke, since those are bugs. The registry validates `data` against the channel's output schema.
+ */
+export const ipcResultSchema = z.discriminatedUnion('ok', [
+    z.object({ ok: z.literal(true), data: z.unknown() }),
+    z.object({ ok: z.literal(false), error: ipcErrorSchema }),
+]);
+
+export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: z.infer<typeof ipcErrorSchema> };
 
 export type IpcSchemas = typeof ipcSchemas;
 export type IpcChannel = keyof IpcSchemas;
