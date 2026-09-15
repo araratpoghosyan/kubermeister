@@ -23,6 +23,8 @@ export const IPC_CHANNELS = [
     'clusters.list',
     'nodes.list',
     'nodes.get',
+    'resources.list',
+    'resources.get',
 ] as const;
 
 export const SUBSCRIPTION_CHANNELS = ['update.state'] as const;

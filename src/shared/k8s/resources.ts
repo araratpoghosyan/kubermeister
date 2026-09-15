@@ -1,0 +1,40 @@
+import { z } from 'zod';
+import { podDetailSchema, podSchema } from './pods.js';
+import { kindSchema } from './registry.js';
+
+/**
+ * The generic resource channels. One `resources.list` and one `resources.get` serve every kind;
+ * the output is a discriminated union on `kind`, so each kind keeps a precise view-model type
+ * while the channel count stays flat.
+ */
+export const resourceListInputSchema = z.object({
+    kind: kindSchema,
+    /** Omitted: the active namespace, or all namespaces when none is selected. */
+    namespace: z.string().optional(),
+});
+
+export const resourceGetInputSchema = z.object({
+    kind: kindSchema,
+    name: z.string().min(1),
+    namespace: z.string().optional(),
+});
+
+export const resourceListOutputSchema = z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('Pod'), items: z.array(podSchema) }),
+]);
+
+export const resourceGetOutputSchema = z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('Pod'), item: podDetailSchema.nullable() }),
+]);
+
+export type ResourceListInput = z.infer<typeof resourceListInputSchema>;
+export type ResourceGetInput = z.infer<typeof resourceGetInputSchema>;
+export type ResourceListOutput = z.infer<typeof resourceListOutputSchema>;
+export type ResourceGetOutput = z.infer<typeof resourceGetOutputSchema>;
+
+/** The row type for a kind, recovered from the list output union. */
+export type RowOf<K extends ResourceListOutput['kind']> = Extract<ResourceListOutput, { kind: K }>['items'][number];
+/** The detail type for a kind, recovered from the get output union. */
+export type DetailOf<K extends ResourceGetOutput['kind']> = NonNullable<
+    Extract<ResourceGetOutput, { kind: K }>['item']
+>;
