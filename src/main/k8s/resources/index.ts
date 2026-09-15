@@ -18,6 +18,7 @@ import {
     listNetworkPolicies,
     listServices,
 } from './network.js';
+import { getCustomResource, listCustomResources } from './crds.js';
 import {
     getClusterRole,
     getClusterRoleBinding,
@@ -85,6 +86,7 @@ const SOURCES: { [K in Kind]: Source<K> } = {
     RoleBinding: { list: listRoleBindings, get: getRoleBinding },
     ClusterRole: { list: () => listClusterRoles(), get: (name) => getClusterRole(name) },
     ClusterRoleBinding: { list: () => listClusterRoleBindings(), get: (name) => getClusterRoleBinding(name) },
+    CustomResourceDefinition: { list: () => listCustomResources(), get: (name) => getCustomResource(name) },
 };
 
 export async function listResources(input: ResourceListInput): Promise<ResourceListOutput> {
@@ -136,6 +138,8 @@ export async function listResources(input: ResourceListInput): Promise<ResourceL
             return { kind: 'ClusterRole', items: await SOURCES.ClusterRole.list() };
         case 'ClusterRoleBinding':
             return { kind: 'ClusterRoleBinding', items: await SOURCES.ClusterRoleBinding.list() };
+        case 'CustomResourceDefinition':
+            return { kind: 'CustomResourceDefinition', items: await SOURCES.CustomResourceDefinition.list() };
     }
 }
 
@@ -191,5 +195,10 @@ export async function getResource(input: ResourceGetInput): Promise<ResourceGetO
             return { kind: 'ClusterRole', item: await SOURCES.ClusterRole.get(input.name) };
         case 'ClusterRoleBinding':
             return { kind: 'ClusterRoleBinding', item: await SOURCES.ClusterRoleBinding.get(input.name) };
+        case 'CustomResourceDefinition':
+            return {
+                kind: 'CustomResourceDefinition',
+                item: await SOURCES.CustomResourceDefinition.get(input.name),
+            };
     }
 }

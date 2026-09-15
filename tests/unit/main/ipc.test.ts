@@ -40,6 +40,12 @@ const metricsMod = {
 const workloadsMod = { getDeploymentReplicaSets: vi.fn(), getDeploymentRollouts: vi.fn() };
 const configMod = { getConfigMapEntries: vi.fn(), getSecretEntries: vi.fn() };
 const networkMod = { getServicePorts: vi.fn(), getServiceEndpoints: vi.fn(), getIngressRules: vi.fn() };
+const helmMod = {
+    listReleases: vi.fn(),
+    getRelease: vi.fn(),
+    getReleaseRevisions: vi.fn(),
+    listHelmCharts: vi.fn(),
+};
 const alertsMod = { listAlerts: vi.fn() };
 vi.mock('../../../src/main/updater.js', () => updater);
 vi.mock('../../../src/main/k8s/client.js', () => client);
@@ -57,6 +63,7 @@ vi.mock('../../../src/main/k8s/resources/workloads.js', () => workloadsMod);
 vi.mock('../../../src/main/k8s/resources/config.js', () => configMod);
 vi.mock('../../../src/main/k8s/resources/overview.js', () => overviewMod);
 vi.mock('../../../src/main/k8s/resources/network.js', () => networkMod);
+vi.mock('../../../src/main/k8s/resources/helm.js', () => helmMod);
 
 const { registerHandlers } = await import('../../../src/main/ipc/index.js');
 const { ipcSchemas } = await import('../../../src/shared/ipc.js');
@@ -350,6 +357,34 @@ describe('registerHandlers', () => {
         await expect(invoke('services.endpoints', { name: 'web', namespace: 'team-a' })).resolves.toHaveLength(1);
         await expect(invoke('ingresses.rules', { name: 'web', namespace: 'team-a' })).resolves.toHaveLength(1);
         await expect(invoke('services.ports', { name: 'web' })).rejects.toThrow();
+    });
+
+    it('forwards the helm release reads and rejects a nameless target', async () => {
+        const release = {
+            name: 'traefik',
+            namespace: 'kube-system',
+            chart: 'traefik-28.0.0',
+            revision: 2,
+            status: 'Deployed',
+            updated: '1h ago',
+        };
+        helmMod.listReleases.mockResolvedValue([release]);
+        helmMod.getRelease.mockResolvedValue(release);
+        helmMod.getReleaseRevisions.mockResolvedValue([
+            { rev: '2', status: 'Deployed', chartVersion: '28.0.0', updated: '1h ago', description: 'Upgrade' },
+        ]);
+        helmMod.listHelmCharts.mockResolvedValue([
+            { name: 'traefik', repository: '—', latestVersion: '28.0.0', appVersion: '3.0.0', description: '' },
+        ]);
+        await expect(invoke('releases.list', {})).resolves.toHaveLength(1);
+        await expect(invoke('releases.get', { name: 'traefik', namespace: 'kube-system' })).resolves.toMatchObject({
+            revision: 2,
+        });
+        expect(helmMod.getRelease).toHaveBeenCalledWith('traefik', 'kube-system');
+        await expect(invoke('releases.revisions', { name: 'traefik' })).resolves.toHaveLength(1);
+        expect(helmMod.getReleaseRevisions).toHaveBeenCalledWith('traefik', undefined);
+        await expect(invoke('helmCharts.list', {})).resolves.toHaveLength(1);
+        await expect(invoke('releases.get', { name: '' })).rejects.toThrow();
     });
 
     it('resets to the default kubeconfig and reloads', async () => {

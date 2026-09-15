@@ -153,6 +153,13 @@ export const KIND_REGISTRY = {
         scalable: false,
         listPath: '/access/clusterrolebindings',
     },
+    CustomResourceDefinition: {
+        kind: 'CustomResourceDefinition',
+        apiVersion: 'apiextensions.k8s.io/v1',
+        clusterScoped: true,
+        scalable: false,
+        listPath: '/addons/crds',
+    },
 } as const satisfies Record<string, KindInfo>;
 
 export type Kind = keyof typeof KIND_REGISTRY;

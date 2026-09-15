@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root';
 import { Route as IndexRouteImport } from './routes/index';
 import { Route as SettingsRouteImport } from './routes/settings';
+import { Route as AddonsChartsRouteImport } from './routes/addons/charts';
 import { Route as OverviewEventsRouteImport } from './routes/overview/events';
 import { Route as OverviewLimitsRouteImport } from './routes/overview/limits';
 import { Route as OverviewNamespacesRouteImport } from './routes/overview/namespaces';
@@ -24,6 +25,9 @@ import { Route as AccessClusterrolesNameRouteImport } from './routes/access/clus
 import { Route as AccessRolebindingsIndexRouteImport } from './routes/access/rolebindings/index';
 import { Route as AccessRolesIndexRouteImport } from './routes/access/roles/index';
 import { Route as AccessServiceaccountsIndexRouteImport } from './routes/access/serviceaccounts/index';
+import { Route as AddonsCrdsIndexRouteImport } from './routes/addons/crds/index';
+import { Route as AddonsCrdsNameRouteImport } from './routes/addons/crds_.$name';
+import { Route as AddonsReleasesIndexRouteImport } from './routes/addons/releases/index';
 import { Route as NetworkEndpointsIndexRouteImport } from './routes/network/endpoints/index';
 import { Route as NetworkIngressesIndexRouteImport } from './routes/network/ingresses/index';
 import { Route as NetworkNetworkpoliciesIndexRouteImport } from './routes/network/networkpolicies/index';
@@ -47,6 +51,7 @@ import { Route as WorkloadsStatefulsetsIndexRouteImport } from './routes/workloa
 import { Route as AccessRolebindingsNamespaceNameRouteImport } from './routes/access/rolebindings/$namespace.$name';
 import { Route as AccessRolesNamespaceNameRouteImport } from './routes/access/roles/$namespace.$name';
 import { Route as AccessServiceaccountsNamespaceNameRouteImport } from './routes/access/serviceaccounts/$namespace.$name';
+import { Route as AddonsReleasesNamespaceNameRouteImport } from './routes/addons/releases/$namespace.$name';
 import { Route as NetworkEndpointsNamespaceNameRouteImport } from './routes/network/endpoints/$namespace.$name';
 import { Route as NetworkIngressesNamespaceNameRouteImport } from './routes/network/ingresses/$namespace.$name';
 import { Route as NetworkNetworkpoliciesNamespaceNameRouteImport } from './routes/network/networkpolicies/$namespace.$name';
@@ -71,6 +76,11 @@ const IndexRoute = IndexRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const AddonsChartsRoute = AddonsChartsRouteImport.update({
+  id: '/addons/charts',
+  path: '/addons/charts',
   getParentRoute: () => rootRouteImport,
 } as any);
 const OverviewEventsRoute = OverviewEventsRouteImport.update({
@@ -141,6 +151,21 @@ const AccessServiceaccountsIndexRoute =
     path: '/access/serviceaccounts/',
     getParentRoute: () => rootRouteImport,
   } as any);
+const AddonsCrdsIndexRoute = AddonsCrdsIndexRouteImport.update({
+  id: '/addons/crds/',
+  path: '/addons/crds/',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const AddonsCrdsNameRoute = AddonsCrdsNameRouteImport.update({
+  id: '/addons/crds_/$name',
+  path: '/addons/crds/$name',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const AddonsReleasesIndexRoute = AddonsReleasesIndexRouteImport.update({
+  id: '/addons/releases/',
+  path: '/addons/releases/',
+  getParentRoute: () => rootRouteImport,
+} as any);
 const NetworkEndpointsIndexRoute = NetworkEndpointsIndexRouteImport.update({
   id: '/network/endpoints/',
   path: '/network/endpoints/',
@@ -267,6 +292,12 @@ const AccessServiceaccountsNamespaceNameRoute =
     path: '/access/serviceaccounts/$namespace/$name',
     getParentRoute: () => rootRouteImport,
   } as any);
+const AddonsReleasesNamespaceNameRoute =
+  AddonsReleasesNamespaceNameRouteImport.update({
+    id: '/addons/releases/$namespace/$name',
+    path: '/addons/releases/$namespace/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
 const NetworkEndpointsNamespaceNameRoute =
   NetworkEndpointsNamespaceNameRouteImport.update({
     id: '/network/endpoints/$namespace/$name',
@@ -361,6 +392,7 @@ const WorkloadsStatefulsetsNamespaceNameRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute;
   '/settings': typeof SettingsRoute;
+  '/addons/charts': typeof AddonsChartsRoute;
   '/overview/events': typeof OverviewEventsRoute;
   '/overview/limits': typeof OverviewLimitsRoute;
   '/overview/namespaces': typeof OverviewNamespacesRoute;
@@ -369,6 +401,7 @@ export interface FileRoutesByFullPath {
   '/overview/summary': typeof OverviewSummaryRoute;
   '/access/clusterrolebindings/$name': typeof AccessClusterrolebindingsNameRoute;
   '/access/clusterroles/$name': typeof AccessClusterrolesNameRoute;
+  '/addons/crds/$name': typeof AddonsCrdsNameRoute;
   '/overview/nodes/$name': typeof OverviewNodesNameRoute;
   '/storage/storageclasses/$name': typeof StorageStorageclassesNameRoute;
   '/storage/volumes/$name': typeof StorageVolumesNameRoute;
@@ -377,6 +410,8 @@ export interface FileRoutesByFullPath {
   '/access/rolebindings/': typeof AccessRolebindingsIndexRoute;
   '/access/roles/': typeof AccessRolesIndexRoute;
   '/access/serviceaccounts/': typeof AccessServiceaccountsIndexRoute;
+  '/addons/crds/': typeof AddonsCrdsIndexRoute;
+  '/addons/releases/': typeof AddonsReleasesIndexRoute;
   '/network/endpoints/': typeof NetworkEndpointsIndexRoute;
   '/network/ingresses/': typeof NetworkIngressesIndexRoute;
   '/network/networkpolicies/': typeof NetworkNetworkpoliciesIndexRoute;
@@ -397,6 +432,7 @@ export interface FileRoutesByFullPath {
   '/access/rolebindings/$namespace/$name': typeof AccessRolebindingsNamespaceNameRoute;
   '/access/roles/$namespace/$name': typeof AccessRolesNamespaceNameRoute;
   '/access/serviceaccounts/$namespace/$name': typeof AccessServiceaccountsNamespaceNameRoute;
+  '/addons/releases/$namespace/$name': typeof AddonsReleasesNamespaceNameRoute;
   '/network/endpoints/$namespace/$name': typeof NetworkEndpointsNamespaceNameRoute;
   '/network/ingresses/$namespace/$name': typeof NetworkIngressesNamespaceNameRoute;
   '/network/networkpolicies/$namespace/$name': typeof NetworkNetworkpoliciesNamespaceNameRoute;
@@ -416,6 +452,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute;
   '/settings': typeof SettingsRoute;
+  '/addons/charts': typeof AddonsChartsRoute;
   '/overview/events': typeof OverviewEventsRoute;
   '/overview/limits': typeof OverviewLimitsRoute;
   '/overview/namespaces': typeof OverviewNamespacesRoute;
@@ -424,6 +461,7 @@ export interface FileRoutesByTo {
   '/overview/summary': typeof OverviewSummaryRoute;
   '/access/clusterrolebindings/$name': typeof AccessClusterrolebindingsNameRoute;
   '/access/clusterroles/$name': typeof AccessClusterrolesNameRoute;
+  '/addons/crds/$name': typeof AddonsCrdsNameRoute;
   '/overview/nodes/$name': typeof OverviewNodesNameRoute;
   '/storage/storageclasses/$name': typeof StorageStorageclassesNameRoute;
   '/storage/volumes/$name': typeof StorageVolumesNameRoute;
@@ -432,6 +470,8 @@ export interface FileRoutesByTo {
   '/access/rolebindings': typeof AccessRolebindingsIndexRoute;
   '/access/roles': typeof AccessRolesIndexRoute;
   '/access/serviceaccounts': typeof AccessServiceaccountsIndexRoute;
+  '/addons/crds': typeof AddonsCrdsIndexRoute;
+  '/addons/releases': typeof AddonsReleasesIndexRoute;
   '/network/endpoints': typeof NetworkEndpointsIndexRoute;
   '/network/ingresses': typeof NetworkIngressesIndexRoute;
   '/network/networkpolicies': typeof NetworkNetworkpoliciesIndexRoute;
@@ -452,6 +492,7 @@ export interface FileRoutesByTo {
   '/access/rolebindings/$namespace/$name': typeof AccessRolebindingsNamespaceNameRoute;
   '/access/roles/$namespace/$name': typeof AccessRolesNamespaceNameRoute;
   '/access/serviceaccounts/$namespace/$name': typeof AccessServiceaccountsNamespaceNameRoute;
+  '/addons/releases/$namespace/$name': typeof AddonsReleasesNamespaceNameRoute;
   '/network/endpoints/$namespace/$name': typeof NetworkEndpointsNamespaceNameRoute;
   '/network/ingresses/$namespace/$name': typeof NetworkIngressesNamespaceNameRoute;
   '/network/networkpolicies/$namespace/$name': typeof NetworkNetworkpoliciesNamespaceNameRoute;
@@ -472,6 +513,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport;
   '/': typeof IndexRoute;
   '/settings': typeof SettingsRoute;
+  '/addons/charts': typeof AddonsChartsRoute;
   '/overview/events': typeof OverviewEventsRoute;
   '/overview/limits': typeof OverviewLimitsRoute;
   '/overview/namespaces': typeof OverviewNamespacesRoute;
@@ -480,6 +522,7 @@ export interface FileRoutesById {
   '/overview/summary': typeof OverviewSummaryRoute;
   '/access/clusterrolebindings_/$name': typeof AccessClusterrolebindingsNameRoute;
   '/access/clusterroles_/$name': typeof AccessClusterrolesNameRoute;
+  '/addons/crds_/$name': typeof AddonsCrdsNameRoute;
   '/overview/nodes_/$name': typeof OverviewNodesNameRoute;
   '/storage/storageclasses_/$name': typeof StorageStorageclassesNameRoute;
   '/storage/volumes_/$name': typeof StorageVolumesNameRoute;
@@ -488,6 +531,8 @@ export interface FileRoutesById {
   '/access/rolebindings/': typeof AccessRolebindingsIndexRoute;
   '/access/roles/': typeof AccessRolesIndexRoute;
   '/access/serviceaccounts/': typeof AccessServiceaccountsIndexRoute;
+  '/addons/crds/': typeof AddonsCrdsIndexRoute;
+  '/addons/releases/': typeof AddonsReleasesIndexRoute;
   '/network/endpoints/': typeof NetworkEndpointsIndexRoute;
   '/network/ingresses/': typeof NetworkIngressesIndexRoute;
   '/network/networkpolicies/': typeof NetworkNetworkpoliciesIndexRoute;
@@ -508,6 +553,7 @@ export interface FileRoutesById {
   '/access/rolebindings/$namespace/$name': typeof AccessRolebindingsNamespaceNameRoute;
   '/access/roles/$namespace/$name': typeof AccessRolesNamespaceNameRoute;
   '/access/serviceaccounts/$namespace/$name': typeof AccessServiceaccountsNamespaceNameRoute;
+  '/addons/releases/$namespace/$name': typeof AddonsReleasesNamespaceNameRoute;
   '/network/endpoints/$namespace/$name': typeof NetworkEndpointsNamespaceNameRoute;
   '/network/ingresses/$namespace/$name': typeof NetworkIngressesNamespaceNameRoute;
   '/network/networkpolicies/$namespace/$name': typeof NetworkNetworkpoliciesNamespaceNameRoute;
@@ -529,6 +575,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/settings'
+    | '/addons/charts'
     | '/overview/events'
     | '/overview/limits'
     | '/overview/namespaces'
@@ -537,6 +584,7 @@ export interface FileRouteTypes {
     | '/overview/summary'
     | '/access/clusterrolebindings/$name'
     | '/access/clusterroles/$name'
+    | '/addons/crds/$name'
     | '/overview/nodes/$name'
     | '/storage/storageclasses/$name'
     | '/storage/volumes/$name'
@@ -545,6 +593,8 @@ export interface FileRouteTypes {
     | '/access/rolebindings/'
     | '/access/roles/'
     | '/access/serviceaccounts/'
+    | '/addons/crds/'
+    | '/addons/releases/'
     | '/network/endpoints/'
     | '/network/ingresses/'
     | '/network/networkpolicies/'
@@ -565,6 +615,7 @@ export interface FileRouteTypes {
     | '/access/rolebindings/$namespace/$name'
     | '/access/roles/$namespace/$name'
     | '/access/serviceaccounts/$namespace/$name'
+    | '/addons/releases/$namespace/$name'
     | '/network/endpoints/$namespace/$name'
     | '/network/ingresses/$namespace/$name'
     | '/network/networkpolicies/$namespace/$name'
@@ -584,6 +635,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/settings'
+    | '/addons/charts'
     | '/overview/events'
     | '/overview/limits'
     | '/overview/namespaces'
@@ -592,6 +644,7 @@ export interface FileRouteTypes {
     | '/overview/summary'
     | '/access/clusterrolebindings/$name'
     | '/access/clusterroles/$name'
+    | '/addons/crds/$name'
     | '/overview/nodes/$name'
     | '/storage/storageclasses/$name'
     | '/storage/volumes/$name'
@@ -600,6 +653,8 @@ export interface FileRouteTypes {
     | '/access/rolebindings'
     | '/access/roles'
     | '/access/serviceaccounts'
+    | '/addons/crds'
+    | '/addons/releases'
     | '/network/endpoints'
     | '/network/ingresses'
     | '/network/networkpolicies'
@@ -620,6 +675,7 @@ export interface FileRouteTypes {
     | '/access/rolebindings/$namespace/$name'
     | '/access/roles/$namespace/$name'
     | '/access/serviceaccounts/$namespace/$name'
+    | '/addons/releases/$namespace/$name'
     | '/network/endpoints/$namespace/$name'
     | '/network/ingresses/$namespace/$name'
     | '/network/networkpolicies/$namespace/$name'
@@ -639,6 +695,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/settings'
+    | '/addons/charts'
     | '/overview/events'
     | '/overview/limits'
     | '/overview/namespaces'
@@ -647,6 +704,7 @@ export interface FileRouteTypes {
     | '/overview/summary'
     | '/access/clusterrolebindings_/$name'
     | '/access/clusterroles_/$name'
+    | '/addons/crds_/$name'
     | '/overview/nodes_/$name'
     | '/storage/storageclasses_/$name'
     | '/storage/volumes_/$name'
@@ -655,6 +713,8 @@ export interface FileRouteTypes {
     | '/access/rolebindings/'
     | '/access/roles/'
     | '/access/serviceaccounts/'
+    | '/addons/crds/'
+    | '/addons/releases/'
     | '/network/endpoints/'
     | '/network/ingresses/'
     | '/network/networkpolicies/'
@@ -675,6 +735,7 @@ export interface FileRouteTypes {
     | '/access/rolebindings/$namespace/$name'
     | '/access/roles/$namespace/$name'
     | '/access/serviceaccounts/$namespace/$name'
+    | '/addons/releases/$namespace/$name'
     | '/network/endpoints/$namespace/$name'
     | '/network/ingresses/$namespace/$name'
     | '/network/networkpolicies/$namespace/$name'
@@ -695,6 +756,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
   SettingsRoute: typeof SettingsRoute;
+  AddonsChartsRoute: typeof AddonsChartsRoute;
   OverviewEventsRoute: typeof OverviewEventsRoute;
   OverviewLimitsRoute: typeof OverviewLimitsRoute;
   OverviewNamespacesRoute: typeof OverviewNamespacesRoute;
@@ -703,6 +765,7 @@ export interface RootRouteChildren {
   OverviewSummaryRoute: typeof OverviewSummaryRoute;
   AccessClusterrolebindingsNameRoute: typeof AccessClusterrolebindingsNameRoute;
   AccessClusterrolesNameRoute: typeof AccessClusterrolesNameRoute;
+  AddonsCrdsNameRoute: typeof AddonsCrdsNameRoute;
   OverviewNodesNameRoute: typeof OverviewNodesNameRoute;
   StorageStorageclassesNameRoute: typeof StorageStorageclassesNameRoute;
   StorageVolumesNameRoute: typeof StorageVolumesNameRoute;
@@ -711,6 +774,8 @@ export interface RootRouteChildren {
   AccessRolebindingsIndexRoute: typeof AccessRolebindingsIndexRoute;
   AccessRolesIndexRoute: typeof AccessRolesIndexRoute;
   AccessServiceaccountsIndexRoute: typeof AccessServiceaccountsIndexRoute;
+  AddonsCrdsIndexRoute: typeof AddonsCrdsIndexRoute;
+  AddonsReleasesIndexRoute: typeof AddonsReleasesIndexRoute;
   NetworkEndpointsIndexRoute: typeof NetworkEndpointsIndexRoute;
   NetworkIngressesIndexRoute: typeof NetworkIngressesIndexRoute;
   NetworkNetworkpoliciesIndexRoute: typeof NetworkNetworkpoliciesIndexRoute;
@@ -731,6 +796,7 @@ export interface RootRouteChildren {
   AccessRolebindingsNamespaceNameRoute: typeof AccessRolebindingsNamespaceNameRoute;
   AccessRolesNamespaceNameRoute: typeof AccessRolesNamespaceNameRoute;
   AccessServiceaccountsNamespaceNameRoute: typeof AccessServiceaccountsNamespaceNameRoute;
+  AddonsReleasesNamespaceNameRoute: typeof AddonsReleasesNamespaceNameRoute;
   NetworkEndpointsNamespaceNameRoute: typeof NetworkEndpointsNamespaceNameRoute;
   NetworkIngressesNamespaceNameRoute: typeof NetworkIngressesNamespaceNameRoute;
   NetworkNetworkpoliciesNamespaceNameRoute: typeof NetworkNetworkpoliciesNamespaceNameRoute;
@@ -762,6 +828,13 @@ declare module '@tanstack/react-router' {
       path: '/settings';
       fullPath: '/settings';
       preLoaderRoute: typeof SettingsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/addons/charts': {
+      id: '/addons/charts';
+      path: '/addons/charts';
+      fullPath: '/addons/charts';
+      preLoaderRoute: typeof AddonsChartsRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/overview/events': {
@@ -853,6 +926,27 @@ declare module '@tanstack/react-router' {
       path: '/access/serviceaccounts';
       fullPath: '/access/serviceaccounts/';
       preLoaderRoute: typeof AccessServiceaccountsIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/addons/crds/': {
+      id: '/addons/crds/';
+      path: '/addons/crds';
+      fullPath: '/addons/crds/';
+      preLoaderRoute: typeof AddonsCrdsIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/addons/crds_/$name': {
+      id: '/addons/crds_/$name';
+      path: '/addons/crds/$name';
+      fullPath: '/addons/crds/$name';
+      preLoaderRoute: typeof AddonsCrdsNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/addons/releases/': {
+      id: '/addons/releases/';
+      path: '/addons/releases';
+      fullPath: '/addons/releases/';
+      preLoaderRoute: typeof AddonsReleasesIndexRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/network/endpoints/': {
@@ -1016,6 +1110,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccessServiceaccountsNamespaceNameRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/addons/releases/$namespace/$name': {
+      id: '/addons/releases/$namespace/$name';
+      path: '/addons/releases/$namespace/$name';
+      fullPath: '/addons/releases/$namespace/$name';
+      preLoaderRoute: typeof AddonsReleasesNamespaceNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/network/endpoints/$namespace/$name': {
       id: '/network/endpoints/$namespace/$name';
       path: '/network/endpoints/$namespace/$name';
@@ -1127,6 +1228,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SettingsRoute: SettingsRoute,
+  AddonsChartsRoute: AddonsChartsRoute,
   OverviewEventsRoute: OverviewEventsRoute,
   OverviewLimitsRoute: OverviewLimitsRoute,
   OverviewNamespacesRoute: OverviewNamespacesRoute,
@@ -1135,6 +1237,7 @@ const rootRouteChildren: RootRouteChildren = {
   OverviewSummaryRoute: OverviewSummaryRoute,
   AccessClusterrolebindingsNameRoute: AccessClusterrolebindingsNameRoute,
   AccessClusterrolesNameRoute: AccessClusterrolesNameRoute,
+  AddonsCrdsNameRoute: AddonsCrdsNameRoute,
   OverviewNodesNameRoute: OverviewNodesNameRoute,
   StorageStorageclassesNameRoute: StorageStorageclassesNameRoute,
   StorageVolumesNameRoute: StorageVolumesNameRoute,
@@ -1143,6 +1246,8 @@ const rootRouteChildren: RootRouteChildren = {
   AccessRolebindingsIndexRoute: AccessRolebindingsIndexRoute,
   AccessRolesIndexRoute: AccessRolesIndexRoute,
   AccessServiceaccountsIndexRoute: AccessServiceaccountsIndexRoute,
+  AddonsCrdsIndexRoute: AddonsCrdsIndexRoute,
+  AddonsReleasesIndexRoute: AddonsReleasesIndexRoute,
   NetworkEndpointsIndexRoute: NetworkEndpointsIndexRoute,
   NetworkIngressesIndexRoute: NetworkIngressesIndexRoute,
   NetworkNetworkpoliciesIndexRoute: NetworkNetworkpoliciesIndexRoute,
@@ -1164,6 +1269,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccessRolesNamespaceNameRoute: AccessRolesNamespaceNameRoute,
   AccessServiceaccountsNamespaceNameRoute:
     AccessServiceaccountsNamespaceNameRoute,
+  AddonsReleasesNamespaceNameRoute: AddonsReleasesNamespaceNameRoute,
   NetworkEndpointsNamespaceNameRoute: NetworkEndpointsNamespaceNameRoute,
   NetworkIngressesNamespaceNameRoute: NetworkIngressesNamespaceNameRoute,
   NetworkNetworkpoliciesNamespaceNameRoute:

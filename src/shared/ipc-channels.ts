@@ -44,6 +44,10 @@ export const IPC_CHANNELS = [
     'services.ports',
     'services.endpoints',
     'ingresses.rules',
+    'releases.list',
+    'releases.get',
+    'releases.revisions',
+    'helmCharts.list',
 ] as const;
 
 export const SUBSCRIPTION_CHANNELS = ['update.state', 'open-settings'] as const;

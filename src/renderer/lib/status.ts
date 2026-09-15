@@ -1,3 +1,4 @@
+import type { ReleaseStatus } from '../../shared/k8s/addons';
 import type { ClusterStatus, NodeStatus } from '../../shared/k8s/status';
 import type { NamespaceTone } from '../../shared/k8s/cluster';
 import type { EndpointReady, NetworkStatus } from '../../shared/k8s/network';
@@ -52,6 +53,14 @@ export const CLAIM_TONE: Record<ClaimStatus, StatusTone> = {
     Unknown: 'neutral',
 };
 export const SNAPSHOT_TONE: Record<SnapshotReady, StatusTone> = { Ready: 'ok', Pending: 'warn' };
+export const RELEASE_TONE: Record<ReleaseStatus, StatusTone> = {
+    Deployed: 'ok',
+    Superseded: 'neutral',
+    Failed: 'danger',
+    Progressing: 'accent',
+    Terminating: 'warn',
+    Unknown: 'neutral',
+};
 export const JOB_TONE: Record<JobStatus, StatusTone> = { Complete: 'ok', Running: 'accent', Failed: 'danger' };
 
 /** Tone for a resource-usage percentage: ok below 75, warn from 75, danger above 90. */

@@ -3,6 +3,7 @@ import { STREAM_CHANNELS, type AllowedStream } from './ipc-channels.js';
 import type { LogLine } from './k8s/logs.js';
 import { podSchema } from './k8s/pods.js';
 import { endpointsSchema, ingressSchema, networkPolicySchema, serviceSchema } from './k8s/network.js';
+import { customResourceSchema } from './k8s/addons.js';
 import {
     clusterRoleBindingSchema,
     clusterRoleSchema,
@@ -67,6 +68,7 @@ export const watchEventSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('RoleBinding'), type: watchType, item: roleBindingSchema }),
     z.object({ kind: z.literal('ClusterRole'), type: watchType, item: clusterRoleSchema }),
     z.object({ kind: z.literal('ClusterRoleBinding'), type: watchType, item: clusterRoleBindingSchema }),
+    z.object({ kind: z.literal('CustomResourceDefinition'), type: watchType, item: customResourceSchema }),
 ]);
 
 export type WatchEvent = z.infer<typeof watchEventSchema>;

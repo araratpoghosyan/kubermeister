@@ -159,3 +159,30 @@ subjects:
   - kind: ServiceAccount
     name: default
     namespace: km-e2e
+---
+# Helm keeps one Secret per release revision; the cluster runs no Helm controller here, so the
+# release the add-on screens read is seeded directly. `release` is base64(gzip(release json)),
+# which the API base64-encodes once more.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sh.helm.release.v1.demo.v1
+  namespace: km-e2e
+  labels:
+    owner: helm
+    name: demo
+type: helm.sh/release.v1
+data:
+  release: SDRzSUFBQUFBQUFBRTFXT3ZXckRRQkNFWHlWTWZSS25Dekg0M2lCOWNPSEdMTHExTFhKL2FGY0dJL1R1NFZRSUFsUE1mTVhNck1pVUdCNkJVNEhaazFRYUcvcE5IVHVHd1l0bm1VcUdId3ltZkMvd0swUkpGNEdITEpWbjRjQUJCcEZFYjRGckxHOE84SERXblRwNzdvYXZuOEY2MjNTRlFXQVo1Nm5xWG9ydkxFb3hmb3dsMWNqSzJBekdKODNhZGhJckJWSnEvdi9WNHhXRzN2VU9CbFRyNVlDZnZlMHR0dFpWOG4xNndLL2I5Z2RSaXRrSzd3QUFBQT09
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sh.helm.release.v1.demo.v2
+  namespace: km-e2e
+  labels:
+    owner: helm
+    name: demo
+type: helm.sh/release.v1
+data:
+  release: SDRzSUFBQUFBQUFBRTFXUHpXckVNQXlFWDZYTTJRbU9seGJxYTEraDIwTXZSZGphMURUK3dkWXVMSXZmdlRpRlFFRUh6UWg5R2oyUUtESXNQTWNNdGF0V3lBM3JKMDVzR0FvM3JpM2tCR3NVUXJwazJBZWFrRnpidmxpMmZHY1BoWTJhZkIzYXdtanpNdW5YYVhsK1g3VFZvejZoNExtNUdvcnNTSnpMV3Nuems4dXhiQ3lNcnVDK3FjcTRFbG5JazlEby93YzlNbUdaelh5Q0FwWHljWmluV2M4YWZiQnl1b1IxQUNxWExUaDZ5OWNrZjc5RVdubE1oTllEMUh2L0JVZ0RubGdWQVFBQQ==
