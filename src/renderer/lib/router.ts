@@ -1,5 +1,8 @@
 import { createHashHistory, createRouter } from '@tanstack/react-router';
-import { routeTree } from '@/routeTree.gen';
+import { routeTree, type FileRouteTypes } from '@/routeTree.gen';
+
+/** Every registered absolute route path; navigation config is typed against it. */
+export type RoutePath = FileRouteTypes['to'];
 
 // Hash history: the packaged renderer is a file:// document, and hash changes never trigger the
 // main process's top-frame navigation guard.

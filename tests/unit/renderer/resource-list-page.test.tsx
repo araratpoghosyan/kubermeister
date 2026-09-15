@@ -1,0 +1,219 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+    createMemoryHistory,
+    createRootRoute,
+    createRoute,
+    createRouter,
+    Outlet,
+    RouterProvider,
+} from '@tanstack/react-router';
+import type { ColumnDef } from '@tanstack/react-table';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { LayersIcon } from 'lucide-react';
+import { describe, expect, it, vi } from 'vitest';
+import { ageColumn, nameColumn, statusColumn, textColumn } from '@/components/templates/list-columns';
+import { ResourceListPage } from '@/components/templates/resource-list-page';
+import { ThemeProvider } from '@/components/theme-provider';
+import { IpcError } from '@/lib/ipc';
+import type { StatusTone } from '@/lib/status';
+
+interface Row {
+    name: string;
+    namespace: string;
+    status: 'Running' | 'Pending';
+    restarts: number;
+    age: string;
+}
+const TONES: Record<Row['status'], StatusTone> = { Running: 'ok', Pending: 'warn' };
+const columns: ColumnDef<Row>[] = [
+    nameColumn<Row>(),
+    statusColumn<Row, Row['status']>(TONES),
+    textColumn<Row>('restarts', 'Restarts', { numeric: true }),
+    ageColumn<Row>(),
+];
+const rows: Row[] = [
+    { name: 'web-1', namespace: 'team-a', status: 'Running', restarts: 0, age: '3d' },
+    { name: 'api-1', namespace: 'team-a', status: 'Pending', restarts: 2, age: '45s' },
+    { name: 'db-1', namespace: 'team-a', status: 'Running', restarts: 1, age: '1h42m' },
+];
+
+type Props = Partial<Parameters<typeof ResourceListPage<Row>>[0]>;
+const okQuery = (data: Row[]) => ({ data, isPending: false, isError: false, error: null, refetch: vi.fn() });
+
+/** Mount the page at `/` inside a tiny router so row navigation has somewhere to go. */
+function renderPage(props: Props) {
+    const root = createRootRoute({ component: Outlet });
+    const index = createRoute({
+        getParentRoute: () => root,
+        path: '/',
+        component: () => (
+            <ResourceListPage<Row> icon={LayersIcon} title="Pods" columns={columns} query={okQuery(rows)} {...props} />
+        ),
+    });
+    const detail = createRoute({ getParentRoute: () => root, path: '/$rest', component: () => <p>detail</p> });
+    const router = createRouter({
+        routeTree: root.addChildren([index, detail]),
+        history: createMemoryHistory({ initialEntries: ['/'] }),
+    });
+    render(
+        <ThemeProvider>
+            <QueryClientProvider client={new QueryClient()}>
+                <RouterProvider router={router} />
+            </QueryClientProvider>
+        </ThemeProvider>,
+    );
+    return router;
+}
+
+const bodyRows = () => within(screen.getByTestId('list')).getAllByRole('row').slice(1);
+const firstCells = () => bodyRows().map((row) => within(row).getAllByRole('cell')[0]?.textContent);
+
+describe('ResourceListPage', () => {
+    it('renders the title, count badge, rows with tones and the result footer', async () => {
+        renderPage({ testId: 'list' });
+        expect(await screen.findByRole('heading', { name: 'Pods' })).toBeInTheDocument();
+        expect(screen.getByTestId('resource-list')).toHaveTextContent('3 results');
+        expect(bodyRows()).toHaveLength(3);
+        expect(within(screen.getByTestId('list')).getByText('Pending')).toHaveAttribute('data-tone', 'warn');
+        expect(screen.queryByText('Namespace')).not.toBeInTheDocument();
+    });
+
+    it('shows skeletons while loading and the empty copy when nothing comes back', async () => {
+        renderPage({ query: { data: undefined, isPending: true, isError: false, error: null, refetch: vi.fn() } });
+        await screen.findByRole('heading', { name: 'Pods' });
+        expect(screen.queryByRole('table')).not.toBeInTheDocument();
+        expect(screen.getByTestId('resource-list').querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(
+            0,
+        );
+    });
+
+    it('uses the noun in generated copy and the empty message override', async () => {
+        renderPage({ query: okQuery([]), nounPlural: 'CRDs', emptyMessage: 'Nothing here.' });
+        expect(await screen.findByText('Nothing here.')).toBeInTheDocument();
+        expect(screen.getByRole('textbox', { name: 'Search CRDs…' })).toBeInTheDocument();
+    });
+
+    it('explains a classified failure per kind and offers a retry', async () => {
+        const refetch = vi.fn();
+        const failing = (kind: string) =>
+            ({
+                data: undefined,
+                isPending: false,
+                isError: true,
+                refetch,
+                error: new IpcError({ kind, detail: 'd', op: 'x' }),
+            }) as Props['query'];
+        const first = renderPage({ query: failing('unauthorized') });
+        expect(await screen.findByText("Your session isn't authenticated to the cluster.")).toBeInTheDocument();
+        await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+        expect(refetch).toHaveBeenCalledOnce();
+        void first;
+    });
+
+    it.each([
+        ['forbidden', "You don't have permission to view Pods."],
+        ['unreachable', 'The cluster API server is unreachable.'],
+        ['notFound', "Pods aren't available on this cluster."],
+        ['timeout', 'Failed to load Pods.'],
+    ])('describes a %s error', async (kind, copy) => {
+        renderPage({
+            query: {
+                data: undefined,
+                isPending: false,
+                isError: true,
+                refetch: vi.fn(),
+                error: new IpcError({ kind, detail: 'd', op: 'x' }),
+            } as Props['query'],
+        });
+        expect(await screen.findByText(copy)).toBeInTheDocument();
+    });
+
+    it('filters rows by the search box across visible columns and reports no matches', async () => {
+        renderPage({ testId: 'list' });
+        const search = await screen.findByRole('textbox', { name: 'Search Pods…' });
+        await userEvent.type(search, 'pend');
+        await waitFor(() => expect(bodyRows()).toHaveLength(1));
+        expect(screen.getByTestId('resource-list')).toHaveTextContent('1 of 3 result');
+        await userEvent.clear(search);
+        await userEvent.type(search, 'zzz');
+        expect(await screen.findByText('No Pods match “zzz”.')).toBeInTheDocument();
+    });
+
+    it('sorts by a column on header click, by duration for age, and reports the sort in the footer', async () => {
+        renderPage({ testId: 'list' });
+        await screen.findByTestId('list');
+        const nameHeader = screen.getByRole('button', { name: 'Name' });
+        await userEvent.click(nameHeader);
+        expect(firstCells()).toEqual(['api-1', 'db-1', 'web-1']);
+        expect(nameHeader.closest('th')).toHaveAttribute('aria-sort', 'ascending');
+        expect(screen.getByTestId('resource-list')).toHaveTextContent('sorted by Name asc');
+        await userEvent.click(nameHeader);
+        expect(firstCells()).toEqual(['web-1', 'db-1', 'api-1']);
+        expect(nameHeader.closest('th')).toHaveAttribute('aria-sort', 'descending');
+
+        // Numeric accessors sort descending first, so the oldest row leads.
+        await userEvent.click(screen.getByRole('button', { name: 'Age' }));
+        expect(firstCells()).toEqual(['web-1', 'db-1', 'api-1']);
+        await userEvent.click(screen.getByRole('button', { name: 'Age' }));
+        expect(firstCells()).toEqual(['api-1', 'db-1', 'web-1']);
+    });
+
+    it('hides a column from the Columns menu and stops searching it', async () => {
+        renderPage({ testId: 'list' });
+        await screen.findByTestId('list');
+        await userEvent.click(screen.getByRole('button', { name: 'Columns' }));
+        await userEvent.click(await screen.findByRole('menuitemcheckbox', { name: 'Status' }));
+        await waitFor(() => expect(screen.queryByRole('button', { name: 'Status' })).not.toBeInTheDocument());
+        await userEvent.keyboard('{Escape}');
+        await userEvent.type(screen.getByRole('textbox'), 'Running');
+        expect(await screen.findByText('No Pods match “Running”.')).toBeInTheDocument();
+    });
+
+    it('injects a Namespace column after Name when rows span several namespaces', async () => {
+        renderPage({ testId: 'list', query: okQuery([rows[0]!, { ...rows[1]!, namespace: 'team-b' }]) });
+        const list = await screen.findByTestId('list');
+        const headers = within(list)
+            .getAllByRole('columnheader')
+            .map((h) => h.textContent);
+        expect(headers.slice(0, 2)).toEqual(['Name', 'Namespace']);
+        expect(list).toHaveTextContent('team-b');
+    });
+
+    it('navigates to the detail path on row click and exposes row attributes', async () => {
+        const router = renderPage({
+            testId: 'list',
+            detailPath: (row) => `/${row.name}`,
+            rowProps: (row) => ({ 'data-row': row.name }),
+        });
+        const list = await screen.findByTestId('list');
+        const target = list.querySelector('[data-row="db-1"]');
+        expect(target).not.toBeNull();
+        await userEvent.click(within(target as HTMLElement).getByText('db-1'));
+        await waitFor(() => expect(router.state.location.pathname).toBe('/db-1'));
+    });
+
+    it('paginates past 50 rows and appends the footer note', async () => {
+        const many = Array.from({ length: 60 }, (_, i) => ({ ...rows[0]!, name: `pod-${String(i).padStart(2, '0')}` }));
+        renderPage({ testId: 'list', query: okQuery(many), footerNote: 'live' });
+        await screen.findByTestId('list');
+        expect(bodyRows()).toHaveLength(50);
+        expect(screen.getByTestId('resource-list')).toHaveTextContent('60 results · live');
+        expect(screen.getByText('Page 1 / 2')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Prev' })).toBeDisabled();
+        await userEvent.click(screen.getByRole('button', { name: 'Next' }));
+        expect(bodyRows()).toHaveLength(10);
+        expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+        await userEvent.click(screen.getByRole('button', { name: 'Prev' }));
+        expect(bodyRows()).toHaveLength(50);
+    });
+
+    it('refreshes every query from the toolbar button', async () => {
+        renderPage({ testId: 'list', toolbar: <button>Extra</button> });
+        await screen.findByTestId('list');
+        expect(screen.getByRole('button', { name: 'Extra' })).toBeInTheDocument();
+        const refresh = screen.getByRole('button', { name: 'Refresh' });
+        await userEvent.click(refresh);
+        await waitFor(() => expect(refresh).toHaveAttribute('aria-disabled', 'false'));
+    });
+});

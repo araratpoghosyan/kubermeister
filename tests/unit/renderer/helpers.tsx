@@ -1,9 +1,36 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createMemoryHistory, createRouter, RouterProvider, type AnyRoute } from '@tanstack/react-router';
 import { render, type RenderResult } from '@testing-library/react';
 import type { ReactElement } from 'react';
+import { ThemeProvider } from '@/components/theme-provider';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
-/** Render under a fresh QueryClient with retries off so failures surface immediately. */
+function testQueryClient(): QueryClient {
+    return new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+}
+
+/** Render under the app's providers with a fresh QueryClient and retries off so failures surface immediately. */
 export function renderWithQuery(ui: ReactElement): RenderResult {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
-    return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+    return render(
+        <ThemeProvider>
+            <QueryClientProvider client={testQueryClient()}>
+                <TooltipProvider>{ui}</TooltipProvider>
+            </QueryClientProvider>
+        </ThemeProvider>,
+    );
+}
+
+/** Render a route tree at `path` under the app's providers, on an in-memory history. */
+export function renderRoutes(routeTree: AnyRoute, path: string) {
+    const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: [path] }) });
+    const result = render(
+        <ThemeProvider>
+            <QueryClientProvider client={testQueryClient()}>
+                <TooltipProvider>
+                    <RouterProvider router={router} />
+                </TooltipProvider>
+            </QueryClientProvider>
+        </ThemeProvider>,
+    );
+    return { ...result, router };
 }
