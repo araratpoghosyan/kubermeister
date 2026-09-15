@@ -2,6 +2,7 @@ import {
     makeInformer,
     type KubernetesObject,
     type V1ClusterRoleBinding,
+    type V1CustomResourceDefinition,
     type V1RoleBinding,
     type V1StorageClass,
 } from '@kubernetes/client-node';
@@ -11,6 +12,7 @@ import { streamSchemas, type StreamController, type StreamSend, type WatchEvent 
 import { apis, kubeConfig, resolveNamespace } from './client.js';
 import { K8sError } from './errors.js';
 import { toConfigMap, toSecret } from './resources/config.js';
+import { toCustomResource } from './resources/crds.js';
 import { toEndpoints, toIngress, toNetworkPolicy, toService } from './resources/network.js';
 import { toClusterRole, toClusterRoleBinding, toRole, toRoleBinding, toServiceAccount } from './resources/access.js';
 import { toPod, usageFor } from './resources/pods.js';
@@ -188,6 +190,11 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
         path: () => `/apis/rbac.authorization.k8s.io/v1/clusterrolebindings`,
         list: () => () => apis().rbac.listClusterRoleBinding(),
         toRow: (binding) => toClusterRoleBinding(binding as V1ClusterRoleBinding),
+    },
+    CustomResourceDefinition: {
+        path: () => '/apis/apiextensions.k8s.io/v1/customresourcedefinitions',
+        list: () => () => apis().apiextensions.listCustomResourceDefinition(),
+        toRow: (crd) => toCustomResource(crd as V1CustomResourceDefinition),
     },
     StorageClass: {
         path: () => '/apis/storage.k8s.io/v1/storageclasses',

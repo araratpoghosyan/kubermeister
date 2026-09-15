@@ -46,6 +46,7 @@ describe('kind registry', () => {
             'RoleBinding',
             'ClusterRole',
             'ClusterRoleBinding',
+            'CustomResourceDefinition',
         ]);
         expect(kindInfo('HorizontalPodAutoscaler')).toMatchObject({
             apiVersion: 'autoscaling/v2',

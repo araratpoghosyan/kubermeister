@@ -68,6 +68,7 @@ const client = {
             listHorizontalPodAutoscalerForAllNamespaces: listAny,
         },
         storage: { listStorageClass: listAny },
+        apiextensions: { listCustomResourceDefinition: listAny },
         rbac: {
             listNamespacedRole: listAny,
             listRoleForAllNamespaces: listAny,
