@@ -73,7 +73,7 @@ describe('command palette', () => {
             'aria-disabled',
             'true',
         );
-        for (const label of ['Cluster summary', 'Nodes', 'Namespaces', 'Pods', 'Settings']) {
+        for (const label of ['Cluster summary', 'Nodes', 'Namespaces', 'Pods', 'Jobs', 'Autoscalers', 'Settings']) {
             expect(within(dialog).getByRole('option', { name: label })).toBeInTheDocument();
         }
     });

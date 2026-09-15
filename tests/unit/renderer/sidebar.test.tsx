@@ -34,7 +34,7 @@ describe('Sidebar', () => {
         expect(within(sidebar).getByRole('link', { name: 'Nodes' })).not.toHaveAttribute('aria-current');
         expect(within(sidebar).getByRole('button', { name: 'Workloads' })).toHaveAttribute('aria-expanded', 'true');
         expect(within(sidebar).getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-expanded', 'true');
-        expect(sidebar).toHaveTextContent('COMPUTE');
+        for (const label of ['COMPUTE', 'BATCH', 'CONFIG']) expect(sidebar).toHaveTextContent(label);
         expect(
             within(sidebar)
                 .getAllByRole('link')
@@ -47,6 +47,9 @@ describe('Sidebar', () => {
             'Deployments',
             'StatefulSets',
             'DaemonSets',
+            'Jobs',
+            'CronJobs',
+            'Autoscalers',
             'Settings',
         ]);
     });
