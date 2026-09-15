@@ -1,0 +1,212 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/jetbrains-mono';
+
+@custom-variant dark (&:is(.dark *));
+
+/* ───────────────────────── Light (Cobalt · light) ───────────────────────── */
+:root {
+    --background: #f7f7f4;
+    --foreground: #18181b;
+    --card: #ffffff;
+    --card-foreground: #18181b;
+    --popover: #ffffff;
+    --popover-foreground: #18181b;
+    --primary: #3d5bd6;
+    --primary-foreground: #ffffff;
+    --secondary: #f1f1ed;
+    --secondary-foreground: #18181b;
+    --muted: #f1f1ed;
+    --muted-foreground: #6b6b72;
+    --accent: #f1f1ed;
+    --accent-foreground: #18181b;
+    --destructive: #d24545;
+    --destructive-foreground: #ffffff;
+    --border: #e4e4df;
+    --input: #e4e4df;
+    --ring: #3d5bd6;
+    --radius: 0.625rem;
+
+    /* design extensions */
+    --elev-1: #ffffff;
+    --elev-2: #f1f1ed;
+    --elev-3: #e7e7e2;
+    --border-hi: #cfcfc9;
+    --text-2: #3f3f46;
+    --text-muted: #6b6b72;
+    /* AA-compliant on --background (#f7f7f4): #a1a1aa was ~2.6:1 and failed for the 9.5–10.5px text
+       (rail/group labels, hints, line numbers) it's used on. Darkened to ~4.6:1. */
+    --text-dim: #6e6e77;
+    --accent-strong: #2a45b0;
+    --accent-bg: rgba(61, 91, 214, 0.1);
+    --ok: #0f9a6e;
+    --warn: #c77a05;
+    --danger: #d24545;
+    --ok-bg: rgba(15, 154, 110, 0.1);
+    --warn-bg: rgba(199, 122, 5, 0.1);
+    --danger-bg: rgba(210, 69, 69, 0.1);
+    /* Passive code/YAML surfaces follow the theme: a recessed light panel in light mode (the syntax
+       token colors below are dark enough to read on it). The interactive shell + log console force
+       `.dark` locally, so they keep the dark `--code-bg` from the `.dark` block. */
+    --code-bg: #f3f3ee;
+
+    --chart-1: #3d5bd6;
+    --chart-2: #0f9a6e;
+    --chart-3: #c77a05;
+    --chart-4: #d24545;
+    --chart-5: #6b6b72;
+}
+
+/* ───────────────────────── Dark (Cobalt · dark, default) ───────────────────────── */
+.dark {
+    --background: #0b0d10;
+    --foreground: #eef0f4;
+    --card: #14171c;
+    --card-foreground: #eef0f4;
+    --popover: #14171c;
+    --popover-foreground: #eef0f4;
+    --primary: #5b7cff;
+    --primary-foreground: #ffffff;
+    --secondary: #1b1f26;
+    --secondary-foreground: #eef0f4;
+    --muted: #1b1f26;
+    --muted-foreground: #7a808b;
+    --accent: #1b1f26;
+    --accent-foreground: #eef0f4;
+    --destructive: #f26565;
+    --destructive-foreground: #ffffff;
+    --border: #262a31;
+    --input: #262a31;
+    --ring: #5b7cff;
+
+    /* design extensions */
+    --elev-1: #14171c;
+    --elev-2: #1b1f26;
+    --elev-3: #232830;
+    --border-hi: #353a43;
+    --text-2: #b7bcc6;
+    --text-muted: #7a808b;
+    /* AA-compliant on --background (#0b0d10): #555a64 was ~3.6:1. Brightened to ~5.5:1. */
+    --text-dim: #8a909b;
+    --accent-strong: #3d5bd6;
+    --accent-bg: rgba(91, 124, 255, 0.12);
+    --ok: #3dcb87;
+    --warn: #f5b042;
+    --danger: #f26565;
+    --ok-bg: rgba(61, 203, 135, 0.14);
+    --warn-bg: rgba(245, 176, 66, 0.14);
+    --danger-bg: rgba(242, 101, 101, 0.14);
+    --code-bg: #08090c;
+
+    --chart-1: #5b7cff;
+    --chart-2: #3dcb87;
+    --chart-3: #f5b042;
+    --chart-4: #f26565;
+    --chart-5: #7a808b;
+}
+
+@theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    /* design extensions exposed as utilities */
+    --color-elev-1: var(--elev-1);
+    --color-elev-2: var(--elev-2);
+    --color-elev-3: var(--elev-3);
+    --color-border-hi: var(--border-hi);
+    --color-text-2: var(--text-2);
+    --color-text-muted: var(--text-muted);
+    --color-text-dim: var(--text-dim);
+    --color-accent-strong: var(--accent-strong);
+    --color-accent-bg: var(--accent-bg);
+    --color-ok: var(--ok);
+    --color-warn: var(--warn);
+    --color-danger: var(--danger);
+    --color-ok-bg: var(--ok-bg);
+    --color-warn-bg: var(--warn-bg);
+    --color-danger-bg: var(--danger-bg);
+    --color-code-bg: var(--code-bg);
+
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+    /* Card radius used across detail/list/form cards (was the recurring `rounded-[10px]`). */
+    --radius-card: 10px;
+
+    /* The dense UI type scale (was recurring `text-[N px]` arbitrary values). Font-size only — no
+       companion line-height token, so these set size alone like the literals they replace. Names are
+       role-ish but map 1:1 to a px value: eyebrow 9.5 · caption 10.5 · label 11 · meta 11.5 ·
+       cell 12 · body 12.5 · lead 13 · title 22. (18px spacing and 13px sizing use Tailwind's
+       fractional scale — `4.5` / `3.25` — instead of arbitrary values.) */
+    --text-eyebrow: 9.5px;
+    --text-caption: 10.5px;
+    --text-label: 11px;
+    --text-meta: 11.5px;
+    --text-cell: 12px;
+    --text-body: 12.5px;
+    --text-lead: 13px;
+    --text-title: 22px;
+
+    /* Detail-screen left tab-rail width (was the recurring `grid-cols-[188px_1fr]`). */
+    --spacing-rail: 188px;
+
+    --font-sans: 'Geist Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+    html {
+        color-scheme: light dark;
+    }
+    body {
+        @apply bg-background text-foreground;
+        font-family: var(--font-sans);
+        font-size: 13px;
+        line-height: 1.45;
+        font-feature-settings: 'cv11', 'ss01';
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+}
+
+/* Thin scrollbars to match the dense ops aesthetic */
+@layer base {
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: var(--border-hi);
+        border-radius: 4px;
+    }
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+}

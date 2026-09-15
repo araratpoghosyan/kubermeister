@@ -1,17 +1,47 @@
+import { resolve } from 'node:path';
 import { defineConfig } from 'vitest/config';
+
+const alias = { '@': resolve(__dirname, 'src/renderer') };
 
 export default defineConfig({
     test: {
-        environment: 'node',
-        include: ['tests/unit/**/*.test.ts'],
-        setupFiles: ['tests/setup.ts'],
+        projects: [
+            {
+                test: {
+                    name: 'node',
+                    environment: 'node',
+                    include: ['tests/unit/**/*.test.ts'],
+                    exclude: ['tests/unit/renderer/**'],
+                    setupFiles: ['tests/setup.ts'],
+                },
+                resolve: { alias },
+            },
+            {
+                test: {
+                    name: 'renderer',
+                    environment: 'jsdom',
+                    include: ['tests/unit/renderer/**/*.test.{ts,tsx}'],
+                    setupFiles: ['tests/setup.ts', 'tests/setup-renderer.ts'],
+                },
+                resolve: { alias },
+            },
+        ],
         coverage: {
             provider: 'v8',
-            // Unit-testable code: main-process logic and the shared contract. Bootstrap files that
-            // only wire Electron together (window creation, the preload bridge) and the DOM
-            // renderer are covered end to end, not here.
-            include: ['src/main/**/*.ts', 'src/shared/**/*.ts', 'src/renderer/lib/**/*.ts'],
-            exclude: ['src/main/index.ts'],
+            // Unit-testable code. Excluded: process bootstrap (window creation, the preload bridge,
+            // the React entry), generated route code, shadcn primitives, and route files, which are
+            // thin compositions covered end to end.
+            include: ['src/main/**/*.ts', 'src/shared/**/*.ts', 'src/renderer/**/*.{ts,tsx}'],
+            exclude: [
+                'src/main/index.ts',
+                'src/renderer/main.tsx',
+                'src/renderer/app.tsx',
+                'src/renderer/lib/router.ts',
+                'src/renderer/routeTree.gen.ts',
+                'src/renderer/routes/**',
+                'src/renderer/components/ui/**',
+                'src/renderer/env.d.ts',
+            ],
             // Ratchet: raise these as coverage grows, never lower them.
             thresholds: {
                 statements: 95,
