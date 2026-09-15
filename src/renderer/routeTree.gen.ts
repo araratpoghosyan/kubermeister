@@ -13,6 +13,8 @@ import { Route as IndexRouteImport } from './routes/index';
 import { Route as OverviewNamespacesRouteImport } from './routes/overview/namespaces';
 import { Route as OverviewNodesRouteImport } from './routes/overview/nodes';
 import { Route as OverviewSummaryRouteImport } from './routes/overview/summary';
+import { Route as WorkloadsPodsIndexRouteImport } from './routes/workloads/pods/index';
+import { Route as WorkloadsPodsNamespaceNameRouteImport } from './routes/workloads/pods/$namespace.$name';
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,18 +36,33 @@ const OverviewSummaryRoute = OverviewSummaryRouteImport.update({
   path: '/overview/summary',
   getParentRoute: () => rootRouteImport,
 } as any);
+const WorkloadsPodsIndexRoute = WorkloadsPodsIndexRouteImport.update({
+  id: '/workloads/pods/',
+  path: '/workloads/pods/',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const WorkloadsPodsNamespaceNameRoute =
+  WorkloadsPodsNamespaceNameRouteImport.update({
+    id: '/workloads/pods/$namespace/$name',
+    path: '/workloads/pods/$namespace/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute;
   '/overview/namespaces': typeof OverviewNamespacesRoute;
   '/overview/nodes': typeof OverviewNodesRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
+  '/workloads/pods/': typeof WorkloadsPodsIndexRoute;
+  '/workloads/pods/$namespace/$name': typeof WorkloadsPodsNamespaceNameRoute;
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute;
   '/overview/namespaces': typeof OverviewNamespacesRoute;
   '/overview/nodes': typeof OverviewNodesRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
+  '/workloads/pods': typeof WorkloadsPodsIndexRoute;
+  '/workloads/pods/$namespace/$name': typeof WorkloadsPodsNamespaceNameRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
@@ -53,19 +70,34 @@ export interface FileRoutesById {
   '/overview/namespaces': typeof OverviewNamespacesRoute;
   '/overview/nodes': typeof OverviewNodesRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
+  '/workloads/pods/': typeof WorkloadsPodsIndexRoute;
+  '/workloads/pods/$namespace/$name': typeof WorkloadsPodsNamespaceNameRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
-    '/' | '/overview/namespaces' | '/overview/nodes' | '/overview/summary';
+    | '/'
+    | '/overview/namespaces'
+    | '/overview/nodes'
+    | '/overview/summary'
+    | '/workloads/pods/'
+    | '/workloads/pods/$namespace/$name';
   fileRoutesByTo: FileRoutesByTo;
-  to: '/' | '/overview/namespaces' | '/overview/nodes' | '/overview/summary';
+  to:
+    | '/'
+    | '/overview/namespaces'
+    | '/overview/nodes'
+    | '/overview/summary'
+    | '/workloads/pods'
+    | '/workloads/pods/$namespace/$name';
   id:
     | '__root__'
     | '/'
     | '/overview/namespaces'
     | '/overview/nodes'
-    | '/overview/summary';
+    | '/overview/summary'
+    | '/workloads/pods/'
+    | '/workloads/pods/$namespace/$name';
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
@@ -73,6 +105,8 @@ export interface RootRouteChildren {
   OverviewNamespacesRoute: typeof OverviewNamespacesRoute;
   OverviewNodesRoute: typeof OverviewNodesRoute;
   OverviewSummaryRoute: typeof OverviewSummaryRoute;
+  WorkloadsPodsIndexRoute: typeof WorkloadsPodsIndexRoute;
+  WorkloadsPodsNamespaceNameRoute: typeof WorkloadsPodsNamespaceNameRoute;
 }
 
 declare module '@tanstack/react-router' {
@@ -105,6 +139,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OverviewSummaryRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/workloads/pods/': {
+      id: '/workloads/pods/';
+      path: '/workloads/pods';
+      fullPath: '/workloads/pods/';
+      preLoaderRoute: typeof WorkloadsPodsIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/workloads/pods/$namespace/$name': {
+      id: '/workloads/pods/$namespace/$name';
+      path: '/workloads/pods/$namespace/$name';
+      fullPath: '/workloads/pods/$namespace/$name';
+      preLoaderRoute: typeof WorkloadsPodsNamespaceNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
   }
 }
 
@@ -113,6 +161,8 @@ const rootRouteChildren: RootRouteChildren = {
   OverviewNamespacesRoute: OverviewNamespacesRoute,
   OverviewNodesRoute: OverviewNodesRoute,
   OverviewSummaryRoute: OverviewSummaryRoute,
+  WorkloadsPodsIndexRoute: WorkloadsPodsIndexRoute,
+  WorkloadsPodsNamespaceNameRoute: WorkloadsPodsNamespaceNameRoute,
 };
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

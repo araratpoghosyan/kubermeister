@@ -10,3 +10,31 @@ metadata:
   namespace: km-e2e
 data:
   greeting: hello-from-e2e
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: km-e2e
+  labels:
+    app: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: web
+          image: busybox:1.36
+          command: ['sh', '-c', 'while true; do echo km-e2e-marker; sleep 5; done']
+          ports:
+            - containerPort: 8080
+          resources:
+            limits:
+              cpu: 100m
+              memory: 32Mi

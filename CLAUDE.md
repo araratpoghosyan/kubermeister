@@ -72,6 +72,13 @@ Body: why the change is needed, what a reader of the history cannot learn from t
 - **Resource reads** (`src/main/k8s/resources/*`) are pure transforms from Kubernetes objects to
   view models, exported and unit tested on their own, plus thin readers that fetch and delegate.
   Keep it that way so a watch stream can feed the same transforms later.
+- **Kinds go through the generic channels.** `src/shared/k8s/registry.ts` holds one entry per kind;
+  `resources.list` and `resources.get` take a `kind` and return a union discriminated on it
+  (`src/shared/k8s/resources.ts`), with per-kind fetchers registered in
+  `src/main/k8s/resources/index.ts`. Adding a kind: registry entry, view-model schema, transforms
+  plus readers, union member, fetcher entry, renderer hook usage. Aggregates that are not a plain
+  kind (cluster summary, namespaces with pod counts, nodes) keep bespoke channels. Detail routes
+  carry the namespace: `/workloads/pods/$namespace/$name`.
 - **Kubernetes access** lives in `src/main/k8s`. The kubeconfig is read-only: switching context
   or namespace changes memory and the app's own settings, never the file. Every cluster call goes
   through `withK8s` (timeout plus `[kind]`-prefixed `K8sError`). No `kubectl` dependency; the

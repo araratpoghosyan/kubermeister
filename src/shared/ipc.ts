@@ -4,6 +4,12 @@ import { kubeContextSchema } from './k8s/contexts.js';
 import { ipcErrorSchema } from './k8s/errors.js';
 import { clusterSchema, namespaceSchema } from './k8s/cluster.js';
 import { nodeDetailSchema, nodeSchema } from './k8s/nodes.js';
+import {
+    resourceGetInputSchema,
+    resourceGetOutputSchema,
+    resourceListInputSchema,
+    resourceListOutputSchema,
+} from './k8s/resources.js';
 import { settingsInputSchema, settingsSchema } from './settings.js';
 
 const noInput = z.object({});
@@ -73,6 +79,8 @@ export const ipcSchemas = {
     'clusters.list': { input: noInput, output: z.array(clusterSchema) },
     'nodes.list': { input: noInput, output: z.array(nodeSchema) },
     'nodes.get': { input: z.object({ name: z.string().min(1) }), output: nodeDetailSchema.nullable() },
+    'resources.list': { input: resourceListInputSchema, output: resourceListOutputSchema },
+    'resources.get': { input: resourceGetInputSchema, output: resourceGetOutputSchema },
 } as const;
 
 /**
