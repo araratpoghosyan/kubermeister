@@ -19,8 +19,21 @@ const apps = {
     listDaemonSetForAllNamespaces: vi.fn(),
     readNamespacedDaemonSet: vi.fn(),
 };
+const batch = {
+    listNamespacedJob: vi.fn(),
+    listJobForAllNamespaces: vi.fn(),
+    readNamespacedJob: vi.fn(),
+    listNamespacedCronJob: vi.fn(),
+    listCronJobForAllNamespaces: vi.fn(),
+    readNamespacedCronJob: vi.fn(),
+};
+const hpa = {
+    listNamespacedHorizontalPodAutoscaler: vi.fn(),
+    listHorizontalPodAutoscalerForAllNamespaces: vi.fn(),
+    readNamespacedHorizontalPodAutoscaler: vi.fn(),
+};
 const client = {
-    apis: () => ({ apps }),
+    apis: () => ({ apps, batch, hpa }),
     getActiveNamespace: vi.fn<() => string | null>(),
     resolveObjectNamespace: (explicit?: string) => explicit ?? client.getActiveNamespace(),
     isSafeSelectorValue: (value: string) => /^[A-Za-z0-9._-]+$/.test(value),
@@ -313,6 +326,210 @@ describe('readers', () => {
         apps.listNamespacedReplicaSet.mockRejectedValue(new Error('boom'));
         await expect(workloads.getDeploymentRollouts('web', 'team-a')).rejects.toMatchObject({
             op: 'deployments.rollouts',
+        });
+    });
+});
+
+const job = (overrides: Partial<V1Job> = {}): V1Job =>
+    ({
+        metadata: {
+            name: 'import',
+            namespace: 'team-a',
+            creationTimestamp: new Date(NOW - HOUR),
+            labels: { app: 'x' },
+        },
+        spec: { completions: 3 },
+        status: {
+            succeeded: 3,
+            startTime: new Date(NOW - 2 * HOUR),
+            completionTime: new Date(NOW - HOUR),
+            conditions: [{ type: 'Complete', status: 'True' }],
+        },
+        ...overrides,
+    }) as V1Job;
+
+describe('job transforms', () => {
+    it('reads the status from terminal conditions, defaulting to Running', () => {
+        expect(workloads.jobStatus(job())).toBe('Complete');
+        expect(workloads.jobStatus(job({ status: { conditions: [{ type: 'Failed', status: 'True' }] } }))).toBe(
+            'Failed',
+        );
+        // Failed outranks Complete when both are set.
+        expect(
+            workloads.jobStatus(
+                job({
+                    status: {
+                        conditions: [
+                            { type: 'Complete', status: 'True' },
+                            { type: 'Failed', status: 'True' },
+                        ],
+                    },
+                }),
+            ),
+        ).toBe('Failed');
+        expect(workloads.jobStatus(job({ status: { conditions: [{ type: 'Complete', status: 'False' }] } }))).toBe(
+            'Running',
+        );
+        expect(workloads.jobStatus(job({ status: {} }))).toBe('Running');
+    });
+
+    it('builds the row with completions, duration and age', () => {
+        expect(workloads.toJob(job(), NOW)).toEqual({
+            name: 'import',
+            namespace: 'team-a',
+            completions: '3/3',
+            duration: '1h0m',
+            status: 'Complete',
+            age: '1h',
+        });
+        // A running job measures against now; one that never started has no duration.
+        expect(workloads.toJob(job({ spec: {}, status: { startTime: new Date(NOW - 60_000) } }), NOW)).toMatchObject({
+            completions: '0/1',
+            duration: '1m0s',
+            status: 'Running',
+        });
+        expect(workloads.toJob(job({ spec: {}, status: {} }), NOW).duration).toBe('—');
+    });
+
+    it('carries label pairs on the detail', () => {
+        expect(workloads.toJobDetail(job(), NOW)).toMatchObject({ labels: [['app', 'x']], annotations: [] });
+    });
+});
+
+const cronJob = (overrides: Partial<V1CronJob> = {}): V1CronJob =>
+    ({
+        metadata: { name: 'nightly', namespace: 'team-a', creationTimestamp: new Date(NOW - 3 * 24 * HOUR) },
+        spec: { schedule: '0 2 * * *', suspend: false },
+        status: { active: [{ name: 'nightly-1' }], lastScheduleTime: new Date(NOW - 2 * HOUR) },
+        ...overrides,
+    }) as V1CronJob;
+
+describe('cronjob transforms', () => {
+    it('builds the row with schedule, suspend, active count and last schedule', () => {
+        expect(workloads.toCronJob(cronJob(), NOW)).toEqual({
+            name: 'nightly',
+            namespace: 'team-a',
+            schedule: '0 2 * * *',
+            suspend: false,
+            active: 1,
+            lastSchedule: '2h ago',
+            age: '3d',
+        });
+    });
+
+    it('defaults a sparse cron job to not suspended, no active jobs and dashes', () => {
+        expect(workloads.toCronJob({ metadata: { name: 'x' } }, NOW)).toMatchObject({
+            schedule: '—',
+            suspend: false,
+            active: 0,
+            lastSchedule: '—',
+        });
+        expect(workloads.toCronJob(cronJob({ spec: { schedule: '@daily', suspend: true } }), NOW).suspend).toBe(true);
+    });
+});
+
+const autoscaler = (overrides: Partial<V2HorizontalPodAutoscaler> = {}): V2HorizontalPodAutoscaler =>
+    ({
+        metadata: { name: 'web', namespace: 'team-a', creationTimestamp: new Date(NOW - HOUR) },
+        spec: {
+            scaleTargetRef: { kind: 'Deployment', name: 'web' },
+            minReplicas: 2,
+            maxReplicas: 10,
+            metrics: [
+                {
+                    type: 'Resource',
+                    resource: { name: 'cpu', target: { type: 'Utilization', averageUtilization: 80 } },
+                },
+            ],
+        },
+        status: {
+            currentReplicas: 3,
+            currentMetrics: [{ type: 'Resource', resource: { name: 'cpu', current: { averageUtilization: 42 } } }],
+        },
+        ...overrides,
+    }) as V2HorizontalPodAutoscaler;
+
+describe('autoscaler transforms', () => {
+    it('formats the target utilisation pair, falling back to zero on one side', () => {
+        expect(workloads.hpaTargets(autoscaler())).toBe('42% / 80%');
+        expect(workloads.hpaTargets(autoscaler({ status: { currentReplicas: 1 } }))).toBe('0% / 80%');
+        expect(workloads.hpaTargets(autoscaler({ spec: { maxReplicas: 3 }, status: { currentReplicas: 1 } }))).toBe(
+            '—',
+        );
+    });
+
+    it('builds the row with the scale reference and replica bounds', () => {
+        expect(workloads.toAutoscaler(autoscaler(), NOW)).toEqual({
+            name: 'web',
+            namespace: 'team-a',
+            reference: 'Deployment/web',
+            min: 2,
+            max: 10,
+            replicas: 3,
+            targets: '42% / 80%',
+            age: '1h',
+        });
+        expect(workloads.toAutoscaler({ metadata: { name: 'x' }, spec: { maxReplicas: 5 } }, NOW)).toMatchObject({
+            reference: '—',
+            min: 1,
+            max: 5,
+            replicas: 0,
+            targets: '—',
+        });
+    });
+});
+
+describe('batch and autoscaler readers', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        client.getActiveNamespace.mockReturnValue('team-a');
+        batch.listNamespacedJob.mockResolvedValue({ items: [job()] });
+        batch.listJobForAllNamespaces.mockResolvedValue({
+            items: [job(), job({ metadata: { name: 'other', namespace: 'b' } })],
+        });
+        batch.readNamespacedJob.mockResolvedValue(job());
+        batch.listNamespacedCronJob.mockResolvedValue({ items: [cronJob()] });
+        batch.listCronJobForAllNamespaces.mockResolvedValue({ items: [] });
+        batch.readNamespacedCronJob.mockRejectedValue(new ApiException(404, 'x', null, {}));
+        hpa.listNamespacedHorizontalPodAutoscaler.mockResolvedValue({ items: [autoscaler()] });
+        hpa.listHorizontalPodAutoscalerForAllNamespaces.mockResolvedValue({ items: [] });
+        hpa.readNamespacedHorizontalPodAutoscaler.mockResolvedValue(autoscaler());
+    });
+
+    it('lists and gets jobs in the explicit, active or all namespaces', async () => {
+        expect((await workloads.listJobs('explicit')).map((j) => j.name)).toEqual(['import']);
+        expect(batch.listNamespacedJob).toHaveBeenCalledWith({ namespace: 'explicit' });
+        await expect(workloads.getJob('import', 'team-a')).resolves.toMatchObject({
+            name: 'import',
+            labels: [['app', 'x']],
+        });
+        client.getActiveNamespace.mockReturnValue(null);
+        expect((await workloads.listJobs()).map((j) => j.namespace)).toEqual(['team-a', 'b']);
+    });
+
+    it('lists and gets cron jobs, returning null for a missing one', async () => {
+        expect((await workloads.listCronJobs()).map((c) => c.name)).toEqual(['nightly']);
+        expect(batch.listNamespacedCronJob).toHaveBeenCalledWith({ namespace: 'team-a' });
+        await expect(workloads.getCronJob('gone', 'team-a')).resolves.toBeNull();
+    });
+
+    it('lists and gets autoscalers', async () => {
+        expect((await workloads.listAutoscalers()).map((a) => a.reference)).toEqual(['Deployment/web']);
+        await expect(workloads.getAutoscaler('web', 'team-a')).resolves.toMatchObject({ name: 'web', annotations: [] });
+        client.getActiveNamespace.mockReturnValue(null);
+        await workloads.listAutoscalers();
+        expect(hpa.listHorizontalPodAutoscalerForAllNamespaces).toHaveBeenCalled();
+    });
+
+    it('classifies failures under the generic ops', async () => {
+        batch.listNamespacedJob.mockRejectedValue(new ApiException(403, 'x', { message: 'denied' }, {}));
+        await expect(workloads.listJobs()).rejects.toMatchObject({ kind: 'forbidden', op: 'resources.list' });
+        hpa.readNamespacedHorizontalPodAutoscaler.mockRejectedValue(
+            Object.assign(new Error('x'), { code: 'ECONNREFUSED' }),
+        );
+        await expect(workloads.getAutoscaler('web', 'team-a')).rejects.toMatchObject({
+            kind: 'unreachable',
+            op: 'resources.get',
         });
     });
 });

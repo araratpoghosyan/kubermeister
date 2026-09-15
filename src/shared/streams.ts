@@ -4,7 +4,14 @@ import type { LogLine } from './k8s/logs.js';
 import { podSchema } from './k8s/pods.js';
 import type { Kind } from './k8s/registry.js';
 import { resourceListInputSchema, type ResourceListInput } from './k8s/resources.js';
-import { daemonSetSchema, deploymentSchema, statefulSetSchema } from './k8s/workloads.js';
+import {
+    autoscalerSchema,
+    cronJobSchema,
+    daemonSetSchema,
+    deploymentSchema,
+    jobSchema,
+    statefulSetSchema,
+} from './k8s/workloads.js';
 
 /**
  * Streaming contract, separate from the one-shot `invoke` channels. A stream pushes many messages
@@ -32,6 +39,9 @@ export const watchEventSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('Deployment'), type: watchType, item: deploymentSchema }),
     z.object({ kind: z.literal('StatefulSet'), type: watchType, item: statefulSetSchema }),
     z.object({ kind: z.literal('DaemonSet'), type: watchType, item: daemonSetSchema }),
+    z.object({ kind: z.literal('Job'), type: watchType, item: jobSchema }),
+    z.object({ kind: z.literal('CronJob'), type: watchType, item: cronJobSchema }),
+    z.object({ kind: z.literal('HorizontalPodAutoscaler'), type: watchType, item: autoscalerSchema }),
 ]);
 
 export type WatchEvent = z.infer<typeof watchEventSchema>;

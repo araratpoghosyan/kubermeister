@@ -4,7 +4,7 @@ import type { RowOf } from '../../shared/k8s/resources.js';
 import { streamSchemas, type StreamController, type StreamSend, type WatchEvent } from '../../shared/streams.js';
 import { apis, kubeConfig, resolveNamespace } from './client.js';
 import { toPod, usageFor } from './resources/pods.js';
-import { toDaemonSet, toDeployment, toStatefulSet } from './resources/workloads.js';
+import { toAutoscaler, toCronJob, toDaemonSet, toDeployment, toJob, toStatefulSet } from './resources/workloads.js';
 
 /** How long to wait before restarting an informer after its watch connection failed. */
 export const WATCH_RETRY_MS = 5_000;
@@ -46,6 +46,31 @@ const WATCH_SOURCES: { [K in Kind]: WatchSource<K> } = {
                 ? () => apis().apps.listNamespacedDaemonSet({ namespace: ns })
                 : () => apis().apps.listDaemonSetForAllNamespaces(),
         toRow: (d) => toDaemonSet(d),
+    },
+    Job: {
+        path: (ns) => (ns ? `/apis/batch/v1/namespaces/${ns}/jobs` : '/apis/batch/v1/jobs'),
+        list: (ns) =>
+            ns ? () => apis().batch.listNamespacedJob({ namespace: ns }) : () => apis().batch.listJobForAllNamespaces(),
+        toRow: (job) => toJob(job),
+    },
+    CronJob: {
+        path: (ns) => (ns ? `/apis/batch/v1/namespaces/${ns}/cronjobs` : '/apis/batch/v1/cronjobs'),
+        list: (ns) =>
+            ns
+                ? () => apis().batch.listNamespacedCronJob({ namespace: ns })
+                : () => apis().batch.listCronJobForAllNamespaces(),
+        toRow: (cronJob) => toCronJob(cronJob),
+    },
+    HorizontalPodAutoscaler: {
+        path: (ns) =>
+            ns
+                ? `/apis/autoscaling/v2/namespaces/${ns}/horizontalpodautoscalers`
+                : '/apis/autoscaling/v2/horizontalpodautoscalers',
+        list: (ns) =>
+            ns
+                ? () => apis().hpa.listNamespacedHorizontalPodAutoscaler({ namespace: ns })
+                : () => apis().hpa.listHorizontalPodAutoscalerForAllNamespaces(),
+        toRow: (autoscaler) => toAutoscaler(autoscaler),
     },
 };
 

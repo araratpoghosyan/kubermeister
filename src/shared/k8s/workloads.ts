@@ -69,6 +69,48 @@ export const replicaSetSchema = z.object({
     age: z.string(),
 });
 
+/** A Job is Running until a terminal condition appears; Complete outranks nothing, Failed outranks Complete. */
+export const jobStatusSchema = z.enum(['Complete', 'Running', 'Failed']);
+
+export const jobSchema = z.object({
+    name: z.string(),
+    namespace: z.string(),
+    /** Succeeded pods over requested completions, e.g. "1/1". */
+    completions: z.string(),
+    /** Wall-clock run time, or an em-dash before the job starts. */
+    duration: z.string(),
+    status: jobStatusSchema,
+    age: z.string(),
+});
+export const jobDetailSchema = jobSchema.extend({ labels: pairs, annotations: pairs });
+
+export const cronJobSchema = z.object({
+    name: z.string(),
+    namespace: z.string(),
+    /** Cron expression, or an em-dash. */
+    schedule: z.string(),
+    suspend: z.boolean(),
+    /** Currently running jobs this cron job owns. */
+    active: z.number().int().nonnegative(),
+    lastSchedule: z.string(),
+    age: z.string(),
+});
+export const cronJobDetailSchema = cronJobSchema.extend({ labels: pairs, annotations: pairs });
+
+export const autoscalerSchema = z.object({
+    name: z.string(),
+    namespace: z.string(),
+    /** Scale target as `Kind/name`, or an em-dash. */
+    reference: z.string(),
+    min: z.number().int().nonnegative(),
+    max: z.number().int().nonnegative(),
+    replicas: z.number().int().nonnegative(),
+    /** Current over target utilisation, e.g. "42% / 80%", or an em-dash when neither is reported. */
+    targets: z.string(),
+    age: z.string(),
+});
+export const autoscalerDetailSchema = autoscalerSchema.extend({ labels: pairs, annotations: pairs });
+
 export const namespacedNameSchema = z.object({ name: z.string().min(1), namespace: z.string().min(1) });
 
 export type DeploymentStatus = z.infer<typeof deploymentStatusSchema>;
@@ -81,4 +123,11 @@ export type DaemonSetDetail = z.infer<typeof daemonSetDetailSchema>;
 export type RolloutState = z.infer<typeof rolloutStateSchema>;
 export type Rollout = z.infer<typeof rolloutSchema>;
 export type ReplicaSet = z.infer<typeof replicaSetSchema>;
+export type JobStatus = z.infer<typeof jobStatusSchema>;
+export type Job = z.infer<typeof jobSchema>;
+export type JobDetail = z.infer<typeof jobDetailSchema>;
+export type CronJob = z.infer<typeof cronJobSchema>;
+export type CronJobDetail = z.infer<typeof cronJobDetailSchema>;
+export type Autoscaler = z.infer<typeof autoscalerSchema>;
+export type AutoscalerDetail = z.infer<typeof autoscalerDetailSchema>;
 export type NamespacedName = z.infer<typeof namespacedNameSchema>;

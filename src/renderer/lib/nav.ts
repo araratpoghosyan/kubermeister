@@ -1,4 +1,14 @@
-import { BoxIcon, BoxesIcon, LayoutDashboardIcon, type LucideIcon, ServerIcon, SettingsIcon } from 'lucide-react';
+import {
+    BoxIcon,
+    BoxesIcon,
+    LayoutDashboardIcon,
+    type LucideIcon,
+    PlayIcon,
+    ServerIcon,
+    SettingsIcon,
+    TimerIcon,
+    TrendingUpIcon,
+} from 'lucide-react';
 import type { RoutePath } from './router';
 
 export interface NavItem {
@@ -53,6 +63,19 @@ export const DOMAINS: Domain[] = [
                     { id: 'deployments', label: 'Deployments', path: '/workloads/deployments', icon: BoxesIcon },
                     { id: 'statefulsets', label: 'StatefulSets', path: '/workloads/statefulsets', icon: BoxesIcon },
                     { id: 'daemonsets', label: 'DaemonSets', path: '/workloads/daemonsets', icon: BoxesIcon },
+                ],
+            },
+            {
+                label: 'BATCH',
+                items: [
+                    { id: 'jobs', label: 'Jobs', path: '/workloads/jobs', icon: PlayIcon },
+                    { id: 'cronjobs', label: 'CronJobs', path: '/workloads/cronjobs', icon: TimerIcon },
+                ],
+            },
+            {
+                label: 'CONFIG',
+                items: [
+                    { id: 'autoscalers', label: 'Autoscalers', path: '/workloads/autoscalers', icon: TrendingUpIcon },
                 ],
             },
         ],

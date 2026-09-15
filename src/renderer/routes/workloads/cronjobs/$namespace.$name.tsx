@@ -1,0 +1,56 @@
+import { createFileRoute } from '@tanstack/react-router';
+import { TimerIcon } from 'lucide-react';
+import { RefreshButton } from '@/components/refresh-button';
+import {
+    eventsTab,
+    labelsTab,
+    overviewTab,
+    ResourceDetail,
+    type DetailTabGroup,
+} from '@/components/templates/resource-detail';
+import { ipcQueryKey } from '@/lib/query';
+import { useResource } from '@/lib/resources';
+
+export const Route = createFileRoute('/workloads/cronjobs/$namespace/$name')({ component: CronJobDetailPage });
+
+function CronJobDetailPage() {
+    const { namespace, name } = Route.useParams();
+    const query = useResource('CronJob', name, namespace);
+    const row = query.data;
+
+    const groups: DetailTabGroup[] = row
+        ? [
+              {
+                  label: 'OBSERVE',
+                  items: [
+                      overviewTab([
+                          ['Schedule', row.schedule],
+                          ['Suspend', String(row.suspend)],
+                          ['Active', String(row.active)],
+                          ['Last schedule', row.lastSchedule],
+                          ['Age', row.age],
+                      ]),
+                      eventsTab({ kind: 'CronJob', name, namespace }),
+                  ],
+              },
+              { label: 'INSPECT', items: [labelsTab({ labels: row.labels, annotations: row.annotations })] },
+          ]
+        : [];
+
+    return (
+        <ResourceDetail
+            icon={TimerIcon}
+            eyebrow="CronJob"
+            title={name}
+            kind="CronJob"
+            namespace={namespace}
+            backTo="/workloads/cronjobs"
+            query={query}
+            found={!!row}
+            actions={<RefreshButton queryKeys={[ipcQueryKey('resources.get', { kind: 'CronJob', name, namespace })]} />}
+            meta={row ? [`schedule: ${row.schedule}`, `suspended: ${row.suspend}`] : undefined}
+            groups={groups}
+            testId="cronjob-page"
+        />
+    );
+}

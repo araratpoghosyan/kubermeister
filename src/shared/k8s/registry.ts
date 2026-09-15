@@ -39,6 +39,21 @@ export const KIND_REGISTRY = {
         scalable: false,
         listPath: '/workloads/daemonsets',
     },
+    Job: { kind: 'Job', apiVersion: 'batch/v1', clusterScoped: false, scalable: false, listPath: '/workloads/jobs' },
+    CronJob: {
+        kind: 'CronJob',
+        apiVersion: 'batch/v1',
+        clusterScoped: false,
+        scalable: false,
+        listPath: '/workloads/cronjobs',
+    },
+    HorizontalPodAutoscaler: {
+        kind: 'HorizontalPodAutoscaler',
+        apiVersion: 'autoscaling/v2',
+        clusterScoped: false,
+        scalable: false,
+        listPath: '/workloads/autoscalers',
+    },
 } as const satisfies Record<string, KindInfo>;
 
 export type Kind = keyof typeof KIND_REGISTRY;

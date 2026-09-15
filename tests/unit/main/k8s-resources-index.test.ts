@@ -9,6 +9,12 @@ const workloadsMod = {
     getStatefulSet: vi.fn(),
     listDaemonSets: vi.fn(),
     getDaemonSet: vi.fn(),
+    listJobs: vi.fn(),
+    getJob: vi.fn(),
+    listCronJobs: vi.fn(),
+    getCronJob: vi.fn(),
+    listAutoscalers: vi.fn(),
+    getAutoscaler: vi.fn(),
 };
 vi.mock('../../../src/main/k8s/resources/workloads.js', () => workloadsMod);
 
@@ -53,6 +59,28 @@ describe('generic resource dispatch', () => {
         await expect(listResources({ kind: 'DaemonSet' })).resolves.toEqual({ kind: 'DaemonSet', items: [] });
         await expect(getResource({ kind: 'DaemonSet', name: 'agent' })).resolves.toEqual({
             kind: 'DaemonSet',
+            item: null,
+        });
+    });
+
+    it('routes the batch and autoscaler kinds to their sources', async () => {
+        for (const fn of [workloadsMod.listJobs, workloadsMod.listCronJobs, workloadsMod.listAutoscalers]) {
+            fn.mockResolvedValue([]);
+        }
+        for (const fn of [workloadsMod.getJob, workloadsMod.getCronJob, workloadsMod.getAutoscaler]) {
+            fn.mockResolvedValue(null);
+        }
+        await expect(listResources({ kind: 'Job', namespace: 'a' })).resolves.toEqual({ kind: 'Job', items: [] });
+        expect(workloadsMod.listJobs).toHaveBeenCalledWith('a');
+        await expect(listResources({ kind: 'CronJob' })).resolves.toEqual({ kind: 'CronJob', items: [] });
+        await expect(listResources({ kind: 'HorizontalPodAutoscaler' })).resolves.toEqual({
+            kind: 'HorizontalPodAutoscaler',
+            items: [],
+        });
+        await expect(getResource({ kind: 'Job', name: 'j' })).resolves.toEqual({ kind: 'Job', item: null });
+        await expect(getResource({ kind: 'CronJob', name: 'c' })).resolves.toEqual({ kind: 'CronJob', item: null });
+        await expect(getResource({ kind: 'HorizontalPodAutoscaler', name: 'h' })).resolves.toEqual({
+            kind: 'HorizontalPodAutoscaler',
             item: null,
         });
     });

@@ -200,3 +200,21 @@ test('lists the seeded deployment and opens its rollout history', async () => {
     await window.getByRole('tab', { name: /ReplicaSets/ }).click();
     await expect(page.getByTestId('replica-sets').getByRole('row')).toHaveCount(2);
 });
+
+test('lists the seeded job and cron job and opens the job detail', async () => {
+    const { window } = launched;
+    // Exact: "Jobs" is a substring of "CronJobs", and both links sit in the sidebar.
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Jobs', exact: true }).click();
+    const job = window.getByTestId('jobs-table').locator('[data-job="import"]');
+    await expect(job).toContainText('1/1', { timeout: 30_000 });
+    await expect(job).toContainText('Complete', { timeout: 30_000 });
+    await job.getByRole('link').click();
+    const page = window.getByTestId('job-page');
+    await expect(page).toContainText('completions: 1/1');
+    await expect(page).toContainText('Completions');
+
+    await window.getByTestId('sidebar').getByRole('link', { name: 'CronJobs' }).click();
+    const cron = window.getByTestId('cronjobs-table').locator('[data-cronjob="nightly"]');
+    await expect(cron).toContainText('0 2 * * *');
+    await expect(cron).toContainText('true');
+});

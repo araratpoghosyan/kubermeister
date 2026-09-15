@@ -1,7 +1,7 @@
 import type { ClusterStatus, NodeStatus } from '../../shared/k8s/status';
 import type { NamespaceTone } from '../../shared/k8s/cluster';
 import type { ContainerState, PodStatus } from '../../shared/k8s/pods';
-import type { DeploymentStatus, RolloutState } from '../../shared/k8s/workloads';
+import type { DeploymentStatus, JobStatus, RolloutState } from '../../shared/k8s/workloads';
 
 /** Presentational tone a status badge renders with. */
 export type StatusTone = 'ok' | 'warn' | 'danger' | 'neutral' | 'accent';
@@ -33,6 +33,7 @@ export const DEPLOYMENT_TONE: Record<DeploymentStatus, StatusTone> = {
     Progressing: 'warn',
 };
 export const ROLLOUT_TONE: Record<RolloutState, StatusTone> = { Current: 'ok', Superseded: 'neutral' };
+export const JOB_TONE: Record<JobStatus, StatusTone> = { Complete: 'ok', Running: 'accent', Failed: 'danger' };
 
 /** Tone for a resource-usage percentage: ok below 75, warn from 75, danger above 90. */
 export function usageTone(percent: number): Extract<StatusTone, 'ok' | 'warn' | 'danger'> {

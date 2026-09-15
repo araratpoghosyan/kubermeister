@@ -23,7 +23,20 @@ const podRow = {
 
 describe('kind registry', () => {
     it('knows every kind with its API facts and list path', () => {
-        expect(KINDS).toEqual(['Pod', 'Deployment', 'StatefulSet', 'DaemonSet']);
+        expect(KINDS).toEqual([
+            'Pod',
+            'Deployment',
+            'StatefulSet',
+            'DaemonSet',
+            'Job',
+            'CronJob',
+            'HorizontalPodAutoscaler',
+        ]);
+        expect(kindInfo('HorizontalPodAutoscaler')).toMatchObject({
+            apiVersion: 'autoscaling/v2',
+            listPath: '/workloads/autoscalers',
+        });
+        expect(kindInfo('Job').apiVersion).toBe('batch/v1');
         expect(kindInfo('Deployment')).toMatchObject({
             apiVersion: 'apps/v1',
             scalable: true,
@@ -64,6 +77,45 @@ describe('generic resource channels', () => {
         ).toBe(false);
         expect(resourceGetOutputSchema.safeParse({ kind: 'Pod', item: null }).success).toBe(true);
         expect(resourceGetOutputSchema.safeParse({ kind: 'Node', item: null }).success).toBe(false);
+        const jobRow = {
+            name: 'j',
+            namespace: 'a',
+            completions: '1/1',
+            duration: '1m0s',
+            status: 'Complete',
+            age: '1h',
+        };
+        expect(resourceListOutputSchema.safeParse({ kind: 'Job', items: [jobRow] }).success).toBe(true);
+        expect(
+            resourceListOutputSchema.safeParse({ kind: 'Job', items: [{ ...jobRow, status: 'Sleeping' }] }).success,
+        ).toBe(false);
+        expect(
+            resourceGetOutputSchema.safeParse({ kind: 'Job', item: { ...jobRow, labels: [], annotations: [] } })
+                .success,
+        ).toBe(true);
+        const cronRow = {
+            name: 'c',
+            namespace: 'a',
+            schedule: '@daily',
+            suspend: false,
+            active: 0,
+            lastSchedule: '—',
+            age: '1h',
+        };
+        expect(resourceListOutputSchema.safeParse({ kind: 'CronJob', items: [cronRow] }).success).toBe(true);
+        const hpaRow = {
+            name: 'h',
+            namespace: 'a',
+            reference: 'Deployment/web',
+            min: 1,
+            max: 3,
+            replicas: 1,
+            targets: '—',
+            age: '1h',
+        };
+        expect(resourceListOutputSchema.safeParse({ kind: 'HorizontalPodAutoscaler', items: [hpaRow] }).success).toBe(
+            true,
+        );
         const deployment = {
             name: 'web',
             namespace: 'a',

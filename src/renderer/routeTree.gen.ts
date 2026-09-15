@@ -15,12 +15,18 @@ import { Route as OverviewNamespacesRouteImport } from './routes/overview/namesp
 import { Route as OverviewNodesRouteImport } from './routes/overview/nodes';
 import { Route as OverviewSummaryRouteImport } from './routes/overview/summary';
 import { Route as OverviewNodesNameRouteImport } from './routes/overview/nodes_.$name';
+import { Route as WorkloadsAutoscalersIndexRouteImport } from './routes/workloads/autoscalers/index';
+import { Route as WorkloadsCronjobsIndexRouteImport } from './routes/workloads/cronjobs/index';
 import { Route as WorkloadsDaemonsetsIndexRouteImport } from './routes/workloads/daemonsets/index';
 import { Route as WorkloadsDeploymentsIndexRouteImport } from './routes/workloads/deployments/index';
+import { Route as WorkloadsJobsIndexRouteImport } from './routes/workloads/jobs/index';
 import { Route as WorkloadsPodsIndexRouteImport } from './routes/workloads/pods/index';
 import { Route as WorkloadsStatefulsetsIndexRouteImport } from './routes/workloads/statefulsets/index';
+import { Route as WorkloadsAutoscalersNamespaceNameRouteImport } from './routes/workloads/autoscalers/$namespace.$name';
+import { Route as WorkloadsCronjobsNamespaceNameRouteImport } from './routes/workloads/cronjobs/$namespace.$name';
 import { Route as WorkloadsDaemonsetsNamespaceNameRouteImport } from './routes/workloads/daemonsets/$namespace.$name';
 import { Route as WorkloadsDeploymentsNamespaceNameRouteImport } from './routes/workloads/deployments/$namespace.$name';
+import { Route as WorkloadsJobsNamespaceNameRouteImport } from './routes/workloads/jobs/$namespace.$name';
 import { Route as WorkloadsPodsNamespaceNameRouteImport } from './routes/workloads/pods/$namespace.$name';
 import { Route as WorkloadsStatefulsetsNamespaceNameRouteImport } from './routes/workloads/statefulsets/$namespace.$name';
 
@@ -54,6 +60,17 @@ const OverviewNodesNameRoute = OverviewNodesNameRouteImport.update({
   path: '/overview/nodes/$name',
   getParentRoute: () => rootRouteImport,
 } as any);
+const WorkloadsAutoscalersIndexRoute =
+  WorkloadsAutoscalersIndexRouteImport.update({
+    id: '/workloads/autoscalers/',
+    path: '/workloads/autoscalers/',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const WorkloadsCronjobsIndexRoute = WorkloadsCronjobsIndexRouteImport.update({
+  id: '/workloads/cronjobs/',
+  path: '/workloads/cronjobs/',
+  getParentRoute: () => rootRouteImport,
+} as any);
 const WorkloadsDaemonsetsIndexRoute =
   WorkloadsDaemonsetsIndexRouteImport.update({
     id: '/workloads/daemonsets/',
@@ -66,6 +83,11 @@ const WorkloadsDeploymentsIndexRoute =
     path: '/workloads/deployments/',
     getParentRoute: () => rootRouteImport,
   } as any);
+const WorkloadsJobsIndexRoute = WorkloadsJobsIndexRouteImport.update({
+  id: '/workloads/jobs/',
+  path: '/workloads/jobs/',
+  getParentRoute: () => rootRouteImport,
+} as any);
 const WorkloadsPodsIndexRoute = WorkloadsPodsIndexRouteImport.update({
   id: '/workloads/pods/',
   path: '/workloads/pods/',
@@ -75,6 +97,18 @@ const WorkloadsStatefulsetsIndexRoute =
   WorkloadsStatefulsetsIndexRouteImport.update({
     id: '/workloads/statefulsets/',
     path: '/workloads/statefulsets/',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const WorkloadsAutoscalersNamespaceNameRoute =
+  WorkloadsAutoscalersNamespaceNameRouteImport.update({
+    id: '/workloads/autoscalers/$namespace/$name',
+    path: '/workloads/autoscalers/$namespace/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const WorkloadsCronjobsNamespaceNameRoute =
+  WorkloadsCronjobsNamespaceNameRouteImport.update({
+    id: '/workloads/cronjobs/$namespace/$name',
+    path: '/workloads/cronjobs/$namespace/$name',
     getParentRoute: () => rootRouteImport,
   } as any);
 const WorkloadsDaemonsetsNamespaceNameRoute =
@@ -87,6 +121,12 @@ const WorkloadsDeploymentsNamespaceNameRoute =
   WorkloadsDeploymentsNamespaceNameRouteImport.update({
     id: '/workloads/deployments/$namespace/$name',
     path: '/workloads/deployments/$namespace/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const WorkloadsJobsNamespaceNameRoute =
+  WorkloadsJobsNamespaceNameRouteImport.update({
+    id: '/workloads/jobs/$namespace/$name',
+    path: '/workloads/jobs/$namespace/$name',
     getParentRoute: () => rootRouteImport,
   } as any);
 const WorkloadsPodsNamespaceNameRoute =
@@ -109,12 +149,18 @@ export interface FileRoutesByFullPath {
   '/overview/nodes': typeof OverviewNodesRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
   '/overview/nodes/$name': typeof OverviewNodesNameRoute;
+  '/workloads/autoscalers/': typeof WorkloadsAutoscalersIndexRoute;
+  '/workloads/cronjobs/': typeof WorkloadsCronjobsIndexRoute;
   '/workloads/daemonsets/': typeof WorkloadsDaemonsetsIndexRoute;
   '/workloads/deployments/': typeof WorkloadsDeploymentsIndexRoute;
+  '/workloads/jobs/': typeof WorkloadsJobsIndexRoute;
   '/workloads/pods/': typeof WorkloadsPodsIndexRoute;
   '/workloads/statefulsets/': typeof WorkloadsStatefulsetsIndexRoute;
+  '/workloads/autoscalers/$namespace/$name': typeof WorkloadsAutoscalersNamespaceNameRoute;
+  '/workloads/cronjobs/$namespace/$name': typeof WorkloadsCronjobsNamespaceNameRoute;
   '/workloads/daemonsets/$namespace/$name': typeof WorkloadsDaemonsetsNamespaceNameRoute;
   '/workloads/deployments/$namespace/$name': typeof WorkloadsDeploymentsNamespaceNameRoute;
+  '/workloads/jobs/$namespace/$name': typeof WorkloadsJobsNamespaceNameRoute;
   '/workloads/pods/$namespace/$name': typeof WorkloadsPodsNamespaceNameRoute;
   '/workloads/statefulsets/$namespace/$name': typeof WorkloadsStatefulsetsNamespaceNameRoute;
 }
@@ -125,12 +171,18 @@ export interface FileRoutesByTo {
   '/overview/nodes': typeof OverviewNodesRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
   '/overview/nodes/$name': typeof OverviewNodesNameRoute;
+  '/workloads/autoscalers': typeof WorkloadsAutoscalersIndexRoute;
+  '/workloads/cronjobs': typeof WorkloadsCronjobsIndexRoute;
   '/workloads/daemonsets': typeof WorkloadsDaemonsetsIndexRoute;
   '/workloads/deployments': typeof WorkloadsDeploymentsIndexRoute;
+  '/workloads/jobs': typeof WorkloadsJobsIndexRoute;
   '/workloads/pods': typeof WorkloadsPodsIndexRoute;
   '/workloads/statefulsets': typeof WorkloadsStatefulsetsIndexRoute;
+  '/workloads/autoscalers/$namespace/$name': typeof WorkloadsAutoscalersNamespaceNameRoute;
+  '/workloads/cronjobs/$namespace/$name': typeof WorkloadsCronjobsNamespaceNameRoute;
   '/workloads/daemonsets/$namespace/$name': typeof WorkloadsDaemonsetsNamespaceNameRoute;
   '/workloads/deployments/$namespace/$name': typeof WorkloadsDeploymentsNamespaceNameRoute;
+  '/workloads/jobs/$namespace/$name': typeof WorkloadsJobsNamespaceNameRoute;
   '/workloads/pods/$namespace/$name': typeof WorkloadsPodsNamespaceNameRoute;
   '/workloads/statefulsets/$namespace/$name': typeof WorkloadsStatefulsetsNamespaceNameRoute;
 }
@@ -142,12 +194,18 @@ export interface FileRoutesById {
   '/overview/nodes': typeof OverviewNodesRoute;
   '/overview/summary': typeof OverviewSummaryRoute;
   '/overview/nodes_/$name': typeof OverviewNodesNameRoute;
+  '/workloads/autoscalers/': typeof WorkloadsAutoscalersIndexRoute;
+  '/workloads/cronjobs/': typeof WorkloadsCronjobsIndexRoute;
   '/workloads/daemonsets/': typeof WorkloadsDaemonsetsIndexRoute;
   '/workloads/deployments/': typeof WorkloadsDeploymentsIndexRoute;
+  '/workloads/jobs/': typeof WorkloadsJobsIndexRoute;
   '/workloads/pods/': typeof WorkloadsPodsIndexRoute;
   '/workloads/statefulsets/': typeof WorkloadsStatefulsetsIndexRoute;
+  '/workloads/autoscalers/$namespace/$name': typeof WorkloadsAutoscalersNamespaceNameRoute;
+  '/workloads/cronjobs/$namespace/$name': typeof WorkloadsCronjobsNamespaceNameRoute;
   '/workloads/daemonsets/$namespace/$name': typeof WorkloadsDaemonsetsNamespaceNameRoute;
   '/workloads/deployments/$namespace/$name': typeof WorkloadsDeploymentsNamespaceNameRoute;
+  '/workloads/jobs/$namespace/$name': typeof WorkloadsJobsNamespaceNameRoute;
   '/workloads/pods/$namespace/$name': typeof WorkloadsPodsNamespaceNameRoute;
   '/workloads/statefulsets/$namespace/$name': typeof WorkloadsStatefulsetsNamespaceNameRoute;
 }
@@ -160,12 +218,18 @@ export interface FileRouteTypes {
     | '/overview/nodes'
     | '/overview/summary'
     | '/overview/nodes/$name'
+    | '/workloads/autoscalers/'
+    | '/workloads/cronjobs/'
     | '/workloads/daemonsets/'
     | '/workloads/deployments/'
+    | '/workloads/jobs/'
     | '/workloads/pods/'
     | '/workloads/statefulsets/'
+    | '/workloads/autoscalers/$namespace/$name'
+    | '/workloads/cronjobs/$namespace/$name'
     | '/workloads/daemonsets/$namespace/$name'
     | '/workloads/deployments/$namespace/$name'
+    | '/workloads/jobs/$namespace/$name'
     | '/workloads/pods/$namespace/$name'
     | '/workloads/statefulsets/$namespace/$name';
   fileRoutesByTo: FileRoutesByTo;
@@ -176,12 +240,18 @@ export interface FileRouteTypes {
     | '/overview/nodes'
     | '/overview/summary'
     | '/overview/nodes/$name'
+    | '/workloads/autoscalers'
+    | '/workloads/cronjobs'
     | '/workloads/daemonsets'
     | '/workloads/deployments'
+    | '/workloads/jobs'
     | '/workloads/pods'
     | '/workloads/statefulsets'
+    | '/workloads/autoscalers/$namespace/$name'
+    | '/workloads/cronjobs/$namespace/$name'
     | '/workloads/daemonsets/$namespace/$name'
     | '/workloads/deployments/$namespace/$name'
+    | '/workloads/jobs/$namespace/$name'
     | '/workloads/pods/$namespace/$name'
     | '/workloads/statefulsets/$namespace/$name';
   id:
@@ -192,12 +262,18 @@ export interface FileRouteTypes {
     | '/overview/nodes'
     | '/overview/summary'
     | '/overview/nodes_/$name'
+    | '/workloads/autoscalers/'
+    | '/workloads/cronjobs/'
     | '/workloads/daemonsets/'
     | '/workloads/deployments/'
+    | '/workloads/jobs/'
     | '/workloads/pods/'
     | '/workloads/statefulsets/'
+    | '/workloads/autoscalers/$namespace/$name'
+    | '/workloads/cronjobs/$namespace/$name'
     | '/workloads/daemonsets/$namespace/$name'
     | '/workloads/deployments/$namespace/$name'
+    | '/workloads/jobs/$namespace/$name'
     | '/workloads/pods/$namespace/$name'
     | '/workloads/statefulsets/$namespace/$name';
   fileRoutesById: FileRoutesById;
@@ -209,12 +285,18 @@ export interface RootRouteChildren {
   OverviewNodesRoute: typeof OverviewNodesRoute;
   OverviewSummaryRoute: typeof OverviewSummaryRoute;
   OverviewNodesNameRoute: typeof OverviewNodesNameRoute;
+  WorkloadsAutoscalersIndexRoute: typeof WorkloadsAutoscalersIndexRoute;
+  WorkloadsCronjobsIndexRoute: typeof WorkloadsCronjobsIndexRoute;
   WorkloadsDaemonsetsIndexRoute: typeof WorkloadsDaemonsetsIndexRoute;
   WorkloadsDeploymentsIndexRoute: typeof WorkloadsDeploymentsIndexRoute;
+  WorkloadsJobsIndexRoute: typeof WorkloadsJobsIndexRoute;
   WorkloadsPodsIndexRoute: typeof WorkloadsPodsIndexRoute;
   WorkloadsStatefulsetsIndexRoute: typeof WorkloadsStatefulsetsIndexRoute;
+  WorkloadsAutoscalersNamespaceNameRoute: typeof WorkloadsAutoscalersNamespaceNameRoute;
+  WorkloadsCronjobsNamespaceNameRoute: typeof WorkloadsCronjobsNamespaceNameRoute;
   WorkloadsDaemonsetsNamespaceNameRoute: typeof WorkloadsDaemonsetsNamespaceNameRoute;
   WorkloadsDeploymentsNamespaceNameRoute: typeof WorkloadsDeploymentsNamespaceNameRoute;
+  WorkloadsJobsNamespaceNameRoute: typeof WorkloadsJobsNamespaceNameRoute;
   WorkloadsPodsNamespaceNameRoute: typeof WorkloadsPodsNamespaceNameRoute;
   WorkloadsStatefulsetsNamespaceNameRoute: typeof WorkloadsStatefulsetsNamespaceNameRoute;
 }
@@ -263,6 +345,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OverviewNodesNameRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/workloads/autoscalers/': {
+      id: '/workloads/autoscalers/';
+      path: '/workloads/autoscalers';
+      fullPath: '/workloads/autoscalers/';
+      preLoaderRoute: typeof WorkloadsAutoscalersIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/workloads/cronjobs/': {
+      id: '/workloads/cronjobs/';
+      path: '/workloads/cronjobs';
+      fullPath: '/workloads/cronjobs/';
+      preLoaderRoute: typeof WorkloadsCronjobsIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/workloads/daemonsets/': {
       id: '/workloads/daemonsets/';
       path: '/workloads/daemonsets';
@@ -275,6 +371,13 @@ declare module '@tanstack/react-router' {
       path: '/workloads/deployments';
       fullPath: '/workloads/deployments/';
       preLoaderRoute: typeof WorkloadsDeploymentsIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/workloads/jobs/': {
+      id: '/workloads/jobs/';
+      path: '/workloads/jobs';
+      fullPath: '/workloads/jobs/';
+      preLoaderRoute: typeof WorkloadsJobsIndexRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/workloads/pods/': {
@@ -291,6 +394,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkloadsStatefulsetsIndexRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/workloads/autoscalers/$namespace/$name': {
+      id: '/workloads/autoscalers/$namespace/$name';
+      path: '/workloads/autoscalers/$namespace/$name';
+      fullPath: '/workloads/autoscalers/$namespace/$name';
+      preLoaderRoute: typeof WorkloadsAutoscalersNamespaceNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/workloads/cronjobs/$namespace/$name': {
+      id: '/workloads/cronjobs/$namespace/$name';
+      path: '/workloads/cronjobs/$namespace/$name';
+      fullPath: '/workloads/cronjobs/$namespace/$name';
+      preLoaderRoute: typeof WorkloadsCronjobsNamespaceNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/workloads/daemonsets/$namespace/$name': {
       id: '/workloads/daemonsets/$namespace/$name';
       path: '/workloads/daemonsets/$namespace/$name';
@@ -303,6 +420,13 @@ declare module '@tanstack/react-router' {
       path: '/workloads/deployments/$namespace/$name';
       fullPath: '/workloads/deployments/$namespace/$name';
       preLoaderRoute: typeof WorkloadsDeploymentsNamespaceNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/workloads/jobs/$namespace/$name': {
+      id: '/workloads/jobs/$namespace/$name';
+      path: '/workloads/jobs/$namespace/$name';
+      fullPath: '/workloads/jobs/$namespace/$name';
+      preLoaderRoute: typeof WorkloadsJobsNamespaceNameRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/workloads/pods/$namespace/$name': {
@@ -329,13 +453,20 @@ const rootRouteChildren: RootRouteChildren = {
   OverviewNodesRoute: OverviewNodesRoute,
   OverviewSummaryRoute: OverviewSummaryRoute,
   OverviewNodesNameRoute: OverviewNodesNameRoute,
+  WorkloadsAutoscalersIndexRoute: WorkloadsAutoscalersIndexRoute,
+  WorkloadsCronjobsIndexRoute: WorkloadsCronjobsIndexRoute,
   WorkloadsDaemonsetsIndexRoute: WorkloadsDaemonsetsIndexRoute,
   WorkloadsDeploymentsIndexRoute: WorkloadsDeploymentsIndexRoute,
+  WorkloadsJobsIndexRoute: WorkloadsJobsIndexRoute,
   WorkloadsPodsIndexRoute: WorkloadsPodsIndexRoute,
   WorkloadsStatefulsetsIndexRoute: WorkloadsStatefulsetsIndexRoute,
+  WorkloadsAutoscalersNamespaceNameRoute:
+    WorkloadsAutoscalersNamespaceNameRoute,
+  WorkloadsCronjobsNamespaceNameRoute: WorkloadsCronjobsNamespaceNameRoute,
   WorkloadsDaemonsetsNamespaceNameRoute: WorkloadsDaemonsetsNamespaceNameRoute,
   WorkloadsDeploymentsNamespaceNameRoute:
     WorkloadsDeploymentsNamespaceNameRoute,
+  WorkloadsJobsNamespaceNameRoute: WorkloadsJobsNamespaceNameRoute,
   WorkloadsPodsNamespaceNameRoute: WorkloadsPodsNamespaceNameRoute,
   WorkloadsStatefulsetsNamespaceNameRoute:
     WorkloadsStatefulsetsNamespaceNameRoute,
