@@ -18,9 +18,11 @@ Download the `.dmg` for your Mac: `mac-arm64` for Apple silicon, `mac-x64` for I
 drag the app into Applications. Builds are signed and notarized, so the app opens without any
 security prompt.
 
-Or install with [Homebrew](https://brew.sh):
+Or install with [Homebrew](https://brew.sh). Homebrew 7 requires third-party taps to be trusted
+once before anything from them can be installed:
 
 ```sh
+brew trust araratpoghosyan/tap
 brew install --cask araratpoghosyan/tap/kubermeister        # stable
 brew install --cask araratpoghosyan/tap/kubermeister@tip    # tip
 ```
