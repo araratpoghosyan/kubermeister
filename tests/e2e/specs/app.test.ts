@@ -183,3 +183,20 @@ test('opens Settings from the sidebar and switches the theme', async () => {
     await page.getByRole('radio', { name: /Dark/ }).click();
     await expect(window.locator('html')).toHaveClass(/dark/);
 });
+
+test('lists the seeded deployment and opens its rollout history', async () => {
+    const { window } = launched;
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Deployments' }).click();
+    const row = window.getByTestId('deployments-table').locator('[data-deployment="web"]');
+    await expect(row).toContainText('1/1');
+    await expect(row).toContainText('Healthy');
+    await expect(row).toContainText('busybox:1.36');
+    await row.getByRole('link').click();
+    const page = window.getByTestId('deployment-page');
+    await expect(page).toContainText('namespace: km-e2e');
+    await expect(page).toContainText('strategy: RollingUpdate');
+    await window.getByRole('tab', { name: /History/ }).click();
+    await expect(page.getByTestId('rollout-history')).toContainText('Current');
+    await window.getByRole('tab', { name: /ReplicaSets/ }).click();
+    await expect(page.getByTestId('replica-sets').getByRole('row')).toHaveCount(2);
+});

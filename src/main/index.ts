@@ -29,7 +29,9 @@ function createWindow(): BrowserWindow {
         },
     });
 
-    window.on('ready-to-show', () => window.show());
+    // End-to-end runs on a developer machine show the window without taking focus, so keystrokes
+    // meant for the terminal never land in the app under test.
+    window.on('ready-to-show', () => (process.env.KUBERMEISTER_SHOW_INACTIVE ? window.showInactive() : window.show()));
 
     window.webContents.setWindowOpenHandler(({ url }) => {
         if (isExternalWebUrl(url)) void shell.openExternal(url);

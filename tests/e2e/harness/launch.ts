@@ -29,7 +29,13 @@ export async function launchApp(): Promise<LaunchedApp> {
     );
     const app = await electron.launch({
         args: ['out/main/index.mjs'],
-        env: { ...process.env, KUBERMEISTER_USER_DATA: userData, KUBECONFIG: KUBECONFIG_PATH },
+        env: {
+            ...process.env,
+            KUBERMEISTER_USER_DATA: userData,
+            KUBECONFIG: KUBECONFIG_PATH,
+            // Never steal focus: a developer typing during a local run must not drive the app.
+            KUBERMEISTER_SHOW_INACTIVE: '1',
+        },
     });
     const window = await app.firstWindow();
     // The first window is handed over while index.html may still be loading; a spec that evaluates
