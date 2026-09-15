@@ -7,7 +7,7 @@ import { K8sError } from '../k8s/errors.js';
 import { listAlerts } from '../k8s/alerts.js';
 import { readPodLogSnapshot } from '../k8s/logs.js';
 import { getActiveCluster, getActiveNamespaceInfo, listClusters, listNamespaces } from '../k8s/resources/cluster.js';
-import { listEventsForObject } from '../k8s/resources/events.js';
+import { listEventsForObject, listRecentEvents } from '../k8s/resources/events.js';
 import { getNodeSeries, getPodSeries, getSparklines, getWorkloadHealth } from '../k8s/resources/metrics.js';
 import { getResource, listResources } from '../k8s/resources/index.js';
 import { getNode, listNodes } from '../k8s/resources/nodes.js';
@@ -66,6 +66,7 @@ const handlers: Handlers = {
     'resources.get': (input) => getResource(input),
     'pods.logSnapshot': (input) => readPodLogSnapshot(input),
     'events.forObject': (input) => listEventsForObject(input),
+    'events.recent': () => listRecentEvents(),
     'metrics.sparklines': () => getSparklines(),
     'metrics.workloadHealth': () => getWorkloadHealth(),
     'metrics.alerts': () => listAlerts(),
