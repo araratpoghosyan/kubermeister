@@ -110,8 +110,11 @@ updates need the `zip` target next to the dmg. Icons regenerate from `resources/
   that container only and a throwaway settings directory that pins it; `~/.kube/config` and
   `$KUBECONFIG` are never read. A guard in the end-to-end setup fails the whole suite if the active
   context is anything but the test cluster's.
-- **End to end: Playwright** against the built app and that k3s container, ubuntu only in CI
-  (Docker needed). Arrives with the Kubernetes client.
+- **End to end: Playwright** (`playwright.config.ts`, `tests/e2e/`) drives the built app, so run
+  `npm run build` before `npm run test:e2e`. `harness/cluster.ts` starts the k3s container,
+  `harness/isolation.ts` is the guard, `harness/launch.ts` launches the app with a throwaway
+  `KUBERMEISTER_USER_DATA`. Needs Docker; ubuntu only in CI. `KM_E2E_KEEP_CLUSTER=1` keeps the
+  container between local runs.
 - Run one file: `npx vitest run tests/unit/main/updater.test.ts`. Watch: `npm run test:watch`.
 
 ## Code style

@@ -42,6 +42,22 @@ jobs:
       # Coverage thresholds live in vitest.config.ts and fail the run when not met.
       - run: npm run test:coverage
 
+  # End to end against a disposable k3s container: ubuntu only, since Docker is available there.
+  # Electron needs a display, hence xvfb. No Playwright browsers are installed: the suite drives
+  # the built Electron app itself.
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: xvfb-run --auto-servernum npm run test:e2e
+
   build:
     name: build (${{ matrix.os }})
     strategy:

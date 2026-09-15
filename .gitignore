@@ -8,3 +8,6 @@ release/
 .idea/
 .claude/settings.local.json
 coverage/
+tests/e2e/.kubeconfig
+test-results/
+playwright-report/
