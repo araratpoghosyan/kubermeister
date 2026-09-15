@@ -1,6 +1,7 @@
 import { app, ipcMain } from 'electron';
 import type { IpcChannel, IpcInput, IpcOutput } from '../../shared/ipc.js';
 import { ipcSchemas } from '../../shared/ipc.js';
+import { getUpdateState, installUpdate } from '../updater.js';
 
 type Handler<C extends IpcChannel> = (input: IpcInput<C>) => Promise<IpcOutput<C>>;
 type Handlers = { [C in IpcChannel]: Handler<C> };
@@ -14,6 +15,8 @@ const handlers: Handlers = {
         node: process.versions.node,
         platform: process.platform,
     }),
+    'update.state': async () => getUpdateState(),
+    'update.install': async () => ({ ok: installUpdate() }),
 };
 
 /**

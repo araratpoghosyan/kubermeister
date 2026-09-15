@@ -29,6 +29,9 @@ mac:
   target:
     - target: dmg
       arch: [arm64, x64]
+    # electron-updater installs macOS updates from the zip, never the dmg.
+    - target: zip
+      arch: [arm64, x64]
   # Signing is controlled by CSC_* environment variables in CI; no `identity` key here, so no
   # credentials means an unsigned build, credentials present means signed with no config change.
   hardenedRuntime: true

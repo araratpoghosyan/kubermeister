@@ -1,6 +1,7 @@
 import { app, BrowserWindow, shell } from 'electron';
 import { join } from 'node:path';
 import { registerHandlers } from './ipc/index.js';
+import { startUpdater } from './updater.js';
 
 // Packaged builds take their name from electron-builder's productName ("Kubermeister" or
 // "Kubermeister Tip"), which also separates their settings folders. Only development, which runs
@@ -66,6 +67,7 @@ function createWindow(): BrowserWindow {
 
 void app.whenReady().then(() => {
     registerHandlers();
+    startUpdater();
     createWindow();
 
     app.on('activate', () => {

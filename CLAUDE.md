@@ -77,8 +77,11 @@ Two channels, two apps that install side by side:
 vX.Y.Z`.
 
 Asset names, app ids and product names are load-bearing for the updater and the Homebrew casks;
-change them together with the workflows. macOS is ad-hoc signed until the `CSC_*` and `APPLE_*`
-secrets exist; never export an empty `CSC_LINK`. Icons regenerate from `resources/icon.svg` and
+change them together with the workflows. Packaging runs through `.github/actions/package`: with the
+`CSC_*` and `APPLE_*` secrets macOS is Developer ID signed and notarized, otherwise ad-hoc signed;
+never export an empty `CSC_LINK`. In-app updates: `src/main/updater.ts` (electron-updater) reads the
+feed electron-builder embeds at package time, so each app only follows its own channel; macOS
+updates need the `zip` target next to the dmg. Icons regenerate from `resources/icon.svg` and
 `resources/icon-tip.svg` with `resources/build-icon.sh`.
 
 ## Code style

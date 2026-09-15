@@ -83,7 +83,7 @@ runs:
       run: |
         shopt -s nullglob
         case "$RUNNER_OS" in
-          macOS)   files=(release/*.dmg release/*.dmg.blockmap "release/${CHANNEL}-mac.yml") ;;
+          macOS)   files=(release/*.dmg release/*.dmg.blockmap release/*.zip release/*.zip.blockmap "release/${CHANNEL}-mac.yml") ;;
           Windows) files=(release/*.exe release/*.exe.blockmap "release/${CHANNEL}.yml") ;;
           Linux)   files=(release/*.AppImage release/*.deb "release/${CHANNEL}-linux.yml") ;;
         esac
