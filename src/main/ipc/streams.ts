@@ -73,6 +73,17 @@ function track(sender: WebContents, key: string): void {
     sender.once('destroyed', sweep);
 }
 
+/**
+ * Stop every stream, whoever owns it. Quitting relies on this: a renderer is not guaranteed to be
+ * destroyed, and so swept, before the process tears down, and a log follow or an exec socket left
+ * open can hold the shutdown open behind it.
+ */
+export function stopAllStreams(): void {
+    for (const key of [...active.keys()]) stop(key);
+    for (const key of starting) cancelled.add(key);
+    senderSubs.clear();
+}
+
 export function registerStreamHandlers(): void {
     ipcMain.handle('stream.start', async (event, arg: unknown) => {
         const parsed = streamStartSchema.safeParse(arg);

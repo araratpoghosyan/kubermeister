@@ -13,7 +13,7 @@ vi.mock('../../../src/main/k8s/watch.js', () => ({
     startResourceWatch: (input: unknown, send: StreamSend) => handler(input, send),
 }));
 
-const { registerStreamHandlers, activeStreamCount } = await import('../../../src/main/ipc/streams.js');
+const { registerStreamHandlers, activeStreamCount, stopAllStreams } = await import('../../../src/main/ipc/streams.js');
 
 class FakeSender extends EventEmitter {
     constructor(public readonly id: number) {
@@ -137,6 +137,36 @@ describe('stream registry', () => {
         await start(sender, 'stream:resources.watch:3');
         sender.emit('destroyed');
         expect(c.stop).toHaveBeenCalledOnce();
+        expect(activeStreamCount()).toBe(0);
+    });
+
+    it("stops every window's streams at once, which is what quitting relies on", async () => {
+        const first = new FakeSender(1);
+        const second = new FakeSender(2);
+        const controllers = [controller(), controller(), controller()];
+        let next = 0;
+        handler.mockImplementation(async () => controllers[next++]!);
+        await start(first, 'stream:resources.watch:1');
+        await start(first, 'stream:resources.watch:2');
+        await start(second, 'stream:resources.watch:1');
+        expect(activeStreamCount()).toBe(3);
+
+        stopAllStreams();
+        for (const ctl of controllers) expect(ctl.stop).toHaveBeenCalledOnce();
+        expect(activeStreamCount()).toBe(0);
+    });
+
+    it('tears down a stream still connecting when everything is stopped', async () => {
+        const sender = new FakeSender(1);
+        const ctl = controller();
+        let resolveHandler: (value: StreamController) => void = () => {};
+        handler.mockImplementation(() => new Promise<StreamController>((resolve) => (resolveHandler = resolve)));
+        const pending = start(sender, 'stream:resources.watch:9');
+
+        stopAllStreams();
+        resolveHandler(ctl);
+        await pending;
+        expect(ctl.stop).toHaveBeenCalledOnce();
         expect(activeStreamCount()).toBe(0);
     });
 
