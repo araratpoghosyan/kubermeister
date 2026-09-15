@@ -7,6 +7,7 @@ import { K8sError } from '../k8s/errors.js';
 import { listAlerts } from '../k8s/alerts.js';
 import { readPodLogSnapshot } from '../k8s/logs.js';
 import { getActiveCluster, getActiveNamespaceInfo, listClusters, listNamespaces } from '../k8s/resources/cluster.js';
+import { getConfigMapEntries, getSecretEntries } from '../k8s/resources/config.js';
 import { listEventsForObject, listRecentEvents } from '../k8s/resources/events.js';
 import {
     getDeploymentSeries,
@@ -82,6 +83,8 @@ const handlers: Handlers = {
     'metrics.deploymentSeries': ({ namespace, name }) => getDeploymentSeries(namespace, name),
     'deployments.replicaSets': ({ name, namespace }) => getDeploymentReplicaSets(name, namespace),
     'deployments.rollouts': ({ name, namespace }) => getDeploymentRollouts(name, namespace),
+    'configMaps.entries': ({ name, namespace }) => getConfigMapEntries(name, namespace),
+    'secrets.entries': ({ name, namespace }) => getSecretEntries(name, namespace),
     'kubeconfig.useDefault': async () => {
         const settings = updateSettings({ connection: { kubeconfigPath: null } });
         reloadKubeConfig();

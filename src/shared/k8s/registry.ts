@@ -54,6 +54,14 @@ export const KIND_REGISTRY = {
         scalable: false,
         listPath: '/workloads/autoscalers',
     },
+    ConfigMap: {
+        kind: 'ConfigMap',
+        apiVersion: 'v1',
+        clusterScoped: false,
+        scalable: false,
+        listPath: '/workloads/configmaps',
+    },
+    Secret: { kind: 'Secret', apiVersion: 'v1', clusterScoped: false, scalable: false, listPath: '/workloads/secrets' },
 } as const satisfies Record<string, KindInfo>;
 
 export type Kind = keyof typeof KIND_REGISTRY;
