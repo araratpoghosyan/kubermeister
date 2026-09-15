@@ -33,6 +33,7 @@
     "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.web.json"
   },
   "dependencies": {
+    "electron-updater": "^6.8.9",
     "zod": "^4.6.5"
   },
   "devDependencies": {
