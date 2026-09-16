@@ -123,7 +123,9 @@ function highlight(message: string, search: LogSearch) {
 
 interface LogViewerProps {
     /** Already filtered by the caller, each line marked with whether the search matched it. */
-    lines: VisibleLine<LogLine>[];
+    lines: VisibleLine<LogLine & { pod?: string }>[];
+    /** Colour per pod, for a view following several at once; absent for a single container. */
+    podColors?: Map<string, string>;
     containers: string[];
     container?: string;
     onContainerChange: (container: string) => void;
@@ -160,6 +162,7 @@ interface LogViewerProps {
  */
 export function LogViewer({
     lines,
+    podColors,
     containers,
     container,
     onContainerChange,
@@ -331,6 +334,17 @@ export function LogViewer({
                                 style={{ transform: `translateY(${item.start}px)` }}
                             >
                                 <span className="w-7 shrink-0 text-right text-text-dim">{item.index + 1}</span>
+                                {log.pod && (
+                                    <span
+                                        className={cn(
+                                            'w-40 shrink-0 truncate',
+                                            podColors?.get(log.pod) ?? 'text-text-2',
+                                        )}
+                                        title={log.pod}
+                                    >
+                                        {log.pod}
+                                    </span>
+                                )}
                                 {timestamps && <span className="shrink-0 text-text-dim">{log.timestamp}</span>}
                                 <span className={cn('w-12 shrink-0 font-medium', LOG_LEVEL_COLOR[log.level])}>
                                     {log.level}

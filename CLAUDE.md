@@ -103,7 +103,10 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   reload or destroy. Lists stay live through `resources.watch` (`src/main/k8s/watch.ts`, the
   client's informer, same row transforms as the list) and `useWatchedList` in
   `src/renderer/lib/watch.ts`, which applies events into the list query's cache. Prefer a watch
-  over polling for anything that changes on its own. The log console renders only the rows in view (`@tanstack/react-virtual`, a devDependency like
+  over polling for anything that changes on its own. A controller's Logs tab follows every pod it owns at once (`src/renderer/lib/multi-pod-logs.ts`):
+  the API server has no call for "the logs of this deployment", so it is one stream per pod, merged
+  in arrival order and coloured by pod, restarting when the set of pods changes so a replaced pod
+  stops being followed. The log console renders only the rows in view (`@tanstack/react-virtual`, a devDependency like
   everything else renderer-side), so a buffer of tens of thousands of lines costs a screenful of DOM;
   its size is the `data.logBufferLines` setting, read live so raising it trims differently from the
   next batch on rather than restarting the follow. jsdom lays nothing out, so `tests/setup-renderer.ts`

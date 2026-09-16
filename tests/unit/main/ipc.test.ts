@@ -45,6 +45,8 @@ const helmMod = {
     getRelease: vi.fn(),
     getReleaseRevisions: vi.fn(),
     listHelmCharts: vi.fn(),
+    rollbackRelease: vi.fn(),
+    uninstallRelease: vi.fn(),
 };
 const manifestMod = { getObjectYaml: vi.fn() };
 const writeMod = {
@@ -52,14 +54,18 @@ const writeMod = {
     replaceResource: vi.fn(),
     deleteResource: vi.fn(),
     scaleResource: vi.fn(),
+    restartResource: vi.fn(),
 };
+const lifecycleExtras = { updateAutoscaler: vi.fn() };
 const lifecycleMod = {
+    ...lifecycleExtras,
     evictPod: vi.fn(),
     retryJob: vi.fn(),
     triggerCronJob: vi.fn(),
     setCronJobSuspended: vi.fn(),
 };
 const ownersMod = { getPodOwners: vi.fn(), listOwnedPods: vi.fn() };
+const describeMod = { describeObject: vi.fn() };
 const alertsMod = { listAlerts: vi.fn() };
 const samplerMod = { resetHistory: vi.fn() };
 const streamsMod = { endAllStreams: vi.fn() };
@@ -86,6 +92,7 @@ vi.mock('../../../src/main/k8s/resources/manifest.js', () => manifestMod);
 vi.mock('../../../src/main/k8s/resources/write.js', () => writeMod);
 vi.mock('../../../src/main/k8s/resources/lifecycle.js', () => lifecycleMod);
 vi.mock('../../../src/main/k8s/resources/owners.js', () => ownersMod);
+vi.mock('../../../src/main/k8s/resources/describe.js', () => describeMod);
 
 const { registerHandlers } = await import('../../../src/main/ipc/index.js');
 const { ipcSchemas } = await import('../../../src/shared/ipc.js');
@@ -169,6 +176,41 @@ describe('registerHandlers', () => {
         ).resolves.toEqual([]);
         expect(ownersMod.getPodOwners).toHaveBeenCalledWith('web-1', 'team-a');
         expect(ownersMod.listOwnedPods).toHaveBeenCalledWith('Deployment', 'web', 'team-a');
+    });
+
+    it('passes the remaining writes and the describe read straight through', async () => {
+        const target = { context: 'alpha', name: 'web', namespace: 'team-a' };
+        writeMod.restartResource.mockResolvedValue({ kind: 'Deployment', name: 'web', namespace: 'team-a' });
+        lifecycleMod.updateAutoscaler.mockResolvedValue({
+            kind: 'HorizontalPodAutoscaler',
+            name: 'web',
+            namespace: 'team-a',
+        });
+        helmMod.rollbackRelease.mockResolvedValue({
+            name: 'demo',
+            namespace: 'team-a',
+            revision: 3,
+            removed: 0,
+            kept: 0,
+        });
+        helmMod.uninstallRelease.mockResolvedValue({ name: 'demo', namespace: 'team-a', removed: 2, kept: 1 });
+        describeMod.describeObject.mockResolvedValue({ kind: 'Pod', name: 'web-1', namespace: 'team-a', sections: [] });
+
+        await expect(invoke('resources.restart', { ...target, kind: 'Deployment' })).resolves.toMatchObject({
+            kind: 'Deployment',
+        });
+        await expect(
+            invoke('autoscalers.update', { ...target, minReplicas: 1, maxReplicas: 3 }),
+        ).resolves.toMatchObject({ kind: 'HorizontalPodAutoscaler' });
+        await expect(invoke('releases.rollback', { ...target, name: 'demo', revision: 1 })).resolves.toMatchObject({
+            revision: 3,
+        });
+        await expect(
+            invoke('releases.uninstall', { ...target, name: 'demo', keepHistory: false }),
+        ).resolves.toMatchObject({ kept: 1 });
+        await expect(
+            invoke('resources.describe', { kind: 'Pod', name: 'web-1', namespace: 'team-a' }),
+        ).resolves.toMatchObject({ kind: 'Pod' });
     });
 
     it('rejects input that does not match the channel schema', async () => {

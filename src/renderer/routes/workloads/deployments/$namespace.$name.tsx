@@ -5,6 +5,7 @@ import { RefreshButton } from '@/components/refresh-button';
 import { DetailCard, DetailMetrics } from '@/components/templates/detail-cards';
 import { eventsTab, labelsTab, ResourceDetail, type DetailTabGroup } from '@/components/templates/resource-detail';
 import { podsTab } from '@/components/templates/owned-pods';
+import { workloadLogsTab } from '@/components/workload/workload-logs-tab';
 import { manifestTab } from '@/components/templates/manifest-panel';
 import { EditResourceButton } from '@/components/templates/edit-resource-button';
 import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
@@ -71,6 +72,7 @@ function DeploymentDetailPage() {
                     ),
                 },
                 podsTab({ kind: 'Deployment', name, namespace }),
+                workloadLogsTab({ kind: 'Deployment', name, namespace }),
                 eventsTab({ kind: 'Deployment', name, namespace }),
             ],
         },

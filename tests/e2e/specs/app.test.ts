@@ -616,6 +616,22 @@ test('describes a pod and a node in the flat view', async () => {
     await expect(nodeDescribe.locator('[data-section="Pods"]')).toContainText('km-e2e/');
 });
 
+test('follows every pod of the seeded deployment in one view', async () => {
+    const { window } = launched;
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Deployments' }).click();
+    await window.getByTestId('deployments-table').locator('[data-deployment="web"]').getByRole('link').click();
+    const page = window.getByTestId('deployment-page');
+    await window.getByRole('tab', { name: 'Logs' }).click();
+
+    // The picker names how many pods are being followed rather than a container.
+    const viewer = page.getByTestId('log-viewer');
+    await expect(viewer.getByRole('button', { name: 'Container' })).toContainText('pods', { timeout: 30_000 });
+    await viewer.getByRole('button', { name: 'Live' }).click();
+    // Each line carries the pod it came from, which is the point of the view.
+    await expect(viewer.getByRole('list', { name: 'Log lines' })).toContainText('km-e2e-marker', { timeout: 60_000 });
+    await expect(viewer.getByRole('list', { name: 'Log lines' }).locator('[title^="web-"]').first()).toBeVisible();
+});
+
 test('stops at the startup screen when the kubeconfig path names nothing', async () => {
     const missing = join(tmpdir(), `km-e2e-missing-${Date.now()}.yaml`);
     const bad = await launchApp({ kubeconfigPath: missing });
