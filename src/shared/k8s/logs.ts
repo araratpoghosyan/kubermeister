@@ -22,5 +22,21 @@ export const podLogSnapshotInputSchema = z.object({
     container: z.string().min(1).optional(),
     sinceSeconds: z.number().int().positive().optional(),
     tailLines: z.number().int().positive().optional(),
+    /** Read the logs of the previous run of this container, which is where a crash left its reason. */
+    previous: z.boolean().optional(),
 });
 export type PodLogSnapshotInput = z.infer<typeof podLogSnapshotInputSchema>;
+
+/**
+ * A whole log, as text, for saving to a file. Capped in main rather than in the renderer: a
+ * container that has been shouting for a week must not be pulled across the bridge in full.
+ */
+export const podLogDownloadInputSchema = podLogSnapshotInputSchema.omit({ tailLines: true });
+
+export const podLogDownloadSchema = z.object({
+    text: z.string(),
+    /** True when the log was longer than the cap and the oldest lines were left behind. */
+    truncated: z.boolean(),
+});
+export type PodLogDownloadInput = z.infer<typeof podLogDownloadInputSchema>;
+export type PodLogDownload = z.infer<typeof podLogDownloadSchema>;

@@ -1,5 +1,6 @@
 import { ChevronDownIcon, DownloadIcon, SearchIcon } from 'lucide-react';
-import type { LogLine } from '../../../shared/k8s/logs';
+import type { LogLevel, LogLine } from '../../../shared/k8s/logs';
+import { matchRanges, type LogSearch, type VisibleLine } from '@/lib/log-filter';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -30,14 +31,94 @@ export const LOG_LEVEL_COLOR: Record<LogLine['level'], string> = {
     INFO: 'text-ok',
 };
 
-/** Case-insensitive substring filter over the message text. */
-export function filterLines<T extends LogLine>(lines: T[], query: string): T[] {
-    const needle = query.trim().toLowerCase();
-    return needle ? lines.filter((line) => line.message.toLowerCase().includes(needle)) : lines;
+/** Tail sizes the console offers; the live buffer's own cap still applies above these. */
+export const TAIL_OPTIONS = [100, 500, 2000] as const;
+
+/** The level floors on offer: no floor, or hide everything below this level. */
+export const LEVEL_OPTIONS: (LogLevel | null)[] = [null, 'INFO', 'WARN', 'ERROR'];
+
+/** A small on/off control for the console's display options. */
+function Toggle({
+    pressed,
+    onToggle,
+    label,
+    title,
+}: {
+    pressed: boolean;
+    onToggle: () => void;
+    label: string;
+    title?: string;
+}) {
+    return (
+        <Button
+            variant={pressed ? 'default' : 'outline'}
+            size="xs"
+            aria-pressed={pressed}
+            aria-label={label}
+            title={title}
+            onClick={onToggle}
+        >
+            {label}
+        </Button>
+    );
+}
+
+/** A labelled dropdown over a fixed set of options. */
+function Picker<T extends { key: string }>({
+    label,
+    value,
+    options,
+    onSelect,
+}: {
+    label: string;
+    value: string;
+    options: T[];
+    onSelect: (option: T) => void;
+}) {
+    return (
+        <>
+            <span className="text-meta text-text-muted">{label}</span>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="xs" aria-label={label}>
+                        {value}
+                        <ChevronDownIcon />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                    {options.map((option) => (
+                        <DropdownMenuItem key={option.key} onSelect={() => onSelect(option)}>
+                            {option.key}
+                        </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+            </DropdownMenu>
+        </>
+    );
+}
+
+/** One message with its matches marked in place, so a search can highlight without hiding. */
+function highlight(message: string, search: LogSearch) {
+    const ranges = matchRanges(message, search);
+    if (ranges.length === 0) return message;
+    const parts: (string | React.JSX.Element)[] = [];
+    let at = 0;
+    ranges.forEach(([start, end], index) => {
+        if (start > at) parts.push(message.slice(at, start));
+        parts.push(
+            <mark key={index} className="rounded-sm bg-warn/30 text-inherit">
+                {message.slice(start, end)}
+            </mark>,
+        );
+        at = end;
+    });
+    if (at < message.length) parts.push(message.slice(at));
+    return parts;
 }
 
 interface LogViewerProps {
-    lines: LogLine[];
+    /** Already filtered by the caller, each line marked with whether the search matched it. */
+    lines: VisibleLine<LogLine>[];
     containers: string[];
     container?: string;
     onContainerChange: (container: string) => void;
@@ -45,13 +126,27 @@ interface LogViewerProps {
     onSinceChange: (since: SinceOption) => void;
     live: boolean;
     onLiveToggle: () => void;
-    grep: string;
-    onGrepChange: (grep: string) => void;
+    search: LogSearch;
+    onSearchChange: (search: LogSearch) => void;
+    /** Hide everything below this level; null shows every line. */
+    minLevel: LogLevel | null;
+    onMinLevelChange: (level: LogLevel | null) => void;
+    tailLines: number;
+    onTailLinesChange: (tail: number) => void;
+    timestamps: boolean;
+    onTimestampsToggle: () => void;
+    wrap: boolean;
+    onWrapToggle: () => void;
+    /** Follow the previous run of the container: where a crash loop left its reason. */
+    previous: boolean;
+    onPreviousToggle: () => void;
     onDownload: () => void;
     /** Rendered above the rows when the live stream errors. */
     error?: string | null;
-    /** True when `lines` has been narrowed by the grep filter. */
+    /** True when `lines` has been narrowed by the search or the level floor. */
     filtered?: boolean;
+    /** True when the search is meant as a pattern and is not a valid one yet. */
+    brokenPattern?: boolean;
 }
 
 /**
@@ -67,11 +162,22 @@ export function LogViewer({
     onSinceChange,
     live,
     onLiveToggle,
-    grep,
-    onGrepChange,
+    search,
+    onSearchChange,
+    minLevel,
+    onMinLevelChange,
+    tailLines,
+    onTailLinesChange,
+    timestamps,
+    onTimestampsToggle,
+    wrap,
+    onWrapToggle,
+    previous,
+    onPreviousToggle,
     onDownload,
     error,
     filtered,
+    brokenPattern,
 }: LogViewerProps) {
     return (
         <Card
@@ -116,13 +222,31 @@ export function LogViewer({
                 <div className="relative w-[200px]">
                     <SearchIcon className="absolute top-1/2 left-2.5 size-3 -translate-y-1/2 text-text-dim" />
                     <Input
-                        value={grep}
-                        onChange={(e) => onGrepChange(e.target.value)}
-                        placeholder="grep…"
+                        value={search.query}
+                        onChange={(e) => onSearchChange({ ...search, query: e.target.value })}
+                        placeholder="search…"
                         aria-label="Filter log lines"
-                        className="h-7 pl-7 text-cell"
+                        className={cn('h-7 pl-7 text-cell', brokenPattern && 'border-danger')}
                     />
                 </div>
+                <Toggle
+                    pressed={search.regex}
+                    onToggle={() => onSearchChange({ ...search, regex: !search.regex })}
+                    label=".*"
+                    title="Read the search as a regular expression"
+                />
+                <Toggle
+                    pressed={search.caseSensitive}
+                    onToggle={() => onSearchChange({ ...search, caseSensitive: !search.caseSensitive })}
+                    label="Aa"
+                    title="Match case"
+                />
+                <Toggle
+                    pressed={search.highlightOnly}
+                    onToggle={() => onSearchChange({ ...search, highlightOnly: !search.highlightOnly })}
+                    label="Mark"
+                    title="Mark matches instead of hiding what does not match"
+                />
                 <Button variant={live ? 'default' : 'outline'} size="xs" onClick={onLiveToggle} aria-pressed={live}>
                     <span className={cn('size-1.5 rounded-full', live ? 'animate-pulse bg-ok' : 'bg-text-dim')} />
                     Live
@@ -130,6 +254,32 @@ export function LogViewer({
                 <Button variant="ghost" size="icon-xs" aria-label="Download logs" onClick={onDownload}>
                     <DownloadIcon />
                 </Button>
+            </div>
+            <div
+                className="flex flex-wrap items-center gap-2 border-b border-border px-3.5 py-1.5"
+                data-testid="log-options"
+            >
+                <Picker
+                    label="Level"
+                    value={minLevel ?? 'All levels'}
+                    options={LEVEL_OPTIONS.map((level) => ({ key: level ?? 'All levels', level }))}
+                    onSelect={(option) => onMinLevelChange(option.level)}
+                />
+                <Picker
+                    label="Tail"
+                    value={String(tailLines)}
+                    options={TAIL_OPTIONS.map((tail) => ({ key: String(tail), tail }))}
+                    onSelect={(option) => onTailLinesChange(option.tail)}
+                />
+                <Toggle pressed={timestamps} onToggle={onTimestampsToggle} label="Timestamps" />
+                <Toggle pressed={wrap} onToggle={onWrapToggle} label="Wrap" />
+                <Toggle
+                    pressed={previous}
+                    onToggle={onPreviousToggle}
+                    label="Previous"
+                    title="Read the previous run of this container"
+                />
+                {brokenPattern && <span className="text-label text-danger">Not a valid pattern yet</span>}
             </div>
             {/* Rows are not virtualized: the live buffer is capped at 2,000 lines and the grep filter is
                 deferred by the caller, so the DOM stays bounded. */}
@@ -143,12 +293,21 @@ export function LogViewer({
                         {error}
                     </div>
                 )}
-                {lines.map((log, i) => (
-                    <div key={i} role="listitem" className="flex gap-3 px-3.5 py-px whitespace-nowrap text-text-2">
-                        <span className="w-7 text-right text-text-dim">{i + 1}</span>
-                        <span className="text-text-dim">{log.timestamp}</span>
-                        <span className={cn('w-12 font-medium', LOG_LEVEL_COLOR[log.level])}>{log.level}</span>
-                        <span className="flex-1">{log.message}</span>
+                {lines.map(({ line: log, match }, i) => (
+                    <div
+                        key={i}
+                        role="listitem"
+                        data-match={match ? 'true' : undefined}
+                        className={cn(
+                            'flex gap-3 px-3.5 py-px text-text-2',
+                            wrap ? 'whitespace-pre-wrap' : 'whitespace-nowrap',
+                            match && 'bg-elev-3',
+                        )}
+                    >
+                        <span className="w-7 shrink-0 text-right text-text-dim">{i + 1}</span>
+                        {timestamps && <span className="shrink-0 text-text-dim">{log.timestamp}</span>}
+                        <span className={cn('w-12 shrink-0 font-medium', LOG_LEVEL_COLOR[log.level])}>{log.level}</span>
+                        <span className="flex-1">{highlight(log.message, search)}</span>
                     </div>
                 ))}
             </div>

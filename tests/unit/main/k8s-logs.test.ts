@@ -219,6 +219,7 @@ describe('readPodLogSnapshot', () => {
             container: 'app',
             tailLines: 500,
             sinceSeconds: 300,
+            previous: undefined,
             timestamps: true,
         });
         expect(lines).toEqual([
@@ -245,6 +246,46 @@ describe('readPodLogSnapshot', () => {
         readNamespacedPodLog.mockRejectedValue(new Error('boom'));
         await expect(logs.readPodLogSnapshot({ name: 'web-1', namespace: 'team-a' })).rejects.toMatchObject({
             op: 'pods.logSnapshot',
+        });
+    });
+});
+
+describe('readPodLogText', () => {
+    beforeEach(() => {
+        target.mockReset();
+        readNamespacedPodLog.mockReset();
+        apis.mockImplementation(() => ({ core: { readNamespacedPodLog } }));
+        target.mockResolvedValue({ name: 'web-1', namespace: 'team-a', container: 'app' });
+    });
+
+    it('reads the whole log rather than a tail, and says it was not cut', async () => {
+        readNamespacedPodLog.mockResolvedValue('one\ntwo\n');
+        await expect(logs.readPodLogText({ name: 'web-1', namespace: 'team-a' })).resolves.toEqual({
+            text: 'one\ntwo\n',
+            truncated: false,
+        });
+        // No tailLines: the file is meant to be the log, not the view.
+        expect(readNamespacedPodLog.mock.calls[0][0]).not.toHaveProperty('tailLines');
+    });
+
+    it('keeps the newest bytes when the log is longer than the cap, cutting on a line boundary', async () => {
+        const long = 'x'.repeat(logs.LOG_DOWNLOAD_BYTES) + '\nlast line\n';
+        readNamespacedPodLog.mockResolvedValue(long);
+        const result = await logs.readPodLogText({ name: 'web-1', namespace: 'team-a' });
+        expect(result.truncated).toBe(true);
+        expect(result.text.startsWith('x')).toBe(false);
+        expect(result.text).toContain('last line');
+    });
+
+    it('reads the previous run when asked, and answers empty for a pod that is gone', async () => {
+        readNamespacedPodLog.mockResolvedValue('');
+        await logs.readPodLogText({ name: 'web-1', namespace: 'team-a', previous: true });
+        expect(readNamespacedPodLog.mock.calls[0][0]).toMatchObject({ previous: true });
+
+        target.mockResolvedValue(null);
+        await expect(logs.readPodLogText({ name: 'ghost', namespace: 'team-a' })).resolves.toEqual({
+            text: '',
+            truncated: false,
         });
     });
 });

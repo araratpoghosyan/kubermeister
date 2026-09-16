@@ -1,6 +1,12 @@
 import { Writable, type Readable } from 'node:stream';
 import { Log } from '@kubernetes/client-node';
-import type { LogLevel, LogLine, PodLogSnapshotInput } from '../../shared/k8s/logs.js';
+import type {
+    LogLevel,
+    LogLine,
+    PodLogDownload,
+    PodLogDownloadInput,
+    PodLogSnapshotInput,
+} from '../../shared/k8s/logs.js';
 import { streamSchemas, type StreamController, type StreamSend } from '../../shared/streams.js';
 import { apis, kubeConfig } from './client.js';
 import { withK8s } from './errors.js';
@@ -88,6 +94,7 @@ export async function startPodLogStream(rawInput: unknown, send: StreamSend): Pr
         follow: true,
         tailLines: input.tailLines ?? DEFAULT_TAIL_LINES,
         sinceSeconds: input.sinceSeconds,
+        previous: input.previous,
         timestamps: true,
     });
     return {
@@ -113,11 +120,41 @@ export function readPodLogSnapshot(input: PodLogSnapshotInput): Promise<LogLine[
             container: target.container,
             tailLines: input.tailLines ?? DEFAULT_TAIL_LINES,
             sinceSeconds: input.sinceSeconds,
+            previous: input.previous,
             timestamps: true,
         });
         return String(raw)
             .split('\n')
             .filter((line) => line.length > 0)
             .map(parseLogLine);
+    });
+}
+
+/** Ceiling on a downloaded log: enough for a long incident, small enough to cross the bridge as one string. */
+export const LOG_DOWNLOAD_BYTES = 8 * 1024 * 1024;
+
+/**
+ * A container's log as text, for saving. The API server is asked for the whole log rather than a
+ * tail, and the cap is applied to what comes back: the newest bytes are kept, since a log read for
+ * a file is read for what happened most recently.
+ */
+export function readPodLogText(input: PodLogDownloadInput): Promise<PodLogDownload> {
+    return withK8s('pods.logDownload', async () => {
+        const target = await resolvePodTarget(input.name, input.namespace, input.container);
+        if (!target) return { text: '', truncated: false };
+        const raw = String(
+            await apis().core.readNamespacedPodLog({
+                name: target.name,
+                namespace: target.namespace,
+                container: target.container,
+                sinceSeconds: input.sinceSeconds,
+                previous: input.previous,
+                timestamps: true,
+            }),
+        );
+        if (Buffer.byteLength(raw, 'utf8') <= LOG_DOWNLOAD_BYTES) return { text: raw, truncated: false };
+        // Cut on a line boundary so the file never opens on half a line.
+        const tail = Buffer.from(raw, 'utf8').subarray(-LOG_DOWNLOAD_BYTES).toString('utf8');
+        return { text: tail.slice(tail.indexOf('\n') + 1), truncated: true };
     });
 }

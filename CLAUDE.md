@@ -103,7 +103,11 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   reload or destroy. Lists stay live through `resources.watch` (`src/main/k8s/watch.ts`, the
   client's informer, same row transforms as the list) and `useWatchedList` in
   `src/renderer/lib/watch.ts`, which applies events into the list query's cache. Prefer a watch
-  over polling for anything that changes on its own. Pod streams (`src/main/k8s/logs.ts`,
+  over polling for anything that changes on its own. The log console's filtering lives in `src/renderer/lib/log-filter.ts`, apart from the component:
+  one pass decides what is shown and what is marked, so hiding and highlighting cannot disagree, and
+  an unfinished regular expression reads as "no filter yet" rather than emptying the console
+  mid-keystroke. `pods.logDownload` saves the whole log from the API server rather than the buffer
+  on screen, capped in main and cut on a line boundary. Pod streams (`src/main/k8s/logs.ts`,
   `exec.ts`, `port-forward.ts`) resolve their target through `pod-target.ts` and report a missing
   pod as an error followed by end rather than throwing; the renderer side lives in
   `src/renderer/lib/pod-streams.ts` with the log buffer capped at 2,000 lines. The Logs tab shows a

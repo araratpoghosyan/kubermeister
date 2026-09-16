@@ -8,7 +8,7 @@ import { K8sError } from '../k8s/errors.js';
 import { listAlerts } from '../k8s/alerts.js';
 import { resetHistory } from '../k8s/sampler.js';
 import { endAllStreams } from './streams.js';
-import { readPodLogSnapshot } from '../k8s/logs.js';
+import { readPodLogSnapshot, readPodLogText } from '../k8s/logs.js';
 import { getActiveCluster, getActiveNamespaceInfo, listClusters, listNamespaces } from '../k8s/resources/cluster.js';
 import { getConfigMapEntries, getSecretEntries } from '../k8s/resources/config.js';
 import { listEvents, listEventsForObject, listRecentEvents } from '../k8s/resources/events.js';
@@ -131,6 +131,7 @@ const handlers: Handlers = {
     'pods.owners': ({ name, namespace }) => getPodOwners(name, namespace),
     'workloads.pods': ({ kind, name, namespace }) => listOwnedPods(kind, name, namespace),
     'pods.logSnapshot': (input) => readPodLogSnapshot(input),
+    'pods.logDownload': (input) => readPodLogText(input),
     'events.forObject': (input) => listEventsForObject(input),
     'events.recent': () => listRecentEvents(),
     'events.list': ({ namespace }) => listEvents(namespace),
