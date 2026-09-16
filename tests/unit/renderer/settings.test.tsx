@@ -88,6 +88,15 @@ describe('settings screen', () => {
         expect(screen.getByRole('combobox', { name: 'Refresh interval' })).toHaveTextContent('30 seconds');
     });
 
+    it('persists a larger log buffer through the bridge', async () => {
+        renderRoutes(routeTree, '/settings');
+        await screen.findByTestId('settings-page');
+        await userEvent.click(screen.getByRole('combobox', { name: 'Buffered lines' }));
+        await userEvent.click(await screen.findByRole('option', { name: '10k lines' }));
+        await waitFor(() => expect(invoke).toHaveBeenCalledWith('settings.set', { data: { logBufferLines: 10000 } }));
+        expect(screen.getByRole('combobox', { name: 'Buffered lines' })).toHaveTextContent('10k lines');
+    });
+
     it('offers the preset intervals plus the current non-preset value', async () => {
         renderRoutes(routeTree, '/settings');
         await screen.findByTestId('settings-page');

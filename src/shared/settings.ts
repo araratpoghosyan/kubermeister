@@ -22,9 +22,14 @@ const connectionSchema = z.object({
 /** Live-refresh cadences offered in Settings, in seconds. */
 export const REFRESH_INTERVAL_OPTIONS = [5, 10, 15, 30, 60] as const;
 
+/** Log buffer sizes offered in Settings, in lines. */
+export const LOG_BUFFER_OPTIONS = [2_000, 10_000, 50_000] as const;
+
 const dataSchema = z.object({
     /** Poll cadence for the live lists, metrics and dashboard queries. */
     refreshIntervalSec: z.number().int().positive(),
+    /** How many log lines a live follow keeps before dropping the oldest. */
+    logBufferLines: z.number().int().positive(),
 });
 
 /**
@@ -85,7 +90,7 @@ export const DEFAULT_SETTINGS: Settings = {
     version: 1,
     session: { lastContext: null, lastNamespace: null, restoreOnLaunch: true },
     connection: { kubeconfigPath: null },
-    data: { refreshIntervalSec: 12 },
+    data: { refreshIntervalSec: 12, logBufferLines: 2_000 },
     updates: { mode: 'check' },
     window: { bounds: null },
 };

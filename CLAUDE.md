@@ -103,7 +103,12 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   reload or destroy. Lists stay live through `resources.watch` (`src/main/k8s/watch.ts`, the
   client's informer, same row transforms as the list) and `useWatchedList` in
   `src/renderer/lib/watch.ts`, which applies events into the list query's cache. Prefer a watch
-  over polling for anything that changes on its own. The log console's filtering lives in `src/renderer/lib/log-filter.ts`, apart from the component:
+  over polling for anything that changes on its own. The log console renders only the rows in view (`@tanstack/react-virtual`, a devDependency like
+  everything else renderer-side), so a buffer of tens of thousands of lines costs a screenful of DOM;
+  its size is the `data.logBufferLines` setting, read live so raising it trims differently from the
+  next batch on rather than restarting the follow. jsdom lays nothing out, so `tests/setup-renderer.ts`
+  stands in for layout with fixed offset sizes and a ResizeObserver that answers once — without
+  those, anything virtualised renders nothing under test. The log console's filtering lives in `src/renderer/lib/log-filter.ts`, apart from the component:
   one pass decides what is shown and what is marked, so hiding and highlighting cannot disagree, and
   an unfinished regular expression reads as "no filter yet" rather than emptying the console
   mid-keystroke. `pods.logDownload` saves the whole log from the API server rather than the buffer

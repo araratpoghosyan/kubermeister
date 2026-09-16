@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { MonitorIcon, MoonIcon, SunIcon, type LucideIcon } from 'lucide-react';
-import { REFRESH_INTERVAL_OPTIONS, UPDATE_MODES, type UpdateMode } from '../../shared/settings';
+import { LOG_BUFFER_OPTIONS, REFRESH_INTERVAL_OPTIONS, UPDATE_MODES, type UpdateMode } from '../../shared/settings';
 import { SettingsPage } from '@/components/templates/settings-page';
 import { Field, FormCard, FormSelect, Toggle } from '@/components/templates/settings-form';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,10 @@ const THEME_OPTIONS: { value: Theme; label: string; icon: LucideIcon; desc: stri
     { value: 'dark', label: 'Dark', icon: MoonIcon, desc: 'Cobalt, dense night mode' },
     { value: 'system', label: 'System', icon: MonitorIcon, desc: 'Match OS preference' },
 ];
+
+/** Thousands read better than five digits in a select; the label maps back to its own number. */
+const bufferLabel = (lines: number): string => `${(lines / 1000).toLocaleString()}k lines`;
+const BUFFER_BY_LABEL = new Map(LOG_BUFFER_OPTIONS.map((lines) => [bufferLabel(lines), lines]));
 
 const intervalLabel = (sec: number) => `${sec} seconds`;
 
@@ -49,6 +53,7 @@ function SettingsScreen() {
     const kubeconfigPath = settings?.connection.kubeconfigPath ?? null;
     const updateMode = settings?.updates.mode ?? 'check';
     const refreshSec = settings?.data.refreshIntervalSec ?? 12;
+    const logBuffer = settings?.data.logBufferLines ?? 2_000;
     // Fold the current value in so a non-preset interval (the 12 s default) still renders as selected.
     const intervalOptions = Array.from(new Set<number>([...REFRESH_INTERVAL_OPTIONS, refreshSec]))
         .sort((a, b) => a - b)
@@ -92,6 +97,19 @@ function SettingsScreen() {
                             onValueChange={(label) =>
                                 void updateSettings(client, { data: { refreshIntervalSec: parseInt(label, 10) } })
                             }
+                        />
+                    </Field>
+                </FormCard>
+
+                <FormCard title="Log buffer" desc="How many lines a live log follow keeps before dropping the oldest.">
+                    <Field label="Buffered lines">
+                        <FormSelect
+                            value={bufferLabel(logBuffer)}
+                            options={LOG_BUFFER_OPTIONS.map(bufferLabel)}
+                            onValueChange={(label) => {
+                                const lines = BUFFER_BY_LABEL.get(label);
+                                if (lines) void updateSettings(client, { data: { logBufferLines: lines } });
+                            }}
                         />
                     </Field>
                 </FormCard>

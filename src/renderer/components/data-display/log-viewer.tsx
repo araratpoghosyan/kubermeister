@@ -1,3 +1,5 @@
+import { useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronDownIcon, DownloadIcon, SearchIcon } from 'lucide-react';
 import type { LogLevel, LogLine } from '../../../shared/k8s/logs';
 import { matchRanges, type LogSearch, type VisibleLine } from '@/lib/log-filter';
@@ -36,6 +38,9 @@ export const TAIL_OPTIONS = [100, 500, 2000] as const;
 
 /** The level floors on offer: no floor, or hide everything below this level. */
 export const LEVEL_OPTIONS: (LogLevel | null)[] = [null, 'INFO', 'WARN', 'ERROR'];
+
+/** Height of one unwrapped row, which is what the virtualiser starts from before measuring. */
+const ROW_HEIGHT = 18;
 
 /** A small on/off control for the console's display options. */
 function Toggle({
@@ -179,6 +184,19 @@ export function LogViewer({
     filtered,
     brokenPattern,
 }: LogViewerProps) {
+    const scrollRef = useRef<HTMLDivElement>(null);
+    // Wrapped lines have no single height, so each is measured; unwrapped ones all match the
+    // estimate and the measurement costs nothing.
+    const virtualizer = useVirtualizer({
+        count: lines.length,
+        getScrollElement: () => scrollRef.current,
+        estimateSize: () => ROW_HEIGHT,
+        overscan: 20,
+        // A first guess at the console's size, replaced the moment it is measured: without one,
+        // nothing is mounted until layout has run, and the first paint of a log is blank.
+        initialRect: { width: 900, height: 600 },
+    });
+
     return (
         <Card
             className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-card py-0 shadow-none"
@@ -281,35 +299,47 @@ export function LogViewer({
                 />
                 {brokenPattern && <span className="text-label text-danger">Not a valid pattern yet</span>}
             </div>
-            {/* Rows are not virtualized: the live buffer is capped at 2,000 lines and the grep filter is
-                deferred by the caller, so the DOM stays bounded. */}
+            {/* Only the rows in view are mounted: the buffer can be tens of thousands of lines, and
+                every one of them in the DOM is what makes a log console crawl. */}
             <div
+                ref={scrollRef}
                 className="min-h-0 flex-1 overflow-auto bg-code-bg py-2 font-mono text-meta"
                 role="list"
                 aria-label="Log lines"
+                data-testid="log-rows"
             >
                 {error && live && (
                     <div className="px-3.5 py-2 text-danger" role="alert">
                         {error}
                     </div>
                 )}
-                {lines.map(({ line: log, match }, i) => (
-                    <div
-                        key={i}
-                        role="listitem"
-                        data-match={match ? 'true' : undefined}
-                        className={cn(
-                            'flex gap-3 px-3.5 py-px text-text-2',
-                            wrap ? 'whitespace-pre-wrap' : 'whitespace-nowrap',
-                            match && 'bg-elev-3',
-                        )}
-                    >
-                        <span className="w-7 shrink-0 text-right text-text-dim">{i + 1}</span>
-                        {timestamps && <span className="shrink-0 text-text-dim">{log.timestamp}</span>}
-                        <span className={cn('w-12 shrink-0 font-medium', LOG_LEVEL_COLOR[log.level])}>{log.level}</span>
-                        <span className="flex-1">{highlight(log.message, search)}</span>
-                    </div>
-                ))}
+                <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
+                    {virtualizer.getVirtualItems().map((item) => {
+                        const { line: log, match } = lines[item.index]!;
+                        return (
+                            <div
+                                key={item.key}
+                                ref={virtualizer.measureElement}
+                                data-index={item.index}
+                                role="listitem"
+                                data-match={match ? 'true' : undefined}
+                                className={cn(
+                                    'absolute top-0 left-0 flex w-full gap-3 px-3.5 py-px text-text-2',
+                                    wrap ? 'whitespace-pre-wrap' : 'whitespace-nowrap',
+                                    match && 'bg-elev-3',
+                                )}
+                                style={{ transform: `translateY(${item.start}px)` }}
+                            >
+                                <span className="w-7 shrink-0 text-right text-text-dim">{item.index + 1}</span>
+                                {timestamps && <span className="shrink-0 text-text-dim">{log.timestamp}</span>}
+                                <span className={cn('w-12 shrink-0 font-medium', LOG_LEVEL_COLOR[log.level])}>
+                                    {log.level}
+                                </span>
+                                <span className="flex-1">{highlight(log.message, search)}</span>
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
             <div
                 className="flex border-t border-border px-3.5 py-1.5 text-label text-text-muted"
