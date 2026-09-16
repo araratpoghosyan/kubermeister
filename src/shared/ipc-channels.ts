@@ -55,6 +55,7 @@ export const IPC_CHANNELS = [
     'resources.replace',
     'resources.delete',
     'resources.scale',
+    'resources.restart',
 ] as const;
 
 export const SUBSCRIPTION_CHANNELS = ['update.state', 'open-settings'] as const;

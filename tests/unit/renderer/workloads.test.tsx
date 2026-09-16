@@ -175,7 +175,7 @@ describe('workload details', () => {
         expect(page).toHaveTextContent('Replicas3');
         expect(page).toHaveTextContent('Available2');
         expect(page).toHaveTextContent('Updated3');
-        expect(within(page).getByRole('button', { name: 'Restart' })).toHaveAttribute('aria-disabled', 'true');
+        expect(within(page).getByRole('button', { name: 'Restart' })).toBeEnabled();
 
         const rail = within(page).getByRole('tablist');
         expect(

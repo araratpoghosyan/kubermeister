@@ -9,7 +9,8 @@ import { invoke, IpcError } from './ipc';
 import { describeError } from './k8s-error';
 import { ipcQueryKey, useIpcMutation } from './query';
 
-type WriteChannel = 'resources.create' | 'resources.replace' | 'resources.delete' | 'resources.scale';
+type WriteChannel =
+    'resources.create' | 'resources.replace' | 'resources.delete' | 'resources.scale' | 'resources.restart';
 
 /** What a screen passes to a write: the input minus the context stamp, which is added here. */
 export type WriteVariables<C extends WriteChannel> = Omit<IpcInput<C>, 'context'>;
@@ -75,6 +76,17 @@ export function useScaleResource() {
     return useIpcMutation<'resources.scale', WriteVariables<'resources.scale'>>('resources.scale', {
         prepare: (variables, client) => stamp('resources.scale', variables, client),
         invalidates: (input) => resourceKeys(input.kind as Kind, input.name, input.namespace),
+    });
+}
+
+/**
+ * Restart a workload. The rolled pods appear and disappear on their own, so beyond the kind's own
+ * screens this refreshes nothing: the pod list is live through its watch.
+ */
+export function useRestartResource() {
+    return useIpcMutation<'resources.restart', WriteVariables<'resources.restart'>>('resources.restart', {
+        prepare: (variables, client) => stamp('resources.restart', variables, client),
+        invalidates: (input) => resourceKeys(input.kind, input.name, input.namespace),
     });
 }
 

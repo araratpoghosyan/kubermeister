@@ -125,13 +125,16 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   view models, exported and unit tested on their own, plus thin readers that fetch and delegate.
   Keep it that way: the watch stream feeds the very same transforms.
 - **Writes** (`src/main/k8s/resources/write.ts`) are `resources.create` / `replace` / `delete` /
-  `scale`. Create and replace go through `apis().objects`, which derives the API path from the
-  manifest's own `apiVersion`/`kind`, so a CRD rides the same call as a Pod; a replace must carry
-  the `metadata.resourceVersion` it was read with, which is what turns a concurrent change into a
-  `conflict` instead of a silent overwrite. **Writes fail closed on targeting.** Every write input
-  carries a `context` stamp, the context the screen was rendered under; main compares it with the
-  context it is on and refuses a mismatch as `conflict`, so rows left over from before a context
-  switch can never act on the new cluster (the renderer adds the stamp in `src/renderer/lib/writes.ts`,
+  `scale` / `restart`. A restart is a strategic merge patch stamping the pod template's
+  `kubectl.kubernetes.io/restartedAt` annotation (the key kubectl writes, so both read as one
+  history), which is why only the kinds in `RESTARTABLE_KINDS` can be restarted at all and why
+  nothing here deletes a pod. Create and replace go through `apis().objects`, which derives the
+  API path from the manifest's own `apiVersion`/`kind`, so a CRD rides the same call as a Pod; a
+  replace must carry the `metadata.resourceVersion` it was read with, which is what turns a
+  concurrent change into a `conflict` instead of a silent overwrite. **Writes fail closed on
+  targeting.** Every write input carries a `context` stamp, the context the screen was rendered
+  under; main compares it with the context it is on and refuses a mismatch as `conflict`, so rows
+  left over from before a context switch can never act on the new cluster (the renderer adds the stamp in `src/renderer/lib/writes.ts`,
   screens never pass it). A delete or scale of a namespaced kind must name its namespace and a
   cluster-scoped kind must not (`refineManifestTarget` in `src/shared/k8s/manifest.ts` enforces it
   at the boundary); the active namespace is never consulted for a destructive write. A create or
