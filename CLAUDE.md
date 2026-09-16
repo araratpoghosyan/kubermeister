@@ -103,7 +103,14 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   reload or destroy. Lists stay live through `resources.watch` (`src/main/k8s/watch.ts`, the
   client's informer, same row transforms as the list) and `useWatchedList` in
   `src/renderer/lib/watch.ts`, which applies events into the list query's cache. Prefer a watch
-  over polling for anything that changes on its own. A controller's Logs tab follows every pod it owns at once (`src/renderer/lib/multi-pod-logs.ts`):
+  over polling for anything that changes on its own. Shells live in a drawer at the bottom of the window, not in a route: `src/renderer/lib/shell-sessions.ts`
+  holds each session and the element its terminal was opened into, so the drawer attaches and detaches
+  one as it switches without the remote shell noticing, and a session ends only when closed or when
+  the context changes (`closeAllShells`). The store owns its terminals — restyling goes through
+  `applyTerminalLook`, never by a component mutating a session it was handed — and the pod's Shell tab
+  opens one per pod and container rather than whenever none is open, so closing every shell on a
+  context switch cannot immediately put one back into the cluster just left.
+  A controller's Logs tab follows every pod it owns at once (`src/renderer/lib/multi-pod-logs.ts`):
   the API server has no call for "the logs of this deployment", so it is one stream per pod, merged
   in arrival order and coloured by pod, restarting when the set of pods changes so a replaced pod
   stops being followed. The log console renders only the rows in view (`@tanstack/react-virtual`, a devDependency like

@@ -157,12 +157,25 @@ test('follows pod logs, runs a command in the pod shell, and starts a port-forwa
     await window.getByRole('button', { name: 'Timestamps' }).click();
     await expect(rows).toContainText('km-e2e-marker');
 
+    // Shells live in the drawer at the bottom, so they survive leaving the pod's page.
     await window.getByRole('tab', { name: 'Shell' }).click();
-    const terminal = window.getByTestId('terminal-host');
-    await expect(terminal.locator('.xterm')).toBeVisible();
+    const drawer = window.getByTestId('shell-drawer');
+    const terminal = drawer.getByTestId('shell-host');
+    await expect(terminal.locator('.xterm')).toBeVisible({ timeout: 30_000 });
     await terminal.click();
     await window.keyboard.type('echo km-shell-$((6*7))\n');
     await expect(terminal).toContainText('km-shell-42', { timeout: 30_000 });
+
+    // Going elsewhere leaves the session open, with its scrollback intact, and coming back finds it.
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Nodes' }).click();
+    await expect(window.getByTestId('nodes-table')).toBeVisible();
+    await expect(drawer.getByTestId('shell-host')).toContainText('km-shell-42');
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Pods' }).click();
+    await window.getByTestId('pods-table').locator('[data-pod^="web-"]').getByRole('link').click();
+    await expect(drawer.getByTestId('shell-host')).toContainText('km-shell-42');
+
+    await drawer.getByRole('button', { name: /^Close shell/ }).click();
+    await expect(window.getByTestId('shell-drawer')).toHaveCount(0);
 
     await window.getByRole('tab', { name: 'Network' }).click();
     await window.getByRole('textbox', { name: 'Local port' }).fill('38080');
@@ -436,9 +449,12 @@ test('restarts the seeded deployment, which rolls its pods onto a new replica se
     await dialog.getByRole('button', { name: 'Restart' }).click();
     await expect(window.getByText(/restarting/)).toBeVisible();
 
-    // The stamped template makes the controller roll the pods onto a second replica set.
-    await window.getByRole('tab', { name: /ReplicaSets/ }).click();
-    await expect(page.getByTestId('replica-sets').getByRole('row')).toHaveCount(3, { timeout: 30_000 });
+    // The stamped template makes the controller roll the pods onto a second replica set. How many
+    // sets exist at any moment depends on how far the roll has got, so this waits for more than one.
+    await page.getByRole('tab', { name: /ReplicaSets/ }).click();
+    const sets = page.getByTestId('replica-sets');
+    await expect(sets).toBeVisible({ timeout: 30_000 });
+    await expect.poll(() => sets.getByRole('row').count(), { timeout: 30_000 }).toBeGreaterThan(2);
     await window.getByRole('tab', { name: /History/ }).click();
     await expect(page.getByTestId('rollout-history').locator('[data-revision="2"]')).toBeVisible();
 });
