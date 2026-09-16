@@ -12,7 +12,6 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { CopyFilesCard, DebugContainerButton } from '@/components/pod/debug-actions';
 import { openPodExec } from '@/lib/pod-streams';
 import { useTerminalFontSize } from '@/lib/settings';
 import { readTerminalLook, readTerminalTheme } from '@/lib/terminal-look';
@@ -106,20 +105,9 @@ export function ShellTab({ name, namespace, pod }: { name: string; namespace: st
                         </DropdownMenu>
                     )}
                     <span className="text-meta text-text-muted">/bin/sh</span>
-                    <div className="ml-auto">
-                        {/* A pod built from a small image has no shell to exec into; the debugger
-                            brings one, and the session switches to it once it is attached. */}
-                        <DebugContainerButton
-                            name={name}
-                            namespace={namespace}
-                            container={container}
-                            onAttached={setSelectedContainer}
-                        />
-                    </div>
                 </div>
                 <div ref={ref} className="min-h-0 flex-1 overflow-hidden p-2" data-testid="terminal-host" />
             </Card>
-            {container && <CopyFilesCard name={name} namespace={namespace} container={container} />}
         </div>
     );
 }

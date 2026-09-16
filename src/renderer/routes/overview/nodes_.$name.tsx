@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/badge';
 import { RefreshButton } from '@/components/refresh-button';
 import { CordonButton } from '@/components/node/cordon-button';
 import { DrainDialog } from '@/components/node/drain-dialog';
-import { NodeShellButton } from '@/components/node/node-shell-button';
 import { DetailCard, DetailMetrics, PropertyGrid } from '@/components/templates/detail-cards';
 import { eventsTab, labelsTab, ResourceDetail, type DetailTabGroup } from '@/components/templates/resource-detail';
 import { manifestTab } from '@/components/templates/manifest-panel';
@@ -132,7 +131,6 @@ function NodeDetailPage() {
                     />
                     {node && <CordonButton name={name} cordoned={node.status === 'Cordoned'} />}
                     <DrainDialog name={name} context={context?.name ?? null} />
-                    <NodeShellButton name={name} />
                     <EditResourceButton />
                     <DeleteResourceButton kind="Node" name={name} backTo="/overview/nodes" />
                 </>

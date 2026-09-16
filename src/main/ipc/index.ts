@@ -20,8 +20,6 @@ import {
     restartResource,
     scaleResource,
 } from '../k8s/resources/write.js';
-import { addDebugContainer, copyFromPod, copyToPod, startNodeShell } from '../k8s/debug.js';
-import type { PodCopyResult, PodFileInput } from '../../shared/k8s/debug.js';
 import { getObjectYaml } from '../k8s/resources/manifest.js';
 import { getObjectMeta } from '../k8s/resources/meta.js';
 import { getRelated } from '../k8s/resources/related.js';
@@ -93,34 +91,6 @@ async function pickKubeconfig(): Promise<string | null> {
     leaveConnection('The kubeconfig changed');
     reloadKubeConfig();
     return path;
-}
-
-/**
- * The local side of a file copy is chosen through the OS picker, never named by the renderer, for
- * the same reason the kubeconfig is: a compromised renderer must not be able to read or overwrite
- * an arbitrary path. A cancelled picker is not a failure — nothing was copied, and that is said.
- */
-async function copyFileFromPod(input: PodFileInput): Promise<PodCopyResult | null> {
-    const owner = BrowserWindow.getFocusedWindow() ?? undefined;
-    const options: Electron.SaveDialogOptions = {
-        title: `Save ${input.remotePath} from ${input.name}`,
-        defaultPath: `${input.remotePath.split('/').pop() ?? 'file'}.tar`,
-    };
-    const result = owner ? await dialog.showSaveDialog(owner, options) : await dialog.showSaveDialog(options);
-    if (result.canceled || !result.filePath) return null;
-    return copyFromPod({ ...input, localPath: result.filePath });
-}
-
-async function copyFileToPod(input: PodFileInput): Promise<PodCopyResult | null> {
-    const owner = BrowserWindow.getFocusedWindow() ?? undefined;
-    const options: Electron.OpenDialogOptions = {
-        title: `Copy a file into ${input.name}`,
-        properties: ['openFile'],
-    };
-    const result = owner ? await dialog.showOpenDialog(owner, options) : await dialog.showOpenDialog(options);
-    const path = result.canceled ? undefined : result.filePaths[0];
-    if (!path) return null;
-    return copyToPod({ ...input, localPath: path });
 }
 
 /**
@@ -217,10 +187,6 @@ const handlers: Handlers = {
     'resources.scale': (input) => scaleResource(input),
     'resources.restart': (input) => restartResource(input),
     'pods.evict': (input) => evictPod(input),
-    'pods.debug': (input) => addDebugContainer(input),
-    'pods.copyFrom': (input) => copyFileFromPod(input),
-    'pods.copyTo': (input) => copyFileToPod(input),
-    'nodes.debug': (input) => startNodeShell(input),
     'jobs.retry': (input) => retryJob(input),
     'cronJobs.trigger': (input) => triggerCronJob(input),
     'cronJobs.suspend': (input) => setCronJobSuspended(input),

@@ -646,26 +646,6 @@ test('follows every pod of the seeded deployment in one view', async () => {
     await expect(viewer.getByRole('list', { name: 'Log lines' }).locator('[title^="web-"]').first()).toBeVisible();
 });
 
-test('attaches a debug container to the seeded pod and shells into it', async () => {
-    const { window } = launched;
-    await window.getByTestId('sidebar').getByRole('link', { name: 'Pods' }).click();
-    await window.getByTestId('pods-table').locator('[data-pod^="web-"]').first().getByRole('link').click();
-    await window.getByRole('tab', { name: 'Shell' }).click();
-
-    await window.getByTestId('pod-page').getByRole('button', { name: 'Debug' }).click();
-    const dialog = window.getByRole('alertdialog');
-    await expect(dialog).toContainText('cannot remove an ephemeral container');
-    await dialog.getByRole('button', { name: 'Attach' }).click();
-    await expect(window.getByText(/attached/)).toBeVisible({ timeout: 30_000 });
-
-    // The shell in the tab switches into the container that was just attached.
-    await expect(window.getByRole('button', { name: 'Container' })).toContainText(/debugger-/, { timeout: 30_000 });
-
-    // The pod's containers card lists it as a debug container once the kubelet starts it.
-    await window.getByRole('tab', { name: 'Overview' }).click();
-    await expect(window.getByTestId('containers')).toContainText('debug', { timeout: 60_000 });
-});
-
 test('forwards a service, which resolves to whichever pod is ready', async () => {
     const { window } = launched;
     await window.getByTestId('sidebar').getByRole('link', { name: 'Services', exact: true }).click();
