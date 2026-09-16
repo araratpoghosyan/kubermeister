@@ -888,6 +888,15 @@ test('filters a list by label and reads the owner and finalizers of an object', 
     await window.getByTestId('label-filter').fill('app=web');
     await window.getByTestId('label-filter').press('Enter');
     await expect(table.locator('[data-pod^="web-"]').first()).toBeVisible({ timeout: 30_000 });
+    // A filter worth keeping is saved under a name and comes back from the Views menu.
+    await window.getByTestId('views-menu').click();
+    await window.getByLabel('View name').fill('web pods');
+    await window.getByRole('button', { name: 'Save' }).click();
+    await window.getByRole('button', { name: 'Clear label selector' }).click();
+    await window.getByTestId('views-menu').click();
+    // The success toast carries the same words, so the menu entry is addressed by its own hook.
+    await window.locator('[data-view="web pods"]').click();
+    await expect(window.getByTestId('label-filter')).toHaveValue('app=web');
     await window.getByRole('button', { name: 'Clear label selector' }).click();
 
     // Every detail carries the owner reference and the finalizers, read through one channel.

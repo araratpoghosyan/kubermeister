@@ -242,6 +242,10 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   `resources.meta` answers the two parts of `metadata` no view model carries, the controlling owner
   reference and the finalizers holding a deletion open, for any kind at all; `ResourceDetail` adds
   that card to the Labels tab itself rather than thirty screens passing the same three values.
+  A filter worth keeping becomes a **saved view**: a named selector in `data.savedViews`, scoped to
+  the screen that made it, because user data belongs in the settings file. Which **columns** a list
+  shows is the opposite — a preference about one window, like the theme — so it lives in
+  `localStorage` per screen and every access is wrapped, since a private window throws.
   Deployments also have `deployments.replicaSets`, `deployments.rollouts`,
   `deployments.rolloutStatus` and `metrics.deploymentSeries` (the sum of the selected pods' tracked
   series), plus the two writes that belong to a rollout rather than to a kind in general:
