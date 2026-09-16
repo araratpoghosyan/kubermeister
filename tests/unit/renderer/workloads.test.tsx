@@ -66,6 +66,34 @@ const data: Record<string, unknown> = {
         { name: 'web-1', desired: 0, current: 0, ready: 0, age: '3d' },
     ],
     'metrics.deploymentSeries': { cpu: [100, 250], mem: [10, 20] },
+    'workloads.pods': [
+        {
+            name: 'web-abc-1',
+            namespace: 'team-a',
+            status: 'Running',
+            ready: '1/1',
+            restarts: 0,
+            age: '2h',
+            node: 'n1',
+            cpu: 5,
+            mem: 12,
+            cpuLimit: 0,
+            memLimit: 0,
+        },
+        {
+            name: 'web-abc-2',
+            namespace: 'team-a',
+            status: 'Pending',
+            ready: '0/1',
+            restarts: 2,
+            age: '1m',
+            node: 'n1',
+            cpu: 0,
+            mem: 0,
+            cpuLimit: 0,
+            memLimit: 0,
+        },
+    ],
     'deployments.rolloutStatus': {
         paused: false,
         desired: 3,
@@ -203,7 +231,7 @@ describe('workload details', () => {
             within(rail)
                 .getAllByRole('tab')
                 .map((t) => t.textContent),
-        ).toEqual(['Overview', 'Events', 'Status', 'History2', 'ReplicaSets2', 'ManifestYAML', 'Labels1']);
+        ).toEqual(['Overview', 'Pods', 'Events', 'Status', 'History2', 'ReplicaSets2', 'ManifestYAML', 'Labels1']);
         await userEvent.click(within(rail).getByRole('tab', { name: /History/ }));
         const history = within(page).getByTestId('rollout-history');
         expect(page).toHaveTextContent('2 revisions');
@@ -221,6 +249,35 @@ describe('workload details', () => {
         expect(within(sets).getByText('web-2').closest('tr')?.querySelector('.text-ok')).toHaveTextContent('3');
         expect(within(sets).getByText('web-1').closest('tr')?.querySelector('.text-text-muted')).toHaveTextContent('0');
         expect(invoke).toHaveBeenCalledWith('metrics.deploymentSeries', { namespace: 'team-a', name: 'web' });
+    });
+
+    it('lists the pods a controller owns, each linking to its own detail', async () => {
+        renderRoutes(routeTree, '/workloads/deployments/team-a/web');
+        const page = await screen.findByTestId('deployment-page');
+        const rail = await within(page).findByRole('tablist');
+        await userEvent.click(within(rail).getByRole('tab', { name: 'Pods' }));
+
+        const table = await within(page).findByTestId('owned-pods');
+        await waitFor(() => expect(table).toHaveTextContent('web-abc-1'));
+        expect(page).toHaveTextContent('2 pods owned by this Deployment');
+        const pending = table.querySelector('[data-pod="web-abc-2"]') as HTMLElement;
+        expect(within(pending).getByText('Pending')).toHaveAttribute('data-tone', 'warn');
+        // Restarts are toned so a crash-looping pod stands out in the controller's own list.
+        expect(within(pending).getByText('2')).toHaveClass('text-warn');
+        expect(within(table).getByRole('link', { name: 'web-abc-1' })).toHaveAttribute(
+            'href',
+            expect.stringContaining('/workloads/pods/team-a/web-abc-1'),
+        );
+        expect(invoke).toHaveBeenCalledWith('workloads.pods', { kind: 'Deployment', name: 'web', namespace: 'team-a' });
+    });
+
+    it('says plainly when a controller has no pods', async () => {
+        withResources({}, { Deployment: { ...deployment, ...meta } }, { ...data, 'workloads.pods': [] });
+        renderRoutes(routeTree, '/workloads/deployments/team-a/web');
+        const page = await screen.findByTestId('deployment-page');
+        const rail = await within(page).findByRole('tablist');
+        await userEvent.click(within(rail).getByRole('tab', { name: 'Pods' }));
+        await waitFor(() => expect(page).toHaveTextContent('0 pods owned by this Deployment'));
     });
 
     it('shows live rollout progress, the controller’s conditions and each generation', async () => {

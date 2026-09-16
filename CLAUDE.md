@@ -201,6 +201,15 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   one superseded. An uninstall deletes the current revision's objects and either forgets the history
   or marks it uninstalled. Objects annotated `helm.sh/resource-policy: keep` are never deleted by
   either, and are counted back to the caller.
+- **Ownership** (`src/main/k8s/resources/owners.ts`) is resolved through the API's own owner
+  references, never label selectors: a selector says which pods a controller _would_ adopt, the
+  references say which it _has_, and two workloads can share labels but never a reference.
+  `pods.owners` walks a pod up through the one intermediary its kind allows (a ReplicaSet to its
+  Deployment, a Job to its CronJob) and stops; `workloads.pods` goes the other way, resolving a
+  controller's owning uids first. A link carries a `path` only when the registry has a screen for
+  that kind, so a ReplicaSet is named but not linked until that kind exists. A broken link higher up
+  ends the chain rather than failing it. Restarting from the pod screen rolls the owning workload,
+  because a pod deleted on its own comes back unchanged.
 - **Kubernetes access** lives in `src/main/k8s`. The kubeconfig is read-only: switching context
   or namespace changes memory and the app's own settings, never the file. Every cluster call goes
   through `withK8s` (timeout plus `[kind]`-prefixed `K8sError`). No `kubectl` dependency; the

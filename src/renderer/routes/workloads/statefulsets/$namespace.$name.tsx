@@ -8,6 +8,7 @@ import {
     ResourceDetail,
     type DetailTabGroup,
 } from '@/components/templates/resource-detail';
+import { podsTab } from '@/components/templates/owned-pods';
 import { manifestTab } from '@/components/templates/manifest-panel';
 import { EditResourceButton } from '@/components/templates/edit-resource-button';
 import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
@@ -33,6 +34,7 @@ function StatefulSetDetailPage() {
                           ['Image', row.image],
                           ['Age', row.age],
                       ]),
+                      podsTab({ kind: 'StatefulSet', name, namespace }),
                       eventsTab({ kind: 'StatefulSet', name, namespace }),
                   ],
               },

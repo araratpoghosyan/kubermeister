@@ -12,6 +12,8 @@ import {
 import { kubeContextSchema } from './k8s/contexts.js';
 import { manifestInputSchema, manifestSchema } from './k8s/manifest.js';
 import { drainPlanInputSchema, drainPlanSchema } from './k8s/drain.js';
+import { ownedPodsInputSchema, ownerChainSchema } from './k8s/owners.js';
+import { podSchema } from './k8s/pods.js';
 import {
     cordonInputSchema,
     deleteInputSchema,
@@ -153,6 +155,8 @@ export const ipcSchemas = {
     'nodes.drainPlan': { input: drainPlanInputSchema, output: drainPlanSchema },
     'resources.list': { input: resourceListInputSchema, output: resourceListOutputSchema },
     'resources.get': { input: resourceGetInputSchema, output: resourceGetOutputSchema },
+    'pods.owners': { input: namespacedNameSchema, output: ownerChainSchema },
+    'workloads.pods': { input: ownedPodsInputSchema, output: z.array(podSchema) },
     'pods.logSnapshot': { input: podLogSnapshotInputSchema, output: z.array(logLineSchema) },
     'events.forObject': { input: objectEventsInputSchema, output: z.array(clusterEventSchema) },
     'events.recent': { input: noInput, output: z.array(clusterEventSchema) },
