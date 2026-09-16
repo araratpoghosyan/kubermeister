@@ -16,7 +16,11 @@ import { ownedPodsInputSchema, ownerChainSchema } from './k8s/owners.js';
 import { podSchema } from './k8s/pods.js';
 import {
     cordonInputSchema,
+    cronJobSuspendInputSchema,
+    cronJobTriggerInputSchema,
     deleteInputSchema,
+    evictInputSchema,
+    jobRetryInputSchema,
     manifestWriteSchema,
     pauseInputSchema,
     restartInputSchema,
@@ -191,6 +195,10 @@ export const ipcSchemas = {
     'resources.delete': { input: deleteInputSchema, output: writeResultSchema },
     'resources.scale': { input: scaleInputSchema, output: writeResultSchema },
     'resources.restart': { input: restartInputSchema, output: writeResultSchema },
+    'pods.evict': { input: evictInputSchema, output: writeResultSchema },
+    'jobs.retry': { input: jobRetryInputSchema, output: writeResultSchema },
+    'cronJobs.trigger': { input: cronJobTriggerInputSchema, output: writeResultSchema },
+    'cronJobs.suspend': { input: cronJobSuspendInputSchema, output: writeResultSchema },
 } as const;
 
 /**

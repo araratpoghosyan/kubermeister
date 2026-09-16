@@ -12,6 +12,7 @@ import { podsTab } from '@/components/templates/owned-pods';
 import { manifestTab } from '@/components/templates/manifest-panel';
 import { EditResourceButton } from '@/components/templates/edit-resource-button';
 import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
+import { SuspendCronJobButton, TriggerCronJobButton } from '@/components/workload/job-actions';
 import { ipcQueryKey } from '@/lib/query';
 import { useResource } from '@/lib/resources';
 
@@ -61,6 +62,8 @@ function CronJobDetailPage() {
             actions={
                 <>
                     <RefreshButton queryKeys={[ipcQueryKey('resources.get', { kind: 'CronJob', name, namespace })]} />
+                    <TriggerCronJobButton name={name} namespace={namespace} />
+                    {row && <SuspendCronJobButton name={name} namespace={namespace} suspended={row.suspend} />}
                     <EditResourceButton />
                     <DeleteResourceButton
                         kind="CronJob"

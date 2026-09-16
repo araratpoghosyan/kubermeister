@@ -41,6 +41,11 @@ export const deleteInputSchema = z
         kind: manifestKindSchema,
         name: z.string().min(1),
         namespace: namespaceNameSchema.optional(),
+        /**
+         * Seconds the object gets to shut down, overriding its own grace period. Zero is a forced
+         * delete: the API server stops waiting and the record goes, whatever the kubelet is doing.
+         */
+        gracePeriodSeconds: z.number().int().min(0).max(3600).optional(),
     })
     .superRefine(refineManifestTarget);
 
@@ -105,6 +110,32 @@ export const cordonInputSchema = z.object({
     unschedulable: z.boolean(),
 });
 
+/** One pod, named by the screen that displayed it; used by the writes that act on a single pod. */
+const podTarget = {
+    ...scopeStamp,
+    name: z.string().min(1),
+    namespace: namespaceNameSchema,
+};
+
+/**
+ * Evicting asks the API server to remove a pod the way a drain does, so PodDisruptionBudgets get a
+ * say. It is the gentle alternative to deleting: a budget can refuse it, and that refusal is the
+ * point rather than an error to work around.
+ */
+export const evictInputSchema = z.object({
+    ...podTarget,
+    gracePeriodSeconds: z.number().int().min(0).max(3600).optional(),
+});
+
+/** Run a job again from the spec it was created with. */
+export const jobRetryInputSchema = z.object(podTarget);
+
+/** Create a job now from a cron job's template, without waiting for its schedule. */
+export const cronJobTriggerInputSchema = z.object(podTarget);
+
+/** Hold a cron job's schedule, or let it run again. */
+export const cronJobSuspendInputSchema = z.object({ ...podTarget, suspend: z.boolean() });
+
 export type WriteResult = z.infer<typeof writeResultSchema>;
 export type ManifestIdentity = z.infer<typeof manifestIdentitySchema>;
 export type ManifestWrite = z.infer<typeof manifestWriteSchema>;
@@ -115,3 +146,7 @@ export type RollbackInput = z.infer<typeof rollbackInputSchema>;
 export type RollbackResult = z.infer<typeof rollbackResultSchema>;
 export type PauseInput = z.infer<typeof pauseInputSchema>;
 export type CordonInput = z.infer<typeof cordonInputSchema>;
+export type EvictInput = z.infer<typeof evictInputSchema>;
+export type JobRetryInput = z.infer<typeof jobRetryInputSchema>;
+export type CronJobTriggerInput = z.infer<typeof cronJobTriggerInputSchema>;
+export type CronJobSuspendInput = z.infer<typeof cronJobSuspendInputSchema>;

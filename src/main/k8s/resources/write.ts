@@ -215,11 +215,16 @@ export function deleteResource(input: DeleteInput): Promise<WriteResult> {
         assertContext(input.context, op);
         const facts = factsFor(input.kind);
         const target = targetNamespace(input.kind, input.name, input.namespace, op);
-        await apis().objects.delete({
-            apiVersion: facts.apiVersion,
-            kind: facts.kind,
-            metadata: { name: input.name, namespace: target },
-        });
+        await apis().objects.delete(
+            {
+                apiVersion: facts.apiVersion,
+                kind: facts.kind,
+                metadata: { name: input.name, namespace: target },
+            },
+            undefined,
+            undefined,
+            input.gracePeriodSeconds,
+        );
         return { kind: facts.kind, name: input.name, namespace: target };
     });
 }

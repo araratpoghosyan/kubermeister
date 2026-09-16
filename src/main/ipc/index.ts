@@ -21,6 +21,7 @@ import {
 } from '../k8s/resources/write.js';
 import { getObjectYaml } from '../k8s/resources/manifest.js';
 import { getPodOwners, listOwnedPods } from '../k8s/resources/owners.js';
+import { evictPod, retryJob, setCronJobSuspended, triggerCronJob } from '../k8s/resources/lifecycle.js';
 import {
     getRelease,
     getReleaseRevisions,
@@ -156,6 +157,10 @@ const handlers: Handlers = {
     'resources.delete': (input) => deleteResource(input),
     'resources.scale': (input) => scaleResource(input),
     'resources.restart': (input) => restartResource(input),
+    'pods.evict': (input) => evictPod(input),
+    'jobs.retry': (input) => retryJob(input),
+    'cronJobs.trigger': (input) => triggerCronJob(input),
+    'cronJobs.suspend': (input) => setCronJobSuspended(input),
     'kubeconfig.useDefault': async () => {
         const settings = updateSettings({ connection: { kubeconfigPath: null } });
         leaveConnection('The kubeconfig changed');
