@@ -3,6 +3,7 @@ import { BoxIcon, HeartIcon, ScrollIcon, TerminalIcon, WaypointsIcon } from 'luc
 import { RefreshButton } from '@/components/refresh-button';
 import { eventsTab, labelsTab, ResourceDetail, type DetailTabGroup } from '@/components/templates/resource-detail';
 import { manifestTab } from '@/components/templates/manifest-panel';
+import { describeTab } from '@/components/templates/describe-panel';
 import { EditResourceButton } from '@/components/templates/edit-resource-button';
 import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
 import { EvictButton } from '@/components/pod/evict-button';
@@ -47,6 +48,7 @@ function PodDetailPage() {
             label: 'INSPECT',
             items: [
                 manifestTab({ kind: 'Pod', name, namespace }),
+                describeTab({ kind: 'Pod', name, namespace }),
                 labelsTab(pod ? { labels: pod.labels, annotations: pod.annotations } : undefined),
                 {
                     id: 'network',

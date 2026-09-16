@@ -170,7 +170,7 @@ describe('pods screens', () => {
             within(rail)
                 .getAllByRole('tab')
                 .map((tab) => tab.textContent),
-        ).toEqual(['Overview', 'Logs', 'Events', 'ManifestYAML', 'Labels1', 'Network1', 'Shell']);
+        ).toEqual(['Overview', 'Logs', 'Events', 'ManifestYAML', 'Describe', 'Labels1', 'Network1', 'Shell']);
         expect(within(page).getByTestId('containers')).toHaveTextContent('nginx:1.27');
         await waitFor(() => expect(page).toHaveTextContent('250m'));
         expect(page).toHaveTextContent('64Mi');

@@ -11,6 +11,7 @@ import {
 } from './k8s/addons.js';
 import { kubeContextSchema } from './k8s/contexts.js';
 import { manifestInputSchema, manifestSchema } from './k8s/manifest.js';
+import { describeDocumentSchema, describeInputSchema } from './k8s/describe.js';
 import { drainPlanInputSchema, drainPlanSchema } from './k8s/drain.js';
 import { ownedPodsInputSchema, ownerChainSchema } from './k8s/owners.js';
 import { podSchema } from './k8s/pods.js';
@@ -191,6 +192,7 @@ export const ipcSchemas = {
     'releases.uninstall': { input: releaseUninstallInputSchema, output: releaseWriteResultSchema },
     'helmCharts.list': { input: noInput, output: z.array(helmChartSchema) },
     'resources.getYaml': { input: manifestInputSchema, output: manifestSchema },
+    'resources.describe': { input: describeInputSchema, output: describeDocumentSchema },
     'resources.create': { input: manifestWriteSchema, output: writeResultSchema },
     'resources.replace': { input: manifestWriteSchema, output: writeResultSchema },
     'resources.delete': { input: deleteInputSchema, output: writeResultSchema },

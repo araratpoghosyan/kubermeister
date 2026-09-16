@@ -79,7 +79,7 @@ describe('node detail', () => {
             within(rail)
                 .getAllByRole('tab')
                 .map((t) => t.textContent),
-        ).toEqual(['Overview', 'Events', 'ManifestYAML', 'Labels1', 'System info', 'Conditions2']);
+        ).toEqual(['Overview', 'Events', 'ManifestYAML', 'Describe', 'Labels1', 'System info', 'Conditions2']);
         // This node is cordoned, so the control offers the way back rather than the way in.
         expect(within(page).getByRole('button', { name: 'Uncordon' })).toBeEnabled();
         expect(within(page).getByRole('button', { name: 'Drain' })).toBeEnabled();
