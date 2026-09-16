@@ -3,6 +3,7 @@ import { BoxIcon, HeartIcon, ScrollIcon, TerminalIcon, WaypointsIcon } from 'luc
 import { RefreshButton } from '@/components/refresh-button';
 import { eventsTab, labelsTab, ResourceDetail, type DetailTabGroup } from '@/components/templates/resource-detail';
 import { manifestTab } from '@/components/templates/manifest-panel';
+import { relatedTab } from '@/components/templates/related-tab';
 import { describeTab } from '@/components/templates/describe-panel';
 import { EditResourceButton } from '@/components/templates/edit-resource-button';
 import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
@@ -41,6 +42,7 @@ function PodDetailPage() {
                     keepMounted: true,
                     content: <LogsTab name={name} namespace={namespace} pod={pod} />,
                 },
+                relatedTab({ kind: 'Pod', name, namespace }),
                 eventsTab({ kind: 'Pod', name, namespace }),
             ],
         },

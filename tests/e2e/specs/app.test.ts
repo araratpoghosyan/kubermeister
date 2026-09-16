@@ -908,6 +908,20 @@ test('filters a list by label and reads the owner and finalizers of an object', 
     await expect(card).toContainText('T');
 });
 
+test('shows what else a pod is tied to, and why', async () => {
+    const { window } = launched;
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Pods' }).click();
+    await window.getByTestId('pods-table').locator('[data-pod^="web-"]').first().getByRole('link').click();
+    const page = window.getByTestId('pod-page');
+    await page.getByRole('tab', { name: 'Related' }).click();
+
+    // The seeded service selects app=web, so it is a relation the app can explain.
+    const traffic = page.getByTestId('related-traffic');
+    await expect(traffic.locator('[data-related="web"]')).toContainText('selects these pods');
+    // Every pod runs as some service account, even the default one.
+    await expect(page.getByTestId('related-access')).toContainText('runs as');
+});
+
 test('stops at the startup screen when the kubeconfig path names nothing', async () => {
     const missing = join(tmpdir(), `km-e2e-missing-${Date.now()}.yaml`);
     const bad = await launchApp({ kubeconfigPath: missing });
