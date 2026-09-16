@@ -206,3 +206,47 @@ describe('running and holding a cron job', () => {
         expect(objects.patch).not.toHaveBeenCalled();
     });
 });
+
+describe('adjusting an autoscaler', () => {
+    it('sends the bounds, and the CPU target only when one was asked for', async () => {
+        const target = { context: 'alpha', name: 'web', namespace: 'team-a' };
+        await expect(
+            lifecycle.updateAutoscaler({ ...target, minReplicas: 2, maxReplicas: 8, targetCpuPercent: 70 }),
+        ).resolves.toEqual({ kind: 'HorizontalPodAutoscaler', name: 'web', namespace: 'team-a' });
+        expect(objects.patch).toHaveBeenCalledWith({
+            apiVersion: 'autoscaling/v2',
+            kind: 'HorizontalPodAutoscaler',
+            metadata: { name: 'web', namespace: 'team-a' },
+            spec: {
+                minReplicas: 2,
+                maxReplicas: 8,
+                metrics: [
+                    {
+                        type: 'Resource',
+                        resource: { name: 'cpu', target: { type: 'Utilization', averageUtilization: 70 } },
+                    },
+                ],
+            },
+        });
+
+        // An autoscaler watching something else keeps watching it: no metrics are sent at all.
+        await lifecycle.updateAutoscaler({ ...target, minReplicas: 1, maxReplicas: 3 });
+        expect(objects.patch).toHaveBeenLastCalledWith(
+            expect.objectContaining({ spec: { minReplicas: 1, maxReplicas: 3 } }),
+        );
+    });
+
+    it('refuses an adjustment aimed at a context the app has left', async () => {
+        client.activeContextName.mockReturnValue('beta');
+        await expect(
+            lifecycle.updateAutoscaler({
+                context: 'alpha',
+                name: 'web',
+                namespace: 'team-a',
+                minReplicas: 1,
+                maxReplicas: 2,
+            }),
+        ).rejects.toMatchObject({ kind: 'conflict' });
+        expect(objects.patch).not.toHaveBeenCalled();
+    });
+});

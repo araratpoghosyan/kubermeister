@@ -160,6 +160,27 @@ subjects:
     name: default
     namespace: km-e2e
 ---
+# An autoscaler over the seeded deployment, so the bounds editor has something real to adjust.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: web
+  namespace: km-e2e
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: web
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
 # The objects revision 2 of the demo release rendered, applied here the way Helm would have applied
 # them: a rollback has to find them in the cluster, not only in the release's own record.
 apiVersion: v1

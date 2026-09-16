@@ -1,5 +1,6 @@
 import type { KubernetesObject, V1Job, V1JobSpec, V1ObjectMeta } from '@kubernetes/client-node';
 import type {
+    AutoscalerUpdateInput,
     CronJobSuspendInput,
     CronJobTriggerInput,
     EvictInput,
@@ -187,5 +188,49 @@ export function setCronJobSuspended(input: CronJobSuspendInput): Promise<WriteRe
         };
         await apis().objects.patch(patch);
         return { kind: 'CronJob', name: input.name, namespace: input.namespace };
+    });
+}
+
+/** A patch that touches nothing but an autoscaler's bounds and its CPU target. */
+interface AutoscalerPatch extends KubernetesObject {
+    spec: {
+        minReplicas: number;
+        maxReplicas: number;
+        metrics?: {
+            type: 'Resource';
+            resource: { name: 'cpu'; target: { type: 'Utilization'; averageUtilization: number } };
+        }[];
+    };
+}
+
+/**
+ * Adjust an autoscaler's bounds, and its CPU target when it has one. A strategic merge would merge
+ * the metrics list by index and leave any other metric in place, which is why the CPU target is
+ * only ever sent when the caller asked to change it: an HPA watching something else keeps watching
+ * it, and this write never silently narrows what an autoscaler reacts to.
+ */
+export function updateAutoscaler(input: AutoscalerUpdateInput): Promise<WriteResult> {
+    const op = 'autoscalers.update';
+    return withK8s(op, async () => {
+        assertContext(input.context, op);
+        const patch: AutoscalerPatch = {
+            apiVersion: 'autoscaling/v2',
+            kind: 'HorizontalPodAutoscaler',
+            metadata: { name: input.name, namespace: input.namespace },
+            spec: { minReplicas: input.minReplicas, maxReplicas: input.maxReplicas },
+        };
+        if (input.targetCpuPercent !== undefined) {
+            patch.spec.metrics = [
+                {
+                    type: 'Resource',
+                    resource: {
+                        name: 'cpu',
+                        target: { type: 'Utilization', averageUtilization: input.targetCpuPercent },
+                    },
+                },
+            ];
+        }
+        await apis().objects.patch(patch);
+        return { kind: 'HorizontalPodAutoscaler', name: input.name, namespace: input.namespace };
     });
 }

@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const readPodUsage = vi.fn();
+const readUsage = vi.fn();
 const readNodeUsage = vi.fn();
-vi.mock('../../../src/main/k8s/metrics.js', () => ({ readPodUsage, readNodeUsage }));
+vi.mock('../../../src/main/k8s/metrics.js', () => ({
+    readUsage,
+    readNodeUsage,
+    containerUsageKey: (namespace: string, pod: string, container: string) => `${namespace}/${pod}/${container}`,
+}));
 const listNode = vi.fn();
 vi.mock('../../../src/main/k8s/client.js', () => ({ apis: () => ({ core: { listNode } }) }));
 
@@ -18,10 +22,13 @@ describe('sampler', () => {
         vi.useFakeTimers();
         sampler.stopSampler();
         sampler.resetHistory();
-        readPodUsage.mockReset();
+        readUsage.mockReset();
         readNodeUsage.mockReset();
         listNode.mockReset();
-        readPodUsage.mockResolvedValue(new Map([['team-a/web-1', { cpu: 250, mem: 64 }]]));
+        readUsage.mockResolvedValue({
+            pods: new Map([['team-a/web-1', { cpu: 250, mem: 64 }]]),
+            containers: new Map(),
+        });
         readNodeUsage.mockResolvedValue(new Map([['n1', { cpu: 1000, mem: 2048 }]]));
         listNode.mockResolvedValue({ items: [node('n1'), node('n2')] });
     });
@@ -52,7 +59,7 @@ describe('sampler', () => {
     it('tracks a pod series from the moment it is requested and bumps it in the LRU', async () => {
         expect(sampler.trackResourceSeries('team-a', 'web-1')).toEqual({ cpu: [], mem: [] });
         await sampler.sampleOnce();
-        readPodUsage.mockResolvedValue(new Map());
+        readUsage.mockResolvedValue({ pods: new Map(), containers: new Map() });
         await sampler.sampleOnce();
         expect(sampler.trackResourceSeries('team-a', 'web-1')).toEqual({ cpu: [250, 0], mem: [64, 0] });
     });
@@ -93,16 +100,16 @@ describe('sampler', () => {
         sampler.ensureSampler();
         sampler.ensureSampler();
         await vi.advanceTimersByTimeAsync(0);
-        expect(readPodUsage).toHaveBeenCalledTimes(1);
+        expect(readUsage).toHaveBeenCalledTimes(1);
         await vi.advanceTimersByTimeAsync(sampler.SAMPLE_INTERVAL_MS);
-        expect(readPodUsage).toHaveBeenCalledTimes(2);
-        readPodUsage.mockRejectedValueOnce(new Error('metrics down'));
+        expect(readUsage).toHaveBeenCalledTimes(2);
+        readUsage.mockRejectedValueOnce(new Error('metrics down'));
         await vi.advanceTimersByTimeAsync(sampler.SAMPLE_INTERVAL_MS);
         await vi.advanceTimersByTimeAsync(sampler.SAMPLE_INTERVAL_MS);
-        expect(readPodUsage).toHaveBeenCalledTimes(4);
+        expect(readUsage).toHaveBeenCalledTimes(4);
         sampler.stopSampler();
         await vi.advanceTimersByTimeAsync(sampler.SAMPLE_INTERVAL_MS * 3);
-        expect(readPodUsage).toHaveBeenCalledTimes(4);
+        expect(readUsage).toHaveBeenCalledTimes(4);
     });
 
     it('forgets everything on reset', async () => {

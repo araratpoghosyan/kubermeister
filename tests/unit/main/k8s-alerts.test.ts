@@ -11,7 +11,12 @@ vi.mock('../../../src/main/k8s/client.js', () => ({
         batch: { listJobForAllNamespaces },
     }),
 }));
-vi.mock('../../../src/main/k8s/sampler.js', () => ({ ensureSampler: vi.fn(), podUsage: vi.fn(), percent: vi.fn() }));
+vi.mock('../../../src/main/k8s/sampler.js', () => ({
+    ensureSampler: vi.fn(),
+    podUsage: vi.fn(),
+    containerUsage: vi.fn(),
+    percent: vi.fn(),
+}));
 
 const alerts = await import('../../../src/main/k8s/alerts.js');
 

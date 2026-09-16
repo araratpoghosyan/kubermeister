@@ -685,6 +685,7 @@ describe('autoscaler transforms', () => {
             max: 10,
             replicas: 3,
             targets: '42% / 80%',
+            targetCpuPercent: 80,
             age: '1h',
         });
         expect(workloads.toAutoscaler({ metadata: { name: 'x' }, spec: { maxReplicas: 5 } }, NOW)).toMatchObject({

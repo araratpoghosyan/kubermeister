@@ -69,6 +69,7 @@ export const IPC_CHANNELS = [
     'jobs.retry',
     'cronJobs.trigger',
     'cronJobs.suspend',
+    'autoscalers.update',
 ] as const;
 
 export const SUBSCRIPTION_CHANNELS = ['update.state', 'open-settings'] as const;

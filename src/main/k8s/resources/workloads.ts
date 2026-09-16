@@ -499,6 +499,14 @@ export function hpaTargets(autoscaler: V2HorizontalPodAutoscaler): string {
     return `${current ?? 0}% / ${target ?? 0}%`;
 }
 
+/** The CPU utilisation an autoscaler aims for, when CPU is among the metrics it watches at all. */
+export function cpuUtilisationTarget(autoscaler: V2HorizontalPodAutoscaler): number | null {
+    const cpu = (autoscaler.spec?.metrics ?? []).find(
+        (metric) => metric.type === 'Resource' && metric.resource?.name === 'cpu',
+    );
+    return cpu?.resource?.target?.averageUtilization ?? null;
+}
+
 export function toAutoscaler(autoscaler: V2HorizontalPodAutoscaler, now = Date.now()): Autoscaler {
     const ref = autoscaler.spec?.scaleTargetRef;
     return {
@@ -509,6 +517,7 @@ export function toAutoscaler(autoscaler: V2HorizontalPodAutoscaler, now = Date.n
         max: autoscaler.spec?.maxReplicas ?? 0,
         replicas: autoscaler.status?.currentReplicas ?? 0,
         targets: hpaTargets(autoscaler),
+        targetCpuPercent: cpuUtilisationTarget(autoscaler),
         age: age(autoscaler.metadata?.creationTimestamp, now),
     };
 }

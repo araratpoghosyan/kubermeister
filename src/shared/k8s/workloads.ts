@@ -145,6 +145,8 @@ export const autoscalerSchema = z.object({
     replicas: z.number().int().nonnegative(),
     /** Current over target utilisation, e.g. "42% / 80%", or an em-dash when neither is reported. */
     targets: z.string(),
+    /** The CPU utilisation target as a number, when this autoscaler watches CPU; null otherwise. */
+    targetCpuPercent: z.number().int().nullable(),
     age: z.string(),
 });
 export const autoscalerDetailSchema = autoscalerSchema.extend({ labels: pairs, annotations: pairs });

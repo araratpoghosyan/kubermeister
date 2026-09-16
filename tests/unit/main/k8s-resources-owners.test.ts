@@ -24,7 +24,12 @@ const client = {
 };
 vi.mock('../../../src/main/k8s/client.js', () => client);
 
-const sampler = { podUsage: vi.fn(() => undefined), ensureSampler: vi.fn(), percent: vi.fn(() => null) };
+const sampler = {
+    containerUsage: vi.fn(() => undefined),
+    podUsage: vi.fn(() => undefined),
+    ensureSampler: vi.fn(),
+    percent: vi.fn(() => null),
+};
 vi.mock('../../../src/main/k8s/sampler.js', () => sampler);
 
 const owners = await import('../../../src/main/k8s/resources/owners.js');

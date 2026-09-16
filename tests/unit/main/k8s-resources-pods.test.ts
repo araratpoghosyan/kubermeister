@@ -24,7 +24,7 @@ const client = {
     },
 };
 vi.mock('../../../src/main/k8s/client.js', () => client);
-const sampler = { ensureSampler: vi.fn(), podUsage: vi.fn() };
+const sampler = { ensureSampler: vi.fn(), containerUsage: vi.fn(() => undefined), podUsage: vi.fn() };
 vi.mock('../../../src/main/k8s/sampler.js', () => sampler);
 
 const pods = await import('../../../src/main/k8s/resources/pods.js');
@@ -196,9 +196,34 @@ describe('container and probe transforms', () => {
         expect(pods.containerState(status({ state: {} }))).toBe('Unknown');
     });
 
+    it('orders containers by the part they play: init steps, the app, then anything attached', () => {
+        const pod = {
+            spec: {
+                initContainers: [{ name: 'migrate', image: 'busybox' }],
+                containers: [{ name: 'app', image: 'nginx' }],
+                ephemeralContainers: [{ name: 'debugger', image: 'busybox' }],
+            },
+            status: {
+                initContainerStatuses: [{ name: 'migrate', restartCount: 0, state: { terminated: { exitCode: 0 } } }],
+                containerStatuses: [{ name: 'app', restartCount: 1, state: { running: {} } }],
+                ephemeralContainerStatuses: [{ name: 'debugger', restartCount: 0, state: { running: {} } }],
+            },
+        };
+        const containers = pods.toContainers(pod, NOW, (name) => (name === 'app' ? { cpu: 40, mem: 64 } : undefined));
+        expect(containers.map((c) => [c.name, c.role])).toEqual([
+            ['migrate', 'init'],
+            ['app', 'app'],
+            ['debugger', 'ephemeral'],
+        ]);
+        expect(containers[1]).toMatchObject({ cpuUsed: 40, memUsed: 64, restarts: 1 });
+        // A container metrics-server has not reported has no usage rather than a zero.
+        expect(containers[0]).toMatchObject({ cpuUsed: null, memUsed: null });
+    });
+
     it('builds the container view with resources, ports, image id and start time', () => {
         expect(pods.toContainer(container(), status(), NOW)).toEqual({
             name: 'app',
+            role: 'app',
             image: 'nginx:1.27',
             imageId: 'abc',
             pullPolicy: 'IfNotPresent',
@@ -211,6 +236,16 @@ describe('container and probe transforms', () => {
             memLimit: '128Mi',
             ports: ['80/TCP'],
             probes: [],
+            // Usage arrives from the sampler, and the request as a number beside it.
+            cpuUsed: null,
+            memUsed: null,
+            cpuRequested: 100,
+            memRequested: null,
+        });
+        expect(pods.toContainer(container(), status(), NOW, 'init', { cpu: 30, mem: 12 })).toMatchObject({
+            role: 'init',
+            cpuUsed: 30,
+            memUsed: 12,
         });
         expect(
             pods.toContainer(

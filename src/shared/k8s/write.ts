@@ -136,6 +136,26 @@ export const cronJobTriggerInputSchema = z.object(podTarget);
 /** Hold a cron job's schedule, or let it run again. */
 export const cronJobSuspendInputSchema = z.object({ ...podTarget, suspend: z.boolean() });
 
+/**
+ * The three numbers an autoscaler is usually adjusted by. Anything else about an HPA — which
+ * metrics it watches, its behaviour policies — stays in the manifest editor, where the shape of
+ * what is being changed is visible.
+ */
+export const autoscalerUpdateSchema = z
+    .object({
+        ...scopeStamp,
+        name: z.string().min(1),
+        namespace: namespaceNameSchema,
+        minReplicas: z.number().int().min(1).max(1000),
+        maxReplicas: z.number().int().min(1).max(1000),
+        /** Target average CPU utilisation as a percentage; omitted leaves the metric as it is. */
+        targetCpuPercent: z.number().int().min(1).max(1000).optional(),
+    })
+    .refine((input) => input.maxReplicas >= input.minReplicas, {
+        path: ['maxReplicas'],
+        message: 'must be at least the minimum',
+    });
+
 export type WriteResult = z.infer<typeof writeResultSchema>;
 export type ManifestIdentity = z.infer<typeof manifestIdentitySchema>;
 export type ManifestWrite = z.infer<typeof manifestWriteSchema>;
@@ -150,3 +170,4 @@ export type EvictInput = z.infer<typeof evictInputSchema>;
 export type JobRetryInput = z.infer<typeof jobRetryInputSchema>;
 export type CronJobTriggerInput = z.infer<typeof cronJobTriggerInputSchema>;
 export type CronJobSuspendInput = z.infer<typeof cronJobSuspendInputSchema>;
+export type AutoscalerUpdateInput = z.infer<typeof autoscalerUpdateSchema>;

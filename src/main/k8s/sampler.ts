@@ -1,7 +1,7 @@
 import type { ClusterSparklines, HealthPoint, ResourceSeries, Usage } from '../../shared/k8s/metrics.js';
 import { apis } from './client.js';
 import { cpuToMillicores, memToMi } from './format.js';
-import { readNodeUsage, readPodUsage } from './metrics.js';
+import { containerUsageKey, readNodeUsage, readUsage } from './metrics.js';
 
 /**
  * In-memory metrics sampler. metrics.k8s.io only reports instantaneous usage, so moving charts come
@@ -31,6 +31,7 @@ const perNode = new Map<string, Usage[]>();
 /** `namespace/name` to millicore and MiB points, in LRU order. */
 const perResource = new Map<string, Usage[]>();
 let latestPods = new Map<string, Usage>();
+let latestContainers = new Map<string, Usage>();
 let latestNodes = new Map<string, Usage>();
 
 function pushTrim<T>(ring: T[], value: T): void {
@@ -52,12 +53,14 @@ export function percent(used: number, total: number): number {
 
 /** Take one sample: refresh the latest usage maps and append a point to every ring. */
 export async function sampleOnce(now = Date.now()): Promise<void> {
-    const [podUsage, nodeUsage, nodeList] = await Promise.all([
-        readPodUsage(),
+    const [usage, nodeUsage, nodeList] = await Promise.all([
+        readUsage(),
         readNodeUsage(),
         bestEffort(() => apis().core.listNode(), { items: [] }),
     ]);
+    const podUsage = usage.pods;
     latestPods = podUsage;
+    latestContainers = usage.containers;
     latestNodes = nodeUsage;
 
     let usedCpu = 0;
@@ -124,7 +127,13 @@ export function resetHistory(): void {
     perNode.clear();
     perResource.clear();
     latestPods = new Map();
+    latestContainers = new Map();
     latestNodes = new Map();
+}
+
+/** Latest usage of one container, or undefined until metrics-server has reported it. */
+export function containerUsage(namespace: string, pod: string, container: string): Usage | undefined {
+    return latestContainers.get(containerUsageKey(namespace, pod, container));
 }
 
 /** The most recent pod usage sample, for list and detail rows; undefined before the first sample. */

@@ -16,6 +16,7 @@ import { ownedPodsInputSchema, ownerChainSchema } from './k8s/owners.js';
 import { podSchema } from './k8s/pods.js';
 import {
     cordonInputSchema,
+    autoscalerUpdateSchema,
     cronJobSuspendInputSchema,
     cronJobTriggerInputSchema,
     deleteInputSchema,
@@ -199,6 +200,7 @@ export const ipcSchemas = {
     'jobs.retry': { input: jobRetryInputSchema, output: writeResultSchema },
     'cronJobs.trigger': { input: cronJobTriggerInputSchema, output: writeResultSchema },
     'cronJobs.suspend': { input: cronJobSuspendInputSchema, output: writeResultSchema },
+    'autoscalers.update': { input: autoscalerUpdateSchema, output: writeResultSchema },
 } as const;
 
 /**
