@@ -7,6 +7,7 @@ import { DrainDialog } from '@/components/node/drain-dialog';
 import { DetailCard, DetailMetrics, PropertyGrid } from '@/components/templates/detail-cards';
 import { eventsTab, labelsTab, ResourceDetail, type DetailTabGroup } from '@/components/templates/resource-detail';
 import { manifestTab } from '@/components/templates/manifest-panel';
+import { describeTab } from '@/components/templates/describe-panel';
 import { EditResourceButton } from '@/components/templates/edit-resource-button';
 import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
 import { ipcQueryKey, useIpcQuery } from '@/lib/query';
@@ -66,6 +67,7 @@ function NodeDetailPage() {
             label: 'INSPECT',
             items: [
                 manifestTab({ kind: 'Node', name }),
+                describeTab({ kind: 'Node', name }),
                 labelsTab(node ? { labels: node.labels, annotations: node.annotations } : undefined),
                 {
                     id: 'system',

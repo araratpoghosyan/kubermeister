@@ -20,6 +20,7 @@ import {
     scaleResource,
 } from '../k8s/resources/write.js';
 import { getObjectYaml } from '../k8s/resources/manifest.js';
+import { describeObject } from '../k8s/resources/describe.js';
 import { getPodOwners, listOwnedPods } from '../k8s/resources/owners.js';
 import {
     evictPod,
@@ -158,6 +159,7 @@ const handlers: Handlers = {
     'releases.uninstall': (input) => uninstallRelease(input),
     'helmCharts.list': () => listHelmCharts(),
     'resources.getYaml': ({ kind, name, namespace }) => getObjectYaml(kind, name, namespace),
+    'resources.describe': (input) => describeObject(input),
     'resources.create': (input) => createResource(input),
     'resources.replace': (input) => replaceResource(input),
     'resources.delete': (input) => deleteResource(input),

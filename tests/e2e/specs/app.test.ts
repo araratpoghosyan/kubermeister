@@ -30,7 +30,9 @@ test('shows the cluster summary for the test context', async () => {
     await expect(summary).toContainText('Healthy');
     await expect(summary.locator('[data-metric="Nodes"]')).toContainText('1');
     await expect(summary.getByTestId('workload-health')).toContainText('live · ~12s samples');
-    await expect(summary.getByTestId('recent-events')).toContainText('Scheduled');
+    // Which events are recent enough to show depends on what the cluster has been doing, so this
+    // asserts that events render at all rather than naming one that can age out of the list.
+    await expect(summary.getByTestId('recent-events').getByRole('listitem').first()).toBeVisible();
 });
 
 test('lists the k3s node as Ready and the seeded namespace', async () => {
@@ -580,6 +582,24 @@ test('shows a container’s usage against its request and edits the autoscaler b
     await expect(window.getByText(/updated/)).toBeVisible();
     // The details grid puts the label and its value in adjacent cells, so the text reads "Max4".
     await expect(page).toContainText('Max4', { timeout: 30_000 });
+});
+
+test('describes a pod and a node in the flat view', async () => {
+    const { window } = launched;
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Pods' }).click();
+    await window.getByTestId('pods-table').locator('[data-pod^="web-"]').first().getByRole('link').click();
+    await window.getByRole('tab', { name: 'Describe' }).click();
+    const podDescribe = window.getByTestId('pod-page').getByTestId('describe');
+    await expect(podDescribe.locator('[data-section="Overview"]')).toContainText('km-e2e');
+    // Every container gets its own block, named after the container.
+    await expect(podDescribe.locator('[data-section="Containers"] [data-block]').first()).toBeVisible();
+
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Nodes' }).click();
+    await window.getByTestId('nodes-table').getByRole('link').first().click();
+    await window.getByRole('tab', { name: 'Describe' }).click();
+    const nodeDescribe = window.getByTestId('node-page').getByTestId('describe');
+    await expect(nodeDescribe.locator('[data-section="Capacity"]')).toContainText('cpu');
+    await expect(nodeDescribe.locator('[data-section="Pods"]')).toContainText('km-e2e/');
 });
 
 test('stops at the startup screen when the kubeconfig path names nothing', async () => {

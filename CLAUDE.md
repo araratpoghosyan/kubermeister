@@ -218,6 +218,12 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   builds a job from the cron job's template owned by nobody, so history limits never sweep a manual
   run away, and `jobFromTemplate` strips the selector and the uid labels the control plane stamps,
   which would otherwise bind the new job to the old one's pods.
+- **Describe** (`src/main/k8s/resources/describe.ts`, `src/shared/k8s/describe.ts`):
+  `resources.describe` answers a structured document — sections of labelled rows, with blocks for
+  the parts that repeat — rather than pre-rendered text, so the screen lays it out and
+  `describeToText` produces the copy and download from the very same document. Pods and nodes only;
+  every other kind has the manifest, which says the same thing in YAML. The transforms are pure over
+  a Kubernetes object plus its events, so the whole view is tested without a cluster.
 - **Ownership** (`src/main/k8s/resources/owners.ts`) is resolved through the API's own owner
   references, never label selectors: a selector says which pods a controller _would_ adopt, the
   references say which it _has_, and two workloads can share labels but never a reference.
