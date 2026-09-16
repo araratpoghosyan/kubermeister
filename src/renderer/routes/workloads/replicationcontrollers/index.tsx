@@ -4,7 +4,7 @@ import { CopyIcon } from 'lucide-react';
 import type { ReplicaSetRow } from '../../../../shared/k8s/workloads';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
-import { useFilteredList } from '@/components/list/use-filtered-list';
+import { useWatchedList } from '@/lib/watch';
 
 export const Route = createFileRoute('/workloads/replicationcontrollers/')({ component: ReplicationControllersPage });
 
@@ -22,14 +22,13 @@ const columns: ColumnDef<ReplicaSetRow>[] = [
 ];
 
 function ReplicationControllersPage() {
-    const controllers = useFilteredList('ReplicationController');
+    const controllers = useWatchedList('ReplicationController');
     return (
         <ResourceListPage
             icon={CopyIcon}
             title="ReplicationControllers"
             columns={columns}
             query={controllers}
-            toolbar={controllers.filter}
             detailPath={detailPath}
             rowProps={(rs) => ({ 'data-replicationcontroller': rs.name })}
             bulkDelete={{ kind: 'ReplicationController' }}

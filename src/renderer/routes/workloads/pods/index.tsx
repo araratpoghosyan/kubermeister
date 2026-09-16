@@ -5,8 +5,6 @@ import { BoxIcon } from 'lucide-react';
 import type { Pod } from '../../../../shared/k8s/pods';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LabelFilter } from '@/components/list/label-filter';
-import { ViewsMenu } from '@/components/list/views-menu';
 import { ageColumn, meterColumn, nameColumn, statusColumn } from '@/components/templates/list-columns';
 import { POD_TONE } from '@/lib/status';
 import { cn } from '@/lib/utils';
@@ -72,8 +70,7 @@ type GroupKey = keyof typeof GROUPS;
 const GROUP_LABEL: Record<GroupKey, string> = { none: 'No grouping', node: 'By node', owner: 'By owner' };
 
 function PodsPage() {
-    const [selector, setSelector] = useState('');
-    const pods = useWatchedList('Pod', undefined, selector || undefined);
+    const pods = useWatchedList('Pod');
     const [group, setGroup] = useState<GroupKey>('none');
     const groupBy = GROUPS[group];
     // Rows of one group must sit together, so grouping sorts by its own key first.
@@ -88,22 +85,18 @@ function PodsPage() {
                 detailPath={detailPath}
                 groupBy={groupBy}
                 toolbar={
-                    <>
-                        <LabelFilter value={selector} onChange={setSelector} />
-                        <ViewsMenu screen="/workloads/pods" selector={selector} onApply={setSelector} />
-                        <Select value={group} onValueChange={(value) => setGroup(value as GroupKey)}>
-                            <SelectTrigger className="h-8 w-40 text-body" aria-label="Group pods">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {(Object.keys(GROUPS) as GroupKey[]).map((key) => (
-                                    <SelectItem key={key} value={key}>
-                                        {GROUP_LABEL[key]}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </>
+                    <Select value={group} onValueChange={(value) => setGroup(value as GroupKey)}>
+                        <SelectTrigger className="h-8 w-40 text-body" aria-label="Group pods">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {(Object.keys(GROUPS) as GroupKey[]).map((key) => (
+                                <SelectItem key={key} value={key}>
+                                    {GROUP_LABEL[key]}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 }
                 rowProps={(pod) => ({ 'data-pod': pod.name })}
                 bulkDelete={{ kind: 'Pod' }}

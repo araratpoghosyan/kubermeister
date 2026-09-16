@@ -4,7 +4,7 @@ import { CodeIcon } from 'lucide-react';
 import type { CustomResource } from '../../../../shared/k8s/addons';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
-import { useFilteredList } from '@/components/list/use-filtered-list';
+import { useWatchedList } from '@/lib/watch';
 
 export const Route = createFileRoute('/addons/crds/')({ component: CrdsPage });
 
@@ -30,7 +30,7 @@ const columns: ColumnDef<CustomResource>[] = [
 ];
 
 function CrdsPage() {
-    const crds = useFilteredList('CustomResourceDefinition');
+    const crds = useWatchedList('CustomResourceDefinition');
     return (
         <ResourceListPage
             icon={CodeIcon}
@@ -38,7 +38,6 @@ function CrdsPage() {
             nounPlural="CRDs"
             columns={columns}
             query={crds}
-            toolbar={crds.filter}
             detailPath={detailPath}
             rowProps={(crd) => ({ 'data-crd': crd.name })}
             testId="crds-table"

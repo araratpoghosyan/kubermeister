@@ -5,7 +5,7 @@ import type { StorageClass } from '../../../../shared/k8s/storage';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
 import { Badge } from '@/components/ui/badge';
-import { useFilteredList } from '@/components/list/use-filtered-list';
+import { useWatchedList } from '@/lib/watch';
 
 export const Route = createFileRoute('/storage/storageclasses/')({ component: StorageClassesPage });
 
@@ -35,14 +35,13 @@ const columns: ColumnDef<StorageClass>[] = [
 ];
 
 function StorageClassesPage() {
-    const classes = useFilteredList('StorageClass');
+    const classes = useWatchedList('StorageClass');
     return (
         <ResourceListPage
             icon={LayersIcon}
             title="StorageClasses"
             columns={columns}
             query={classes}
-            toolbar={classes.filter}
             detailPath={detailPath}
             rowProps={(storageClass) => ({ 'data-storageclass': storageClass.name })}
             bulkDelete={{ kind: 'StorageClass' }}

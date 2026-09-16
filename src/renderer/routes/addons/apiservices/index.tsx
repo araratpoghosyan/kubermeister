@@ -5,7 +5,7 @@ import type { ApiService } from '../../../../shared/k8s/apiserver';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, statusColumn, textColumn } from '@/components/templates/list-columns';
 import { API_SERVICE_TONE } from '@/lib/status';
-import { useFilteredList } from '@/components/list/use-filtered-list';
+import { useWatchedList } from '@/lib/watch';
 
 export const Route = createFileRoute('/addons/apiservices/')({ component: ApiServicesPage });
 
@@ -20,14 +20,13 @@ const columns: ColumnDef<ApiService>[] = [
 ];
 
 function ApiServicesPage() {
-    const services = useFilteredList('APIService');
+    const services = useWatchedList('APIService');
     return (
         <ResourceListPage
             icon={PlugIcon}
             title="APIServices"
             columns={columns}
             query={services}
-            toolbar={services.filter}
             detailPath={detailPath}
             rowProps={(service) => ({ 'data-apiservice': service.name })}
             bulkDelete={{ kind: 'APIService' }}

@@ -5,7 +5,7 @@ import type { PriorityClass } from '../../../../shared/k8s/policy';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
 import { Badge } from '@/components/ui/badge';
-import { useFilteredList } from '@/components/list/use-filtered-list';
+import { useWatchedList } from '@/lib/watch';
 
 export const Route = createFileRoute('/overview/priorityclasses/')({ component: PriorityClassesPage });
 
@@ -35,14 +35,13 @@ const columns: ColumnDef<PriorityClass>[] = [
 ];
 
 function PriorityClassesPage() {
-    const classes = useFilteredList('PriorityClass');
+    const classes = useWatchedList('PriorityClass');
     return (
         <ResourceListPage
             icon={ArrowUpNarrowWideIcon}
             title="PriorityClasses"
             columns={columns}
             query={classes}
-            toolbar={classes.filter}
             detailPath={detailPath}
             rowProps={(priorityClass) => ({ 'data-priorityclass': priorityClass.name })}
             bulkDelete={{ kind: 'PriorityClass' }}

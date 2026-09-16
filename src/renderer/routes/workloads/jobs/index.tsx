@@ -5,7 +5,7 @@ import type { Job } from '../../../../shared/k8s/workloads';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, readyRatioColumn, statusColumn, textColumn } from '@/components/templates/list-columns';
 import { JOB_TONE } from '@/lib/status';
-import { useFilteredList } from '@/components/list/use-filtered-list';
+import { useWatchedList } from '@/lib/watch';
 
 export const Route = createFileRoute('/workloads/jobs/')({ component: JobsPage });
 
@@ -21,14 +21,13 @@ const columns: ColumnDef<Job>[] = [
 ];
 
 function JobsPage() {
-    const jobs = useFilteredList('Job');
+    const jobs = useWatchedList('Job');
     return (
         <ResourceListPage
             icon={PlayIcon}
             title="Jobs"
             columns={columns}
             query={jobs}
-            toolbar={jobs.filter}
             detailPath={detailPath}
             rowProps={(job) => ({ 'data-job': job.name })}
             bulkDelete={{ kind: 'Job' }}

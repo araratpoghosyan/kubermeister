@@ -238,18 +238,14 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   it. Pod rows carry the controller that owns them, which is what lets the cluster-wide list group
   by node or by workload (`groupBy` on `DataTable`, which interleaves heading rows into the
   virtualised list rather than nesting tables).
-  **Filtering is the API server's job.** A list screen's label selector rides on `resources.list`
-  and `resources.watch` alike (`listFiltered` in `watch.ts` reuses the watch source's own list call
-  and row transform), so a filtered screen stays live and means the same thing whether a namespace
-  holds ten objects or ten thousand; the shared informer is keyed by selector as well as kind and
-  namespace. A selector is only sent once it is finished — a half-typed one matches nothing.
-  `resources.meta` answers the two parts of `metadata` no view model carries, the controlling owner
-  reference and the finalizers holding a deletion open, for any kind at all; `ResourceDetail` adds
-  that card to the Labels tab itself rather than thirty screens passing the same three values.
-  A filter worth keeping becomes a **saved view**: a named selector in `data.savedViews`, scoped to
-  the screen that made it, because user data belongs in the settings file. Which **columns** a list
-  shows is the opposite — a preference about one window, like the theme — so it lives in
-  `localStorage` per screen and every access is wrapped, since a private window throws.
+  **Narrowing a list is the search box's job**: it matches the rows already on screen against the
+  columns on screen, and nothing about it reaches the API server, so a list screen asks for one
+  thing only — its kind, in its namespace. `resources.meta` answers the two parts of `metadata` no
+  view model carries, the controlling owner reference and the finalizers holding a deletion open,
+  for any kind at all; `ResourceDetail` adds that card to the Labels tab itself rather than thirty
+  screens passing the same three values. Which **columns** a list shows is a preference about one
+  window, like the theme, so it lives in `localStorage` per screen and every access is wrapped,
+  since a private window throws.
   **Related objects** (`resources.related`, `src/main/k8s/resources/related.ts`) answer what else an
   object is tied to, and every link says _why_: "mounted as volume", "envFrom in web", "selects
   these pods", "runs as". A relation that cannot be explained is a guess, so everything comes from

@@ -201,10 +201,9 @@ describe('startResourceWatch', () => {
             { fake: true },
             '/api/v1/namespaces/explicit/pods',
             expect.any(Function),
-            undefined,
         );
         await (makeInformer.mock.calls[0] as unknown[])[2]!();
-        expect(listNamespacedPod).toHaveBeenCalledWith({ namespace: 'explicit', labelSelector: undefined });
+        expect(listNamespacedPod).toHaveBeenCalledWith({ namespace: 'explicit' });
         expect(informer.start).toHaveBeenCalledOnce();
     });
 
@@ -214,16 +213,10 @@ describe('startResourceWatch', () => {
             expect.anything(),
             '/api/v1/namespaces/team-a/pods',
             expect.any(Function),
-            undefined,
         );
         client.resolveNamespace = () => undefined;
         await startResourceWatch({ kind: 'Pod' }, vi.fn());
-        expect(makeInformer).toHaveBeenLastCalledWith(
-            expect.anything(),
-            '/api/v1/pods',
-            expect.any(Function),
-            undefined,
-        );
+        expect(makeInformer).toHaveBeenLastCalledWith(expect.anything(), '/api/v1/pods', expect.any(Function));
         await (makeInformer.mock.calls[1] as unknown[])[2]!();
         expect(listPodForAllNamespaces).toHaveBeenCalled();
         client.resolveNamespace = (explicit?: string) => explicit ?? 'team-a';
@@ -276,10 +269,9 @@ describe('startResourceWatch', () => {
             expect.anything(),
             '/apis/apps/v1/namespaces/team-a/deployments',
             expect.any(Function),
-            undefined,
         );
         await (makeInformer.mock.calls[0] as unknown[])[2]!();
-        expect(listNamespacedDeployment).toHaveBeenCalledWith({ namespace: 'team-a', labelSelector: undefined });
+        expect(listNamespacedDeployment).toHaveBeenCalledWith({ namespace: 'team-a' });
         informer.emit('add', {
             metadata: { name: 'web', namespace: 'team-a' },
             spec: { replicas: 1 },
@@ -295,7 +287,6 @@ describe('startResourceWatch', () => {
             expect.anything(),
             '/apis/apps/v1/daemonsets',
             expect.any(Function),
-            undefined,
         );
         await (makeInformer.mock.calls[1] as unknown[])[2]!();
         expect(listDaemonSetForAllNamespaces).toHaveBeenCalled();
@@ -305,7 +296,6 @@ describe('startResourceWatch', () => {
             expect.anything(),
             '/apis/apps/v1/namespaces/team-a/statefulsets',
             expect.any(Function),
-            undefined,
         );
     });
 
@@ -316,12 +306,12 @@ describe('startResourceWatch', () => {
         await (
             await listOf(0)
         )();
-        expect(listNamespacedStatefulSet).toHaveBeenCalledWith({ namespace: 'team-a', labelSelector: undefined });
+        expect(listNamespacedStatefulSet).toHaveBeenCalledWith({ namespace: 'team-a' });
         await startResourceWatch({ kind: 'DaemonSet', namespace: 'team-a' }, vi.fn());
         await (
             await listOf(1)
         )();
-        expect(listNamespacedDaemonSet).toHaveBeenCalledWith({ namespace: 'team-a', labelSelector: undefined });
+        expect(listNamespacedDaemonSet).toHaveBeenCalledWith({ namespace: 'team-a' });
         client.resolveNamespace = () => undefined;
         await startResourceWatch({ kind: 'Deployment' }, vi.fn());
         await (
@@ -361,10 +351,9 @@ describe('startResourceWatch', () => {
             expect.anything(),
             '/apis/batch/v1/namespaces/team-a/jobs',
             expect.any(Function),
-            undefined,
         );
         await listOf(0)();
-        expect(listNamespacedJob).toHaveBeenCalledWith({ namespace: 'team-a', labelSelector: undefined });
+        expect(listNamespacedJob).toHaveBeenCalledWith({ namespace: 'team-a' });
         informer.emit('add', {
             metadata: { name: 'import', namespace: 'team-a' },
             status: { conditions: [{ type: 'Complete', status: 'True' }] },
@@ -379,7 +368,6 @@ describe('startResourceWatch', () => {
             expect.anything(),
             '/apis/batch/v1/cronjobs',
             expect.any(Function),
-            undefined,
         );
         await listOf(1)();
         expect(listCronJobForAllNamespaces).toHaveBeenCalled();
@@ -390,13 +378,9 @@ describe('startResourceWatch', () => {
             expect.anything(),
             '/apis/autoscaling/v2/namespaces/team-a/horizontalpodautoscalers',
             expect.any(Function),
-            undefined,
         );
         await listOf(2)();
-        expect(listNamespacedHorizontalPodAutoscaler).toHaveBeenCalledWith({
-            namespace: 'team-a',
-            labelSelector: undefined,
-        });
+        expect(listNamespacedHorizontalPodAutoscaler).toHaveBeenCalledWith({ namespace: 'team-a' });
     });
 
     it('gives every registered kind a namespaced path, a cluster-wide path and a row transform', async () => {
@@ -435,31 +419,6 @@ describe('startResourceWatch', () => {
             await expect(listAll()).resolves.toEqual({ items: [] });
             client.resolveNamespace = (explicit?: string) => explicit ?? 'team-a';
         }
-    });
-
-    it('filters a list through the same call the informer lists with', async () => {
-        const { listFiltered } = await import('../../../src/main/k8s/watch.js');
-        listNamespacedPod.mockResolvedValueOnce({
-            items: [{ metadata: { name: 'web-1', namespace: 'team-a' }, spec: {}, status: { phase: 'Running' } }],
-        });
-        await expect(listFiltered('Pod', 'team-a', 'app=web')).resolves.toMatchObject([{ name: 'web-1' }]);
-        // The selector goes to the API server; nothing is fetched only to be dropped here.
-        expect(listNamespacedPod).toHaveBeenCalledWith({ namespace: 'team-a', labelSelector: 'app=web' });
-        // The informer keys on the selector too, so two filters are two watches, not one shared one.
-        await startResourceWatch({ kind: 'Pod', namespace: 'team-a' }, vi.fn());
-        await startResourceWatch({ kind: 'Pod', namespace: 'team-a', labelSelector: 'app=web' }, vi.fn());
-        expect(openInformerCount()).toBe(2);
-        expect(makeInformer).toHaveBeenLastCalledWith(
-            expect.anything(),
-            '/api/v1/namespaces/team-a/pods',
-            expect.any(Function),
-            'app=web',
-        );
-    });
-
-    it('refuses to filter a kind that has no watch source', async () => {
-        const { listFiltered } = await import('../../../src/main/k8s/watch.js');
-        await expect(listFiltered('VolumeSnapshot', 'team-a', 'app=web')).rejects.toMatchObject({ kind: 'invalid' });
     });
 
     it('refuses to watch a kind that has no watch source', async () => {

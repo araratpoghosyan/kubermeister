@@ -4,7 +4,7 @@ import { KeyRoundIcon } from 'lucide-react';
 import type { Lease } from '../../../../shared/k8s/policy';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
-import { useFilteredList } from '@/components/list/use-filtered-list';
+import { useWatchedList } from '@/lib/watch';
 
 export const Route = createFileRoute('/overview/leases/')({ component: LeasesPage });
 
@@ -20,14 +20,13 @@ const columns: ColumnDef<Lease>[] = [
 ];
 
 function LeasesPage() {
-    const leases = useFilteredList('Lease');
+    const leases = useWatchedList('Lease');
     return (
         <ResourceListPage
             icon={KeyRoundIcon}
             title="Leases"
             columns={columns}
             query={leases}
-            toolbar={leases.filter}
             detailPath={detailPath}
             rowProps={(lease) => ({ 'data-lease': lease.name })}
             bulkDelete={{ kind: 'Lease' }}

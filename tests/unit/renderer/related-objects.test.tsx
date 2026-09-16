@@ -41,7 +41,7 @@ const data: Record<string, unknown> = {
         version: 1,
         session: { lastContext: null, lastNamespace: null, restoreOnLaunch: true },
         connection: { kubeconfigPath: null },
-        data: { refreshIntervalSec: 12, logBufferLines: 2000, terminalFontSize: 12, forwards: [], savedViews: [] },
+        data: { refreshIntervalSec: 12, logBufferLines: 2000, terminalFontSize: 12, forwards: [] },
         updates: { mode: 'check' },
         window: { bounds: null },
     },

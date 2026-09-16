@@ -4,7 +4,7 @@ import { ServerIcon } from 'lucide-react';
 import type { CsiNode } from '../../../../shared/k8s/csi';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
-import { useFilteredList } from '@/components/list/use-filtered-list';
+import { useWatchedList } from '@/lib/watch';
 
 export const Route = createFileRoute('/storage/csinodes/')({ component: CsiNodesPage });
 
@@ -18,14 +18,13 @@ const columns: ColumnDef<CsiNode>[] = [
 ];
 
 function CsiNodesPage() {
-    const nodes = useFilteredList('CSINode');
+    const nodes = useWatchedList('CSINode');
     return (
         <ResourceListPage
             icon={ServerIcon}
             title="CSINodes"
             columns={columns}
             query={nodes}
-            toolbar={nodes.filter}
             detailPath={detailPath}
             rowProps={(node) => ({ 'data-csinode': node.name })}
             bulkDelete={{ kind: 'CSINode' }}

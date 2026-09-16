@@ -5,7 +5,7 @@ import type { WebhookConfig } from '../../../../shared/k8s/admission';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, statusColumn, textColumn } from '@/components/templates/list-columns';
 import { WEBHOOK_TONE } from '@/lib/status';
-import { useFilteredList } from '@/components/list/use-filtered-list';
+import { useWatchedList } from '@/lib/watch';
 
 export const Route = createFileRoute('/addons/mutatingwebhooks/')({ component: MutatingWebhooksPage });
 
@@ -22,14 +22,13 @@ const columns: ColumnDef<WebhookConfig>[] = [
 ];
 
 function MutatingWebhooksPage() {
-    const configurations = useFilteredList('MutatingWebhookConfiguration');
+    const configurations = useWatchedList('MutatingWebhookConfiguration');
     return (
         <ResourceListPage
             icon={PencilIcon}
             title="MutatingWebhooks"
             columns={columns}
             query={configurations}
-            toolbar={configurations.filter}
             detailPath={detailPath}
             rowProps={(configuration) => ({ 'data-mutatingwebhook': configuration.name })}
             bulkDelete={{ kind: 'MutatingWebhookConfiguration' }}

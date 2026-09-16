@@ -4,7 +4,7 @@ import { GaugeIcon } from 'lucide-react';
 import type { CsiCapacity } from '../../../../shared/k8s/csi';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
-import { useFilteredList } from '@/components/list/use-filtered-list';
+import { useWatchedList } from '@/lib/watch';
 
 export const Route = createFileRoute('/storage/capacity/')({ component: StorageCapacityPage });
 
@@ -21,7 +21,7 @@ const columns: ColumnDef<CsiCapacity>[] = [
 ];
 
 function StorageCapacityPage() {
-    const capacities = useFilteredList('CSIStorageCapacity');
+    const capacities = useWatchedList('CSIStorageCapacity');
     return (
         <ResourceListPage
             icon={GaugeIcon}
@@ -29,7 +29,6 @@ function StorageCapacityPage() {
             nounPlural="CSIStorageCapacity objects"
             columns={columns}
             query={capacities}
-            toolbar={capacities.filter}
             detailPath={detailPath}
             rowProps={(capacity) => ({ 'data-capacity': capacity.name })}
             bulkDelete={{ kind: 'CSIStorageCapacity' }}

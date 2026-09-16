@@ -4,7 +4,7 @@ import { RouteIcon } from 'lucide-react';
 import type { Ingress } from '../../../../shared/k8s/network';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
-import { useFilteredList } from '@/components/list/use-filtered-list';
+import { useWatchedList } from '@/lib/watch';
 
 export const Route = createFileRoute('/network/ingresses/')({ component: IngressesPage });
 
@@ -21,14 +21,13 @@ const columns: ColumnDef<Ingress>[] = [
 ];
 
 function IngressesPage() {
-    const ingresses = useFilteredList('Ingress');
+    const ingresses = useWatchedList('Ingress');
     return (
         <ResourceListPage
             icon={RouteIcon}
             title="Ingresses"
             columns={columns}
             query={ingresses}
-            toolbar={ingresses.filter}
             detailPath={detailPath}
             rowProps={(ingress) => ({ 'data-ingress': ingress.name })}
             bulkDelete={{ kind: 'Ingress' }}

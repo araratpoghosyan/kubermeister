@@ -53,7 +53,6 @@ import {
     serviceAccountSchema,
 } from './access.js';
 import { kindSchema } from './registry.js';
-import { labelSelectorSchema } from './selectors.js';
 import { namespaceNameSchema } from './names.js';
 import {
     claimDetailSchema,
@@ -95,11 +94,6 @@ export const resourceListInputSchema = z.object({
     kind: kindSchema,
     /** Omitted: the active namespace, or all namespaces when none is selected. */
     namespace: namespaceNameSchema.optional(),
-    /**
-     * A label selector the API server applies, so the same filter narrows the watch behind the list
-     * and a namespace with more objects than one page still filters correctly.
-     */
-    labelSelector: labelSelectorSchema.optional(),
 });
 
 export const resourceGetInputSchema = z.object({

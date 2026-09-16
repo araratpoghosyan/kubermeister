@@ -5,7 +5,7 @@ import type { CronJob } from '../../../../shared/k8s/workloads';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
 import { cn } from '@/lib/utils';
-import { useFilteredList } from '@/components/list/use-filtered-list';
+import { useWatchedList } from '@/lib/watch';
 
 export const Route = createFileRoute('/workloads/cronjobs/')({ component: CronJobsPage });
 
@@ -44,14 +44,13 @@ const columns: ColumnDef<CronJob>[] = [
 ];
 
 function CronJobsPage() {
-    const cronJobs = useFilteredList('CronJob');
+    const cronJobs = useWatchedList('CronJob');
     return (
         <ResourceListPage
             icon={TimerIcon}
             title="CronJobs"
             columns={columns}
             query={cronJobs}
-            toolbar={cronJobs.filter}
             detailPath={detailPath}
             rowProps={(cronJob) => ({ 'data-cronjob': cronJob.name })}
             bulkDelete={{ kind: 'CronJob' }}
