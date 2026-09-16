@@ -23,6 +23,8 @@ const { ManifestPanel, spliceResourceVersion } = await import('@/components/temp
 const { DeleteResourceButton } = await import('@/components/templates/delete-resource-button');
 const { ScaleControl } = await import('@/components/templates/scale-control');
 const { RestartButton } = await import('@/components/templates/restart-button');
+const { RollbackButton } = await import('@/components/deployment/rollback-button');
+const { PauseButton } = await import('@/components/deployment/pause-button');
 const { IpcError } = await import('@/lib/ipc');
 const { routeTree } = await import('@/routeTree.gen');
 
@@ -58,6 +60,8 @@ const data: Record<string, unknown> = {
     'resources.delete': { kind: 'ConfigMap', name: 'app-config', namespace: 'team-a' },
     'resources.scale': { kind: 'Deployment', name: 'web', namespace: 'team-a' },
     'resources.restart': { kind: 'Deployment', name: 'web', namespace: 'team-a' },
+    'deployments.rollback': { kind: 'Deployment', name: 'web', namespace: 'team-a', revision: '1', skipped: false },
+    'deployments.pause': { kind: 'Deployment', name: 'web', namespace: 'team-a' },
     'resources.create': { kind: 'ConfigMap', name: 'my-config', namespace: 'team-a' },
 };
 
@@ -308,6 +312,87 @@ describe('restart action', () => {
         await userEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Restart' }));
         await waitFor(() => expect(invoke).toHaveBeenCalledWith('resources.restart', expect.anything()));
         expect(toasts.success).not.toHaveBeenCalled();
+    });
+});
+
+describe('rollout control', () => {
+    it('says what a rollback restores, and that it lands as a new revision', async () => {
+        renderInRouter(<RollbackButton name="web" namespace="team-a" revision="1" image="nginx:1.21" />);
+        await userEvent.click(await screen.findByRole('button', { name: 'Roll back' }));
+        const dialog = await screen.findByRole('alertdialog');
+        expect(dialog).toHaveTextContent('Roll back to revision #1?');
+        expect(dialog).toHaveTextContent('nginx:1.21');
+        expect(dialog).toHaveTextContent('records this as a new revision');
+        await userEvent.click(within(dialog).getByRole('button', { name: 'Roll back' }));
+        await waitFor(() =>
+            expect(invoke).toHaveBeenCalledWith('deployments.rollback', {
+                context: 'alpha',
+                name: 'web',
+                namespace: 'team-a',
+                revision: '1',
+            }),
+        );
+        expect(toasts.success).toHaveBeenCalledWith('Rolled “web” back to revision #1', expect.anything());
+    });
+
+    it('reports a revision that is already running as a no-op rather than a rollback', async () => {
+        invoke.mockImplementation(async (channel: string) =>
+            channel === 'deployments.rollback'
+                ? { kind: 'Deployment', name: 'web', namespace: 'team-a', revision: '2', skipped: true }
+                : data[channel],
+        );
+        renderInRouter(<RollbackButton name="web" namespace="team-a" revision="2" image="nginx:1.27" />);
+        await userEvent.click(await screen.findByRole('button', { name: 'Roll back' }));
+        await userEvent.click(
+            within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Roll back' }),
+        );
+        await waitFor(() =>
+            expect(toasts.success).toHaveBeenCalledWith('Revision #2 is already running', {
+                description: 'Nothing was changed.',
+            }),
+        );
+    });
+
+    it('says nothing succeeded when the cluster refuses a rollback or a pause', async () => {
+        invoke.mockImplementation(async (channel: string) => {
+            if (channel === 'deployments.rollback' || channel === 'deployments.pause') {
+                throw new IpcError({ kind: 'forbidden', detail: 'no access', op: channel });
+            }
+            return data[channel];
+        });
+        renderInRouter(<RollbackButton name="web" namespace="team-a" revision="1" image="nginx:1.21" />);
+        await userEvent.click(await screen.findByRole('button', { name: 'Roll back' }));
+        await userEvent.click(
+            within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Roll back' }),
+        );
+        await waitFor(() => expect(invoke).toHaveBeenCalledWith('deployments.rollback', expect.anything()));
+
+        renderInRouter(<PauseButton name="web" namespace="team-a" paused={false} />);
+        await userEvent.click(await screen.findByRole('button', { name: 'Pause' }));
+        await waitFor(() => expect(invoke).toHaveBeenCalledWith('deployments.pause', expect.anything()));
+        expect(toasts.success).not.toHaveBeenCalled();
+    });
+
+    it('holds a rollout and lets it go again from the same control', async () => {
+        const { unmount } = renderInRouter(<PauseButton name="web" namespace="team-a" paused={false} />);
+        await userEvent.click(await screen.findByRole('button', { name: 'Pause' }));
+        await waitFor(() =>
+            expect(invoke).toHaveBeenCalledWith('deployments.pause', {
+                context: 'alpha',
+                name: 'web',
+                namespace: 'team-a',
+                paused: true,
+            }),
+        );
+        expect(toasts.success).toHaveBeenCalledWith('Rollout of “web” paused', expect.anything());
+        unmount();
+
+        renderInRouter(<PauseButton name="web" namespace="team-a" paused />);
+        await userEvent.click(await screen.findByRole('button', { name: 'Resume' }));
+        await waitFor(() =>
+            expect(invoke).toHaveBeenCalledWith('deployments.pause', expect.objectContaining({ paused: false })),
+        );
+        expect(toasts.success).toHaveBeenCalledWith('Rollout of “web” resumed', undefined);
     });
 });
 

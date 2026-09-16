@@ -5,9 +5,10 @@ const pairs = z.array(z.tuple([z.string(), z.string()]));
 
 /**
  * Display status derived from a Deployment's replica counts. Scaled to zero is a settled state and
- * reads Available rather than Progressing forever.
+ * reads Available rather than Progressing forever. A paused rollout outranks every count: it will
+ * not converge on its own, so reporting it as Progressing would promise movement that never comes.
  */
-export const deploymentStatusSchema = z.enum(['Available', 'Healthy', 'Progressing']);
+export const deploymentStatusSchema = z.enum(['Available', 'Healthy', 'Progressing', 'Paused']);
 
 export const deploymentSchema = z.object({
     name: z.string(),
@@ -21,6 +22,8 @@ export const deploymentSchema = z.object({
     strategy: z.string(),
     /** First container image, or a dash. */
     image: z.string(),
+    /** Whether the rollout is held: the controller makes no progress until it is resumed. */
+    paused: z.boolean(),
     age: z.string(),
 });
 export const deploymentDetailSchema = deploymentSchema.extend({ labels: pairs, annotations: pairs });
@@ -68,6 +71,40 @@ export const replicaSetSchema = z.object({
     current: z.number().int().nonnegative(),
     ready: z.number().int().nonnegative(),
     age: z.string(),
+});
+
+/** One of the Deployment's conditions, as the API server reports it. */
+export const rolloutConditionSchema = z.object({
+    type: z.string(),
+    /** 'True', 'False' or 'Unknown', kept as the API server's own wording. */
+    status: z.string(),
+    reason: z.string(),
+    message: z.string(),
+    when: z.string(),
+});
+
+/** A ReplicaSet in the rollout picture: the same row plus where it stands in the rollout. */
+export const rolloutReplicaSetSchema = replicaSetSchema.extend({
+    rev: z.string(),
+    /** The set the Deployment is rolling towards, against the ones it is rolling away from. */
+    role: z.enum(['new', 'old']),
+});
+
+/**
+ * Live progress of a rolling update: the counts the controller moves, the conditions explaining
+ * why it is or is not moving, and the pods each generation still holds.
+ */
+export const rolloutStatusSchema = z.object({
+    paused: z.boolean(),
+    desired: z.number().int().nonnegative(),
+    updated: z.number().int().nonnegative(),
+    ready: z.number().int().nonnegative(),
+    available: z.number().int().nonnegative(),
+    unavailable: z.number().int().nonnegative(),
+    /** Every replica is updated and available: the rollout has nothing left to do. */
+    settled: z.boolean(),
+    conditions: z.array(rolloutConditionSchema),
+    sets: z.array(rolloutReplicaSetSchema),
 });
 
 /** A Job is Running until a terminal condition appears; Complete outranks nothing, Failed outranks Complete. */
@@ -155,6 +192,9 @@ export type DaemonSetDetail = z.infer<typeof daemonSetDetailSchema>;
 export type RolloutState = z.infer<typeof rolloutStateSchema>;
 export type Rollout = z.infer<typeof rolloutSchema>;
 export type ReplicaSet = z.infer<typeof replicaSetSchema>;
+export type RolloutCondition = z.infer<typeof rolloutConditionSchema>;
+export type RolloutReplicaSet = z.infer<typeof rolloutReplicaSetSchema>;
+export type RolloutStatus = z.infer<typeof rolloutStatusSchema>;
 export type JobStatus = z.infer<typeof jobStatusSchema>;
 export type Job = z.infer<typeof jobSchema>;
 export type JobDetail = z.infer<typeof jobDetailSchema>;

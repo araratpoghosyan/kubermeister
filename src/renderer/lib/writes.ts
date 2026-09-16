@@ -10,7 +10,13 @@ import { describeError } from './k8s-error';
 import { ipcQueryKey, useIpcMutation } from './query';
 
 type WriteChannel =
-    'resources.create' | 'resources.replace' | 'resources.delete' | 'resources.scale' | 'resources.restart';
+    | 'resources.create'
+    | 'resources.replace'
+    | 'resources.delete'
+    | 'resources.scale'
+    | 'resources.restart'
+    | 'deployments.rollback'
+    | 'deployments.pause';
 
 /** What a screen passes to a write: the input minus the context stamp, which is added here. */
 export type WriteVariables<C extends WriteChannel> = Omit<IpcInput<C>, 'context'>;
@@ -87,6 +93,32 @@ export function useRestartResource() {
     return useIpcMutation<'resources.restart', WriteVariables<'resources.restart'>>('resources.restart', {
         prepare: (variables, client) => stamp('resources.restart', variables, client),
         invalidates: (input) => resourceKeys(input.kind, input.name, input.namespace),
+    });
+}
+
+/** Which queries a Deployment write disturbs: its own screens plus the rollout tabs beside them. */
+function deploymentKeys(name: string, namespace: string) {
+    return [
+        ...resourceKeys('Deployment', name, namespace),
+        ['deployments.rollouts'],
+        ['deployments.replicaSets'],
+        ['deployments.rolloutStatus'],
+    ];
+}
+
+/** Roll a Deployment back to one of its own revisions. */
+export function useRollbackDeployment() {
+    return useIpcMutation<'deployments.rollback', WriteVariables<'deployments.rollback'>>('deployments.rollback', {
+        prepare: (variables, client) => stamp('deployments.rollback', variables, client),
+        invalidates: (input) => deploymentKeys(input.name, input.namespace),
+    });
+}
+
+/** Hold a rollout where it stands, or let it continue. */
+export function usePauseDeployment() {
+    return useIpcMutation<'deployments.pause', WriteVariables<'deployments.pause'>>('deployments.pause', {
+        prepare: (variables, client) => stamp('deployments.pause', variables, client),
+        invalidates: (input) => deploymentKeys(input.name, input.namespace),
     });
 }
 

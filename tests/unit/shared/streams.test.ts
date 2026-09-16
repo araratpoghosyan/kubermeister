@@ -44,6 +44,7 @@ describe('stream contract', () => {
             available: 1,
             strategy: 'RollingUpdate',
             image: 'x',
+            paused: false,
             age: '1h',
         };
         expect(watchEventSchema.safeParse({ kind: 'Deployment', type: 'modified', item: deployment }).success).toBe(

@@ -160,8 +160,17 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   entry in `resources/manifest.ts` (typed over every kind, so a new one fails to compile until its
   manifest is readable too), a
   `list/index.tsx` plus `list/$namespace.$name.tsx` route pair, a navigation item and a tone map.
-  Deployments also have `deployments.replicaSets`, `deployments.rollouts` and
-  `metrics.deploymentSeries` (the sum of the selected pods' tracked series). Batch kinds read
+  Deployments also have `deployments.replicaSets`, `deployments.rollouts`,
+  `deployments.rolloutStatus` and `metrics.deploymentSeries` (the sum of the selected pods' tracked
+  series), plus the two writes that belong to a rollout rather than to a kind in general:
+  `deployments.rollback` and `deployments.pause` live in `resources/workloads.ts`, next to the
+  ReplicaSet readers they share, and go through the same `assertContext` guard as every other write.
+  A rollback restores a revision's pod template with a **JSON** patch, never a strategic merge: a
+  merge would merge container lists by name, so a container added after the target revision would
+  survive the rollback meant to undo it. A revision whose template already matches the live one is
+  reported as `skipped` instead of written, and template comparison canonicalises both sides (keys
+  ordered, blanks dropped, the controller's `pod-template-hash` label ignored) because the API server
+  fills the two copies out differently. Batch kinds read
   through `apis().batch`, autoscalers through `apis().hpa`. Cluster-scoped kinds ignore the active
   namespace in their readers and watch paths, and their detail routes use the `list_.$name.tsx`
   naming. A kind whose CRD a cluster need not have (volume snapshots) has no watch source and is

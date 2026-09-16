@@ -1,4 +1,5 @@
 import type {
+    KubernetesObject,
     V1CronJob,
     V1DaemonSet,
     V1Deployment,
@@ -22,11 +23,16 @@ import type {
     JobStatus,
     ReplicaSet,
     Rollout,
+    RolloutCondition,
+    RolloutReplicaSet,
+    RolloutStatus,
     StatefulSet,
     StatefulSetDetail,
 } from '../../../shared/k8s/workloads.js';
+import type { PauseInput, RollbackInput, RollbackResult, WriteResult } from '../../../shared/k8s/write.js';
 import { apis, getNamespaced, listItems } from '../client.js';
-import { withK8s } from '../errors.js';
+import { K8sError, withK8s } from '../errors.js';
+import { assertContext } from './write.js';
 import { age, ago, dash, duration, joinSelector, readyRatio, toPairs } from '../format.js';
 
 /*
@@ -35,8 +41,12 @@ import { age, ago, dash, duration, joinSelector, readyRatio, toPairs } from '../
 
 const firstImage = (containers?: { image?: string }[]): string => dash(containers?.[0]?.image);
 
-/** Scaled to zero is a settled, intentional state, so it reads Available rather than Progressing. */
-export function deploymentStatus(desired: number, available: number): DeploymentStatus {
+/**
+ * Scaled to zero is a settled, intentional state, so it reads Available rather than Progressing. A
+ * paused rollout is reported as such whatever the counts say: it will not converge until resumed.
+ */
+export function deploymentStatus(desired: number, available: number, paused = false): DeploymentStatus {
+    if (paused) return 'Paused';
     if (desired === 0) return 'Available';
     return available >= desired ? 'Healthy' : 'Progressing';
 }
@@ -44,16 +54,18 @@ export function deploymentStatus(desired: number, available: number): Deployment
 export function toDeployment(d: V1Deployment, now = Date.now()): Deployment {
     const desired = d.spec?.replicas ?? d.status?.replicas ?? 0;
     const available = d.status?.availableReplicas ?? 0;
+    const paused = d.spec?.paused === true;
     return {
         name: d.metadata?.name ?? '',
         namespace: d.metadata?.namespace ?? '',
-        status: deploymentStatus(desired, available),
+        status: deploymentStatus(desired, available, paused),
         ready: readyRatio(d.status?.readyReplicas, desired),
         replicas: desired,
         updated: d.status?.updatedReplicas ?? 0,
         available,
         strategy: d.spec?.strategy?.type ?? 'RollingUpdate',
         image: firstImage(d.spec?.template?.spec?.containers),
+        paused,
         age: age(d.metadata?.creationTimestamp, now),
     };
 }
@@ -143,6 +155,134 @@ export function toRollouts(deployment: V1Deployment, sets: V1ReplicaSet[], now =
         }));
 }
 
+/** The revision a ReplicaSet carries; sets created before the annotation existed read as revision 0. */
+function revisionOf(rs: V1ReplicaSet): string {
+    return rs.metadata?.annotations?.[REVISION_ANNOTATION] ?? '0';
+}
+
+/** The label the Deployment controller maintains on every generation it creates. */
+const POD_TEMPLATE_HASH_LABEL = 'pod-template-hash';
+
+/**
+ * Live progress of a rolling update: the counts the controller moves, the conditions explaining why
+ * it is or is not moving, and the pods each generation still holds. The set matching the
+ * Deployment's own revision is the one being rolled towards; the rest are being drained.
+ */
+export function toRolloutStatus(d: V1Deployment, sets: V1ReplicaSet[], now = Date.now()): RolloutStatus {
+    const desired = d.spec?.replicas ?? d.status?.replicas ?? 0;
+    const updated = d.status?.updatedReplicas ?? 0;
+    const available = d.status?.availableReplicas ?? 0;
+    const currentRevision = d.metadata?.annotations?.[REVISION_ANNOTATION];
+    const conditions: RolloutCondition[] = (d.status?.conditions ?? []).map((c) => ({
+        type: c.type,
+        status: c.status,
+        reason: dash(c.reason),
+        message: dash(c.message),
+        when: ago(c.lastTransitionTime, now),
+    }));
+    const rollingSets: RolloutReplicaSet[] = ownedReplicaSets(d, sets)
+        .map((rs) => ({ rs, rev: revisionOf(rs) }))
+        .sort((a, b) => Number(b.rev) - Number(a.rev))
+        .map(({ rs, rev }) => ({
+            ...toReplicaSet(rs, now),
+            rev,
+            role: rev === currentRevision ? ('new' as const) : ('old' as const),
+        }));
+    return {
+        paused: d.spec?.paused === true,
+        desired,
+        updated,
+        ready: d.status?.readyReplicas ?? 0,
+        available,
+        unavailable: d.status?.unavailableReplicas ?? 0,
+        settled: updated === desired && available >= desired && (d.status?.unavailableReplicas ?? 0) === 0,
+        conditions,
+        sets: rollingSets,
+    };
+}
+
+/**
+ * Annotations that describe a ReplicaSet's place in the rollout rather than the Deployment's own
+ * intent. A rollback keeps the Deployment's values for these and takes everything else from the
+ * revision it restores, so rolling back cannot rewrite the rollout's own bookkeeping.
+ */
+const ROLLOUT_OWNED_ANNOTATIONS = new Set([
+    'kubectl.kubernetes.io/last-applied-configuration',
+    'deployment.kubernetes.io/revision',
+    'deployment.kubernetes.io/revision-history',
+    'deployment.kubernetes.io/desired-replicas',
+    'deployment.kubernetes.io/max-replicas',
+    'deprecated.deployment.rollback.to',
+]);
+
+/** The pod template of a revision, without the hash label the controller adds to every generation. */
+export function templateForRollback(rs: V1ReplicaSet): NonNullable<V1ReplicaSet['spec']>['template'] {
+    const template = structuredClone(rs.spec?.template ?? {});
+    if (template.metadata?.labels) delete template.metadata.labels[POD_TEMPLATE_HASH_LABEL];
+    return template;
+}
+
+/** The annotations a rolled-back Deployment ends up with. */
+export function annotationsForRollback(d: V1Deployment, rs: V1ReplicaSet): Record<string, string> {
+    const annotations: Record<string, string> = {};
+    for (const key of ROLLOUT_OWNED_ANNOTATIONS) {
+        const own = d.metadata?.annotations?.[key];
+        if (own !== undefined) annotations[key] = own;
+    }
+    for (const [key, value] of Object.entries(rs.metadata?.annotations ?? {})) {
+        if (!ROLLOUT_OWNED_ANNOTATIONS.has(key)) annotations[key] = value;
+    }
+    return annotations;
+}
+
+/** An absent field, an empty map and an empty list all say the same thing about a pod template. */
+function isBlank(value: unknown): boolean {
+    if (value === undefined || value === null) return true;
+    if (Array.isArray(value)) return value.length === 0;
+    return typeof value === 'object' && Object.keys(value as object).length === 0;
+}
+
+/**
+ * A pod template reduced to what it actually says: keys in a fixed order and blanks dropped. The
+ * API server fills templates out differently depending on where they are read from — a Deployment's
+ * own template and the copy its ReplicaSet carries differ in empty maps and key order alone — so
+ * comparing them literally would call every revision different from every other.
+ */
+function canonical(value: unknown): unknown {
+    if (Array.isArray(value)) return value.map(canonical);
+    if (value && typeof value === 'object') {
+        return Object.fromEntries(
+            Object.entries(value as Record<string, unknown>)
+                .map(([key, item]) => [key, canonical(item)] as const)
+                .filter(([, item]) => !isBlank(item))
+                .sort(([a], [b]) => a.localeCompare(b)),
+        );
+    }
+    return value;
+}
+
+/** Whether two pod templates differ by anything more than the controller's own hash label. */
+export function sameTemplate(a?: V1Deployment['spec'], b?: V1ReplicaSet['spec']): boolean {
+    const strip = (template: unknown) => {
+        const copy = structuredClone(template ?? null) as { metadata?: { labels?: Record<string, string> } } | null;
+        if (copy?.metadata?.labels) delete copy.metadata.labels[POD_TEMPLATE_HASH_LABEL];
+        return JSON.stringify(canonical(copy));
+    };
+    return strip(a?.template) === strip(b?.template);
+}
+
+/**
+ * The rollback itself, as a JSON patch. The template is replaced rather than merged: a strategic
+ * merge would merge container lists by name, so a container or an environment variable added after
+ * the target revision would survive the rollback it is supposed to undo.
+ */
+export function rollbackPatch(d: V1Deployment, rs: V1ReplicaSet): { op: string; path: string; value: unknown }[] {
+    return [
+        { op: 'replace', path: '/spec/template', value: templateForRollback(rs) },
+        { op: 'replace', path: '/metadata/annotations', value: annotationsForRollback(d, rs) },
+    ];
+}
+
 export function listDeployments(namespace?: string): Promise<Deployment[]> {
     return withK8s('resources.list', async () => {
         const { items } = await listItems(
@@ -185,6 +325,82 @@ export function getDeploymentRollouts(name: string, namespace: string): Promise<
         const d = await readDeployment(name, namespace);
         if (!d) return [];
         return toRollouts(d, await replicaSetsOf(d));
+    });
+}
+
+export function getDeploymentRolloutStatus(name: string, namespace: string): Promise<RolloutStatus | null> {
+    return withK8s('deployments.rolloutStatus', async () => {
+        const d = await readDeployment(name, namespace);
+        if (!d) return null;
+        return toRolloutStatus(d, await replicaSetsOf(d));
+    });
+}
+
+/** A patch that touches nothing but the rollout's pause flag. */
+interface PausePatch extends KubernetesObject {
+    spec: { paused: boolean };
+}
+
+/** The deployment a write names, or a classified error: a write never falls back to another object. */
+async function readDeploymentForWrite(name: string, namespace: string, op: string): Promise<V1Deployment> {
+    const d = await readDeployment(name, namespace);
+    if (!d) throw new K8sError('notFound', `Deployment "${name}" was not found in namespace ${namespace}.`, op);
+    return d;
+}
+
+/**
+ * Roll a Deployment back to one of its own revisions by restoring that ReplicaSet's pod template.
+ * The cluster then rolls forward to it as it would to any other change, which is why the result is
+ * a new revision rather than the old number returning. A revision whose template already matches
+ * the live one is reported as skipped: there is nothing to undo, and writing would churn the pods
+ * for no change.
+ */
+export function rollbackDeployment(input: RollbackInput): Promise<RollbackResult> {
+    const op = 'deployments.rollback';
+    return withK8s(op, async () => {
+        assertContext(input.context, op);
+        const d = await readDeploymentForWrite(input.name, input.namespace, op);
+        const target = ownedReplicaSets(d, await replicaSetsOf(d)).find((rs) => revisionOf(rs) === input.revision);
+        if (!target) {
+            throw new K8sError(
+                'notFound',
+                `Deployment "${input.name}" has no revision ${input.revision} to roll back to.`,
+                op,
+            );
+        }
+        const result = {
+            kind: 'Deployment',
+            name: input.name,
+            namespace: input.namespace,
+            revision: input.revision,
+        };
+        if (sameTemplate(d.spec, target.spec)) return { ...result, skipped: true };
+        await apis().apps.patchNamespacedDeployment({
+            name: input.name,
+            namespace: input.namespace,
+            body: rollbackPatch(d, target),
+        });
+        return { ...result, skipped: false };
+    });
+}
+
+/**
+ * Hold a rollout where it stands, or let it continue. A paused Deployment keeps serving the pods it
+ * has and applies no further change, which is what makes it safe to edit a manifest mid-rollout.
+ */
+export function setDeploymentPaused(input: PauseInput): Promise<WriteResult> {
+    const op = 'deployments.pause';
+    return withK8s(op, async () => {
+        assertContext(input.context, op);
+        await readDeploymentForWrite(input.name, input.namespace, op);
+        const patch: PausePatch = {
+            apiVersion: 'apps/v1',
+            kind: 'Deployment',
+            metadata: { name: input.name, namespace: input.namespace },
+            spec: { paused: input.paused },
+        };
+        await apis().objects.patch(patch);
+        return { kind: 'Deployment', name: input.name, namespace: input.namespace };
     });
 }
 

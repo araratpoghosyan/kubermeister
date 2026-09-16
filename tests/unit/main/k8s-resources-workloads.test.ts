@@ -12,6 +12,7 @@ const apps = {
     listDeploymentForAllNamespaces: vi.fn(),
     readNamespacedDeployment: vi.fn(),
     listNamespacedReplicaSet: vi.fn(),
+    patchNamespacedDeployment: vi.fn(),
     listNamespacedStatefulSet: vi.fn(),
     listStatefulSetForAllNamespaces: vi.fn(),
     readNamespacedStatefulSet: vi.fn(),
@@ -32,8 +33,10 @@ const hpa = {
     listHorizontalPodAutoscalerForAllNamespaces: vi.fn(),
     readNamespacedHorizontalPodAutoscaler: vi.fn(),
 };
+const objects = { patch: vi.fn() };
 const client = {
-    apis: () => ({ apps, batch, hpa }),
+    apis: () => ({ apps, batch, hpa, objects }),
+    activeContextName: vi.fn<() => string>(() => 'alpha'),
     getActiveNamespace: vi.fn<() => string | null>(),
     resolveObjectNamespace: (explicit?: string) => explicit ?? client.getActiveNamespace(),
     isSafeSelectorValue: (value: string) => /^[A-Za-z0-9._-]+$/.test(value),
@@ -133,6 +136,7 @@ describe('deployment transforms', () => {
             available: 2,
             strategy: 'Recreate',
             image: 'nginx:1.27',
+            paused: false,
             age: '3d',
         });
     });
@@ -187,6 +191,221 @@ describe('deployment transforms', () => {
             state: 'Superseded',
             by: '—',
         });
+    });
+});
+
+describe('rollout status and rollback transforms', () => {
+    it('reports a paused rollout as Paused whatever the replica counts say', () => {
+        const held = deployment({ spec: { replicas: 3, paused: true } } as Partial<V1Deployment>);
+        expect(workloads.deploymentStatus(3, 3, true)).toBe('Paused');
+        expect(workloads.toDeployment(held, NOW)).toMatchObject({ status: 'Paused', paused: true });
+        expect(workloads.toDeployment(deployment(), NOW).paused).toBe(false);
+    });
+
+    it('builds the live picture: counts, conditions and a role for each generation', () => {
+        const rolling = deployment({
+            status: {
+                replicas: 3,
+                readyReplicas: 2,
+                updatedReplicas: 2,
+                availableReplicas: 2,
+                unavailableReplicas: 1,
+                conditions: [
+                    {
+                        type: 'Progressing',
+                        status: 'True',
+                        reason: 'ReplicaSetUpdated',
+                        message: 'rolling',
+                        lastTransitionTime: new Date(NOW - HOUR),
+                    },
+                    { type: 'Available', status: 'False', lastTransitionTime: new Date(NOW - HOUR) },
+                ],
+            },
+        } as Partial<V1Deployment>);
+        const status = workloads.toRolloutStatus(rolling, [replicaSet('1'), replicaSet('2')], NOW);
+        expect(status).toMatchObject({
+            paused: false,
+            desired: 3,
+            updated: 2,
+            ready: 2,
+            available: 2,
+            unavailable: 1,
+            settled: false,
+        });
+        // Newest revision first, and the one the deployment points at is what it rolls towards.
+        expect(status.sets.map((set) => [set.rev, set.role])).toEqual([
+            ['2', 'new'],
+            ['1', 'old'],
+        ]);
+        expect(status.conditions[0]).toMatchObject({ type: 'Progressing', status: 'True', message: 'rolling' });
+        // A condition the server left blank reads as a dash rather than an empty cell.
+        expect(status.conditions[1]).toMatchObject({ reason: '—', message: '—' });
+    });
+
+    it('settles only when every replica is updated and available', () => {
+        const done = deployment({
+            status: { replicas: 3, readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3 },
+        } as Partial<V1Deployment>);
+        expect(workloads.toRolloutStatus(done, [replicaSet('2')], NOW).settled).toBe(true);
+        expect(workloads.toRolloutStatus(deployment(), [replicaSet('2')], NOW).settled).toBe(false);
+    });
+
+    it('restores a revision without the hash label the controller maintains', () => {
+        const hashed = replicaSet('1', {
+            spec: {
+                replicas: 0,
+                template: {
+                    metadata: { labels: { app: 'web', 'pod-template-hash': 'abc123' } },
+                    spec: { containers: [{ name: 'web', image: 'nginx:1.21' }] },
+                },
+            },
+        } as Partial<V1ReplicaSet>);
+        const template = workloads.templateForRollback(hashed);
+        expect(template.metadata?.labels).toEqual({ app: 'web' });
+        // The ReplicaSet itself is left alone; only the copy that goes back loses the label.
+        expect(hashed.spec?.template?.metadata?.labels?.['pod-template-hash']).toBe('abc123');
+    });
+
+    it('keeps the deployment’s rollout bookkeeping and takes the rest from the revision', () => {
+        const target = replicaSet('1', {
+            metadata: {
+                name: 'web-1',
+                ownerReferences: [{ uid: 'dep-1' } as never],
+                annotations: {
+                    'deployment.kubernetes.io/revision': '1',
+                    'deployment.kubernetes.io/desired-replicas': '9',
+                    'kubernetes.io/change-cause': 'first release',
+                },
+            },
+        });
+        expect(workloads.annotationsForRollback(deployment(), target)).toEqual({
+            // The deployment's own values for the keys that describe the rollout, not the set's.
+            'deployment.kubernetes.io/revision': '2',
+            'kubectl.kubernetes.io/last-applied-configuration': '{}',
+            'kubernetes.io/change-cause': 'first release',
+        });
+    });
+
+    it('sees through the hash label when comparing a revision with the live template', () => {
+        const live = deployment();
+        const same = replicaSet('2', {
+            spec: {
+                template: {
+                    metadata: { labels: { 'pod-template-hash': 'xyz' } },
+                    spec: { containers: [{ name: 'web', image: 'nginx:1.27' }] },
+                },
+            },
+        } as Partial<V1ReplicaSet>);
+        expect(workloads.sameTemplate(live.spec, same.spec)).toBe(true);
+        expect(workloads.sameTemplate(live.spec, replicaSet('1').spec)).toBe(false);
+    });
+
+    it('replaces the template wholesale rather than merging it', () => {
+        const patch = workloads.rollbackPatch(deployment(), replicaSet('1'));
+        expect(patch.map((op) => [op.op, op.path])).toEqual([
+            ['replace', '/spec/template'],
+            ['replace', '/metadata/annotations'],
+        ]);
+    });
+});
+
+describe('rollout writes', () => {
+    const ON_ALPHA = { context: 'alpha', name: 'web', namespace: 'team-a' };
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        client.getActiveNamespace.mockReturnValue('team-a');
+        client.activeContextName.mockReturnValue('alpha');
+        apps.readNamespacedDeployment.mockResolvedValue(deployment());
+        apps.listNamespacedReplicaSet.mockResolvedValue({ items: [replicaSet('1'), replicaSet('2')] });
+        apps.patchNamespacedDeployment.mockResolvedValue({});
+        objects.patch.mockResolvedValue({});
+    });
+
+    it('reads the live rollout picture and answers null for a deployment that is gone', async () => {
+        await expect(workloads.getDeploymentRolloutStatus('web', 'team-a')).resolves.toMatchObject({
+            desired: 3,
+            updated: 3,
+            sets: [expect.objectContaining({ rev: '2', role: 'new' }), expect.objectContaining({ rev: '1' })],
+        });
+        apps.readNamespacedDeployment.mockRejectedValue(new ApiException(404, 'x', null, {}));
+        await expect(workloads.getDeploymentRolloutStatus('gone', 'team-a')).resolves.toBeNull();
+    });
+
+    it('rolls back by restoring the revision’s template through a JSON patch', async () => {
+        await expect(workloads.rollbackDeployment({ ...ON_ALPHA, revision: '1' })).resolves.toEqual({
+            kind: 'Deployment',
+            name: 'web',
+            namespace: 'team-a',
+            revision: '1',
+            skipped: false,
+        });
+        const [call] = apps.patchNamespacedDeployment.mock.calls;
+        expect(call[0]).toMatchObject({ name: 'web', namespace: 'team-a' });
+        expect(call[0].body[0]).toMatchObject({
+            op: 'replace',
+            path: '/spec/template',
+            value: { spec: { containers: [{ image: 'nginx:1.21' }] } },
+        });
+    });
+
+    it('writes nothing when the revision’s template is already the live one', async () => {
+        // The current generation carries the deployment's own template, plus the controller's hash.
+        const current = replicaSet('2', {
+            spec: {
+                replicas: 3,
+                template: {
+                    metadata: { labels: { 'pod-template-hash': 'abc' } },
+                    spec: { containers: [{ name: 'web', image: 'nginx:1.27' }] },
+                },
+            },
+        } as Partial<V1ReplicaSet>);
+        apps.listNamespacedReplicaSet.mockResolvedValue({ items: [replicaSet('1'), current] });
+        await expect(workloads.rollbackDeployment({ ...ON_ALPHA, revision: '2' })).resolves.toMatchObject({
+            skipped: true,
+        });
+        expect(apps.patchNamespacedDeployment).not.toHaveBeenCalled();
+    });
+
+    it('refuses a revision the deployment never had', async () => {
+        await expect(workloads.rollbackDeployment({ ...ON_ALPHA, revision: '9' })).rejects.toMatchObject({
+            kind: 'notFound',
+            detail: expect.stringContaining('no revision 9'),
+        });
+        expect(apps.patchNamespacedDeployment).not.toHaveBeenCalled();
+    });
+
+    it('refuses to roll back or pause a deployment that is gone', async () => {
+        apps.readNamespacedDeployment.mockRejectedValue(new ApiException(404, 'x', null, {}));
+        const expected = { kind: 'notFound', detail: expect.stringContaining('was not found') };
+        await expect(workloads.rollbackDeployment({ ...ON_ALPHA, revision: '1' })).rejects.toMatchObject(expected);
+        await expect(workloads.setDeploymentPaused({ ...ON_ALPHA, paused: true })).rejects.toMatchObject(expected);
+        expect(objects.patch).not.toHaveBeenCalled();
+    });
+
+    it('refuses both writes when the screen’s context is no longer the active one', async () => {
+        client.activeContextName.mockReturnValue('beta');
+        const expected = { kind: 'conflict', detail: expect.stringContaining('meant for context "alpha"') };
+        await expect(workloads.rollbackDeployment({ ...ON_ALPHA, revision: '1' })).rejects.toMatchObject(expected);
+        await expect(workloads.setDeploymentPaused({ ...ON_ALPHA, paused: true })).rejects.toMatchObject(expected);
+        expect(apps.patchNamespacedDeployment).not.toHaveBeenCalled();
+        expect(objects.patch).not.toHaveBeenCalled();
+    });
+
+    it('pauses and resumes through the deployment’s own pause flag', async () => {
+        await expect(workloads.setDeploymentPaused({ ...ON_ALPHA, paused: true })).resolves.toEqual({
+            kind: 'Deployment',
+            name: 'web',
+            namespace: 'team-a',
+        });
+        expect(objects.patch).toHaveBeenCalledWith({
+            apiVersion: 'apps/v1',
+            kind: 'Deployment',
+            metadata: { name: 'web', namespace: 'team-a' },
+            spec: { paused: true },
+        });
+        await workloads.setDeploymentPaused({ ...ON_ALPHA, paused: false });
+        expect(objects.patch).toHaveBeenLastCalledWith(expect.objectContaining({ spec: { paused: false } }));
     });
 });
 

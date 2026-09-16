@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { BoxesIcon, HeartIcon, HistoryIcon, LayersIcon, RotateCcwIcon } from 'lucide-react';
+import { ActivityIcon, BoxesIcon, HeartIcon, HistoryIcon, LayersIcon } from 'lucide-react';
 import { StatusBadge } from '@/components/data-display/status-badge';
-import { ComingSoonButton } from '@/components/coming-soon-button';
 import { RefreshButton } from '@/components/refresh-button';
 import { DetailCard, DetailMetrics } from '@/components/templates/detail-cards';
 import { eventsTab, labelsTab, ResourceDetail, type DetailTabGroup } from '@/components/templates/resource-detail';
@@ -9,6 +8,9 @@ import { manifestTab } from '@/components/templates/manifest-panel';
 import { EditResourceButton } from '@/components/templates/edit-resource-button';
 import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
 import { RestartButton } from '@/components/templates/restart-button';
+import { PauseButton } from '@/components/deployment/pause-button';
+import { RollbackButton } from '@/components/deployment/rollback-button';
+import { RolloutStatusTab } from '@/components/deployment/rollout-status-tab';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ipcQueryKey, useIpcQuery } from '@/lib/query';
 import { useResource } from '@/lib/resources';
@@ -74,6 +76,12 @@ function DeploymentDetailPage() {
             label: 'ROLLOUT',
             items: [
                 {
+                    id: 'status',
+                    label: 'Status',
+                    icon: ActivityIcon,
+                    content: <RolloutStatusTab name={name} namespace={namespace} />,
+                },
+                {
                     id: 'history',
                     label: 'History',
                     icon: HistoryIcon,
@@ -112,14 +120,12 @@ function DeploymentDetailPage() {
                                             <TableCell className="font-mono tabular-nums">{r.duration}</TableCell>
                                             <TableCell>
                                                 {i > 0 && (
-                                                    <ComingSoonButton
-                                                        variant="ghost"
-                                                        size="xs"
-                                                        tip="Rollback arrives with write actions"
-                                                    >
-                                                        <RotateCcwIcon />
-                                                        Roll back
-                                                    </ComingSoonButton>
+                                                    <RollbackButton
+                                                        name={name}
+                                                        namespace={namespace}
+                                                        revision={r.rev}
+                                                        image={r.image}
+                                                    />
                                                 )}
                                             </TableCell>
                                         </TableRow>
@@ -207,9 +213,11 @@ function DeploymentDetailPage() {
                             ipcQueryKey('deployments.rollouts', target),
                             ipcQueryKey('deployments.replicaSets', target),
                             ipcQueryKey('metrics.deploymentSeries', target),
+                            ipcQueryKey('deployments.rolloutStatus', target),
                             ipcQueryKey('resources.getYaml', { kind: 'Deployment', name, namespace }),
                         ]}
                     />
+                    {deployment && <PauseButton name={name} namespace={namespace} paused={deployment.paused} />}
                     <RestartButton kind="Deployment" name={name} namespace={namespace} />
                     <EditResourceButton />
                     <DeleteResourceButton

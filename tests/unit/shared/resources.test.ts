@@ -155,6 +155,7 @@ describe('generic resource channels', () => {
             available: 1,
             strategy: 'RollingUpdate',
             image: 'x',
+            paused: false,
             age: '1h',
         };
         expect(resourceListOutputSchema.safeParse({ kind: 'Deployment', items: [deployment] }).success).toBe(true);

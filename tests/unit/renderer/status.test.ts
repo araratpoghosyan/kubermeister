@@ -35,7 +35,7 @@ describe('status tones', () => {
             'Running',
             'Unknown',
         ]);
-        expect(DEPLOYMENT_TONE).toEqual({ Healthy: 'ok', Available: 'ok', Progressing: 'warn' });
+        expect(DEPLOYMENT_TONE).toEqual({ Healthy: 'ok', Available: 'ok', Progressing: 'warn', Paused: 'neutral' });
         expect(ROLLOUT_TONE).toEqual({ Current: 'ok', Superseded: 'neutral' });
     });
 
