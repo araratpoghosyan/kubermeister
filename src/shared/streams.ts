@@ -5,6 +5,7 @@ import { namespaceNameSchema } from './k8s/names.js';
 import { podSchema } from './k8s/pods.js';
 import { endpointsSchema, ingressSchema, networkPolicySchema, serviceSchema } from './k8s/network.js';
 import { customResourceSchema } from './k8s/addons.js';
+import { drainOptionsSchema, type DrainEvent } from './k8s/drain.js';
 import {
     clusterRoleBindingSchema,
     clusterRoleSchema,
@@ -106,12 +107,22 @@ export const podPortForwardInputSchema = podTargetSchema.omit({ container: true 
     localPort: tcpPort,
 });
 
+/**
+ * A drain writes to the cluster over minutes, so it is a stream rather than an invoke. It carries
+ * the same context stamp every write does: main refuses one aimed at a context it has left.
+ */
+export const nodeDrainInputSchema = drainOptionsSchema.extend({
+    context: z.string().min(1),
+    name: z.string().min(1),
+});
+
 export const portForwardStatusSchema = z.object({
     status: z.literal('listening'),
     localPort: tcpPort,
     targetPort: tcpPort,
 });
 
+export type NodeDrainInput = z.infer<typeof nodeDrainInputSchema>;
 export type PodLogsInput = z.infer<typeof podLogsInputSchema>;
 export type PodExecInput = z.infer<typeof podExecInputSchema>;
 export type PodPortForwardInput = z.infer<typeof podPortForwardInputSchema>;
@@ -124,6 +135,8 @@ export interface StreamContract extends Record<AllowedStream, { input: unknown; 
     /** Raw terminal output; keystrokes travel back through `send`. */
     'pods.exec': { input: PodExecInput; data: string };
     'pods.portForward': { input: PodPortForwardInput; data: PortForwardStatus };
+    /** One drain, reported step by step; the stream ends when the node is drained or the drain is stopped. */
+    'nodes.drain': { input: NodeDrainInput; data: DrainEvent };
 }
 
 export { STREAM_CHANNELS };
@@ -137,6 +150,7 @@ export const streamSchemas = {
     'pods.logs': podLogsInputSchema,
     'pods.exec': podExecInputSchema,
     'pods.portForward': podPortForwardInputSchema,
+    'nodes.drain': nodeDrainInputSchema,
 } satisfies Record<StreamChannel, z.ZodType>;
 
 /**

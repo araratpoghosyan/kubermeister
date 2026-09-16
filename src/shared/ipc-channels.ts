@@ -25,6 +25,8 @@ export const IPC_CHANNELS = [
     'clusters.list',
     'nodes.list',
     'nodes.get',
+    'nodes.cordon',
+    'nodes.drainPlan',
     'resources.list',
     'resources.get',
     'pods.logSnapshot',
@@ -64,7 +66,13 @@ export const IPC_CHANNELS = [
 export const SUBSCRIPTION_CHANNELS = ['update.state', 'open-settings'] as const;
 
 /** Stream channels the preload's `stream()` accepts. Schemas live in `streams.ts`; this file stays import-free. */
-export const STREAM_CHANNELS = ['resources.watch', 'pods.logs', 'pods.exec', 'pods.portForward'] as const;
+export const STREAM_CHANNELS = [
+    'resources.watch',
+    'pods.logs',
+    'pods.exec',
+    'pods.portForward',
+    'nodes.drain',
+] as const;
 
 /** Control channels the preload's `stream()` uses; the renderer never calls them directly. */
 export const STREAM_CONTROL_CHANNELS = ['stream.start', 'stream.send', 'stream.stop'] as const;

@@ -94,6 +94,17 @@ export const pauseInputSchema = z.object({
     paused: z.boolean(),
 });
 
+/**
+ * Cordon or uncordon one node. Nodes are cluster-scoped, so no namespace is named, and the flag is
+ * absolute rather than a toggle: a screen acting on a stale reading cannot flip the node the wrong
+ * way, it can only ask for the state it displayed.
+ */
+export const cordonInputSchema = z.object({
+    ...scopeStamp,
+    name: z.string().min(1),
+    unschedulable: z.boolean(),
+});
+
 export type WriteResult = z.infer<typeof writeResultSchema>;
 export type ManifestIdentity = z.infer<typeof manifestIdentitySchema>;
 export type ManifestWrite = z.infer<typeof manifestWriteSchema>;
@@ -103,3 +114,4 @@ export type RestartInput = z.infer<typeof restartInputSchema>;
 export type RollbackInput = z.infer<typeof rollbackInputSchema>;
 export type RollbackResult = z.infer<typeof rollbackResultSchema>;
 export type PauseInput = z.infer<typeof pauseInputSchema>;
+export type CordonInput = z.infer<typeof cordonInputSchema>;

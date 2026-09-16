@@ -7,6 +7,7 @@ import {
     type StreamController,
     type StreamSend,
 } from '../../shared/streams.js';
+import { startNodeDrain } from '../k8s/drain.js';
 import { startPodExecStream } from '../k8s/exec.js';
 import { startPodLogStream } from '../k8s/logs.js';
 import { startPodPortForward } from '../k8s/port-forward.js';
@@ -20,6 +21,7 @@ const HANDLERS: Record<StreamChannel, StreamHandler> = {
     'pods.logs': startPodLogStream,
     'pods.exec': startPodExecStream,
     'pods.portForward': startPodPortForward,
+    'nodes.drain': startNodeDrain,
 };
 
 /**

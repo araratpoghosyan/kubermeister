@@ -80,8 +80,9 @@ describe('node detail', () => {
                 .getAllByRole('tab')
                 .map((t) => t.textContent),
         ).toEqual(['Overview', 'Events', 'ManifestYAML', 'Labels1', 'System info', 'Conditions2']);
-        expect(within(page).getByRole('button', { name: 'Cordon' })).toHaveAttribute('aria-disabled', 'true');
-        expect(within(page).getByRole('button', { name: 'Drain' })).toHaveAttribute('aria-disabled', 'true');
+        // This node is cordoned, so the control offers the way back rather than the way in.
+        expect(within(page).getByRole('button', { name: 'Uncordon' })).toBeEnabled();
+        expect(within(page).getByRole('button', { name: 'Drain' })).toBeEnabled();
     });
 
     it('shows system info, conditions, labels and events in their tabs', async () => {

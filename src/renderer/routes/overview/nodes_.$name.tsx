@@ -1,8 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { CpuIcon, HeartIcon, ListChecksIcon, ServerIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { ComingSoonButton } from '@/components/coming-soon-button';
 import { RefreshButton } from '@/components/refresh-button';
+import { CordonButton } from '@/components/node/cordon-button';
+import { DrainDialog } from '@/components/node/drain-dialog';
 import { DetailCard, DetailMetrics, PropertyGrid } from '@/components/templates/detail-cards';
 import { eventsTab, labelsTab, ResourceDetail, type DetailTabGroup } from '@/components/templates/resource-detail';
 import { manifestTab } from '@/components/templates/manifest-panel';
@@ -22,6 +23,8 @@ function NodeDetailPage() {
     const query = useIpcQuery('nodes.get', { name }, { refetchInterval });
     const node = query.data;
     const series = useIpcQuery('metrics.nodeSeries', { name }, { refetchInterval }).data;
+    // The drain is a write, so it carries the context the screen was rendered under.
+    const context = useIpcQuery('context.current', {}).data;
     const sparkCpu = series?.cpu ?? [];
     const sparkMem = series?.mem ?? [];
     const conditions = node?.conditions ?? [];
@@ -124,12 +127,8 @@ function NodeDetailPage() {
                     <RefreshButton
                         queryKeys={[ipcQueryKey('nodes.get', { name }), ipcQueryKey('metrics.nodeSeries', { name })]}
                     />
-                    <ComingSoonButton variant="outline" size="sm" tip="Cordoning arrives with node actions">
-                        Cordon
-                    </ComingSoonButton>
-                    <ComingSoonButton variant="outline" size="sm" tip="Draining arrives with node actions">
-                        Drain
-                    </ComingSoonButton>
+                    {node && <CordonButton name={name} cordoned={node.status === 'Cordoned'} />}
+                    <DrainDialog name={name} context={context?.name ?? null} />
                     <EditResourceButton />
                     <DeleteResourceButton kind="Node" name={name} backTo="/overview/nodes" />
                 </>

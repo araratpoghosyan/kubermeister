@@ -1,8 +1,11 @@
 import type { V1Node } from '@kubernetes/client-node';
 import type { Usage } from '../../../shared/k8s/metrics.js';
 import type { Node, NodeDetail } from '../../../shared/k8s/nodes.js';
+import type { CordonInput, WriteResult } from '../../../shared/k8s/write.js';
 import { apis } from '../client.js';
+import { setNodeUnschedulable } from '../drain.js';
 import { withK8s } from '../errors.js';
+import { assertContext } from './write.js';
 import { age, cpuToCores, cpuToMillicores, dash, memToGiB, memToMi, toPairs } from '../format.js';
 import { ensureSampler, nodeUsage, percent } from '../sampler.js';
 import { countBy, nodeReady } from './cluster.js';
@@ -90,6 +93,19 @@ export function listNodes(): Promise<Node[]> {
         const [res, podsByNode] = await Promise.all([apis().core.listNode(), podsPerNode()]);
         ensureSampler();
         return res.items.map((node) => toNode(node, podsByNode, Date.now(), nodeUsage(node.metadata?.name ?? '')));
+    });
+}
+
+/**
+ * Cordon or uncordon a node. Running pods stay where they are either way: cordoning only stops the
+ * scheduler putting new ones here, which is what makes it safe to do before deciding to drain.
+ */
+export function cordonNode(input: CordonInput): Promise<WriteResult> {
+    const op = 'nodes.cordon';
+    return withK8s(op, async () => {
+        assertContext(input.context, op);
+        await setNodeUnschedulable(input.name, input.unschedulable, op);
+        return { kind: 'Node', name: input.name };
     });
 }
 
