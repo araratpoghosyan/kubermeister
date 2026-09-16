@@ -3,7 +3,13 @@ import type { AllowedChannel } from './ipc-channels.js';
 import { helmChartSchema, releaseRevisionSchema, releaseSchema, releaseTargetSchema } from './k8s/addons.js';
 import { kubeContextSchema } from './k8s/contexts.js';
 import { manifestInputSchema, manifestSchema } from './k8s/manifest.js';
-import { deleteInputSchema, manifestWriteSchema, scaleInputSchema, writeResultSchema } from './k8s/write.js';
+import {
+    deleteInputSchema,
+    manifestWriteSchema,
+    restartInputSchema,
+    scaleInputSchema,
+    writeResultSchema,
+} from './k8s/write.js';
 import { clusterEventSchema, objectEventsInputSchema } from './k8s/events.js';
 import { ingressRuleSchema, serviceEndpointSchema, servicePortSchema } from './k8s/network.js';
 import { limitRangeSchema, resourceQuotaSchema } from './k8s/overview.js';
@@ -159,6 +165,7 @@ export const ipcSchemas = {
     'resources.replace': { input: manifestWriteSchema, output: writeResultSchema },
     'resources.delete': { input: deleteInputSchema, output: writeResultSchema },
     'resources.scale': { input: scaleInputSchema, output: writeResultSchema },
+    'resources.restart': { input: restartInputSchema, output: writeResultSchema },
 } as const;
 
 /**

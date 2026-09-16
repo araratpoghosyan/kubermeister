@@ -20,8 +20,8 @@ app's own settings.
   the live manifest as YAML. Pods add logs, an interactive shell and port forwarding; deployments
   add rollout history and replica sets; services add ports and endpoints.
 - **Changes when you need them.** Create from a template or a pasted manifest, edit the manifest in
-  place, scale, and delete one object or a selection. Every write can be checked first with a dry
-  run, and an edit that lost a race to another writer is reported rather than silently applied.
+  place, scale, restart a workload's pods, and delete one object or a selection. Every write can be
+  checked first with a dry run, and an edit that lost a race to another writer is reported rather than silently applied.
 - **Secrets stay secret.** Secret values are never read for the list or detail views; they appear
   only in the manifest, where the cluster itself stores them.
 

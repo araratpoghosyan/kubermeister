@@ -126,6 +126,16 @@ describe('IPC contract', () => {
         ).toBe(true);
         expect(scale.safeParse({ context: 'alpha', kind: 'Deployment', name: 'web', replicas: 2 }).success).toBe(false);
 
+        const restart = ipcSchemas['resources.restart'].input;
+        expect(
+            restart.safeParse({ context: 'alpha', kind: 'Deployment', name: 'web', namespace: 'team-a' }).success,
+        ).toBe(true);
+        expect(restart.safeParse({ context: 'alpha', kind: 'Deployment', name: 'web' }).success).toBe(false);
+        // Only a kind with a pod template can be rolled at all.
+        expect(restart.safeParse({ context: 'alpha', kind: 'ConfigMap', name: 'x', namespace: 'team-a' }).success).toBe(
+            false,
+        );
+
         const manifest = ipcSchemas['resources.replace'].input;
         expect(manifest.safeParse({ context: 'alpha', manifest: 'kind: Pod' }).success).toBe(true);
         expect(manifest.safeParse({ manifest: 'kind: Pod' }).success).toBe(false);

@@ -69,7 +69,7 @@ export function OverviewTab({ name, namespace, pod }: { name: string; namespace:
                         {containers.length}
                     </Badge>
                     <div className="flex-1" />
-                    <ComingSoonButton variant="ghost" size="xs">
+                    <ComingSoonButton variant="ghost" size="xs" tip="Restarting a pod arrives with the owner chain">
                         <RefreshCwIcon />
                         Restart
                     </ComingSoonButton>

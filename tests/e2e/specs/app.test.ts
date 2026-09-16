@@ -409,6 +409,24 @@ test('creates a config map from the editor, scales the deployment, then deletes 
     await expect(window.getByTestId('configmaps-table').locator('[data-configmap="my-config"]')).toHaveCount(0);
 });
 
+test('restarts the seeded deployment, which rolls its pods onto a new replica set', async () => {
+    const { window } = launched;
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Deployments' }).click();
+    await window.getByTestId('deployments-table').locator('[data-deployment="web"]').getByRole('link').click();
+    const page = window.getByTestId('deployment-page');
+    await page.getByRole('button', { name: 'Restart' }).click();
+    const dialog = window.getByRole('alertdialog');
+    await expect(dialog).toContainText('Restart Deployment?');
+    await dialog.getByRole('button', { name: 'Restart' }).click();
+    await expect(window.getByText(/restarting/)).toBeVisible();
+
+    // The stamped template makes the controller roll the pods onto a second replica set.
+    await window.getByRole('tab', { name: /ReplicaSets/ }).click();
+    await expect(page.getByTestId('replica-sets').getByRole('row')).toHaveCount(3, { timeout: 30_000 });
+    await window.getByRole('tab', { name: /History/ }).click();
+    await expect(page.getByTestId('rollout-history').locator('[data-revision="2"]')).toBeVisible();
+});
+
 test('stops at the startup screen when the kubeconfig path names nothing', async () => {
     const missing = join(tmpdir(), `km-e2e-missing-${Date.now()}.yaml`);
     const bad = await launchApp({ kubeconfigPath: missing });

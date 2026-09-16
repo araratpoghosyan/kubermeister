@@ -22,6 +22,7 @@ vi.mock('sonner', async () => ({
 const { ManifestPanel, spliceResourceVersion } = await import('@/components/templates/manifest-panel');
 const { DeleteResourceButton } = await import('@/components/templates/delete-resource-button');
 const { ScaleControl } = await import('@/components/templates/scale-control');
+const { RestartButton } = await import('@/components/templates/restart-button');
 const { IpcError } = await import('@/lib/ipc');
 const { routeTree } = await import('@/routeTree.gen');
 
@@ -56,6 +57,7 @@ const data: Record<string, unknown> = {
     'resources.replace': { kind: 'ConfigMap', name: 'app-config', namespace: 'team-a' },
     'resources.delete': { kind: 'ConfigMap', name: 'app-config', namespace: 'team-a' },
     'resources.scale': { kind: 'Deployment', name: 'web', namespace: 'team-a' },
+    'resources.restart': { kind: 'Deployment', name: 'web', namespace: 'team-a' },
     'resources.create': { kind: 'ConfigMap', name: 'my-config', namespace: 'team-a' },
 };
 
@@ -257,6 +259,55 @@ describe('scale control', () => {
                 replicas: 5,
             }),
         );
+    });
+});
+
+describe('restart action', () => {
+    it('says what the rollout will do before stamping the workload', async () => {
+        renderInRouter(<RestartButton kind="Deployment" name="web" namespace="team-a" />);
+        await userEvent.click(await screen.findByRole('button', { name: 'Restart' }));
+        const dialog = await screen.findByRole('alertdialog');
+        expect(dialog).toHaveTextContent('Restart Deployment?');
+        expect(dialog).toHaveTextContent('replaced gradually');
+        await userEvent.click(within(dialog).getByRole('button', { name: 'Restart' }));
+        await waitFor(() =>
+            expect(invoke).toHaveBeenCalledWith('resources.restart', {
+                context: 'alpha',
+                kind: 'Deployment',
+                name: 'web',
+                namespace: 'team-a',
+            }),
+        );
+        expect(toasts.success).toHaveBeenCalledWith('Deployment “web” restarting', expect.anything());
+    });
+
+    it('describes the ordering each kind rolls its pods in', async () => {
+        renderInRouter(<RestartButton kind="StatefulSet" name="db" namespace="team-a" />);
+        await userEvent.click(await screen.findByRole('button', { name: 'Restart' }));
+        expect(await screen.findByRole('alertdialog')).toHaveTextContent('one at a time, in reverse ordinal order');
+    });
+
+    it('can be dismissed without restarting anything', async () => {
+        renderInRouter(<RestartButton kind="DaemonSet" name="agent" namespace="team-a" />);
+        await userEvent.click(await screen.findByRole('button', { name: 'Restart' }));
+        const dialog = await screen.findByRole('alertdialog');
+        expect(dialog).toHaveTextContent('pod on each node is replaced');
+        await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+        expect(invoke).not.toHaveBeenCalledWith('resources.restart', expect.anything());
+    });
+
+    it('keeps the dialog for a restart the cluster refused, without claiming it happened', async () => {
+        invoke.mockImplementation(async (channel: string) => {
+            if (channel === 'resources.restart') {
+                throw new IpcError({ kind: 'forbidden', detail: 'no access', op: 'resources.restart' });
+            }
+            return data[channel];
+        });
+        renderInRouter(<RestartButton kind="Deployment" name="web" namespace="team-a" />);
+        await userEvent.click(await screen.findByRole('button', { name: 'Restart' }));
+        await userEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Restart' }));
+        await waitFor(() => expect(invoke).toHaveBeenCalledWith('resources.restart', expect.anything()));
+        expect(toasts.success).not.toHaveBeenCalled();
     });
 });
 

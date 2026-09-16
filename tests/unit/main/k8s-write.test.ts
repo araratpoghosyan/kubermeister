@@ -1,7 +1,7 @@
 import { ApiException } from '@kubernetes/client-node';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const objects = { create: vi.fn(), replace: vi.fn(), delete: vi.fn(), resource: vi.fn() };
+const objects = { create: vi.fn(), replace: vi.fn(), delete: vi.fn(), patch: vi.fn(), resource: vi.fn() };
 const apps = {
     readNamespacedDeploymentScale: vi.fn(),
     replaceNamespacedDeploymentScale: vi.fn(),
@@ -67,9 +67,13 @@ describe('context stamp', () => {
         await expect(
             write.scaleResource({ ...stale, kind: 'Deployment', name: 'web', namespace: 'team-a', replicas: 1 }),
         ).rejects.toMatchObject(expected);
+        await expect(
+            write.restartResource({ ...stale, kind: 'Deployment', name: 'web', namespace: 'team-a' }),
+        ).rejects.toMatchObject(expected);
         expect(objects.create).not.toHaveBeenCalled();
         expect(objects.replace).not.toHaveBeenCalled();
         expect(objects.delete).not.toHaveBeenCalled();
+        expect(objects.patch).not.toHaveBeenCalled();
         expect(apps.readNamespacedDeploymentScale).not.toHaveBeenCalled();
     });
 });
@@ -288,6 +292,60 @@ describe('deleteResource', () => {
         await expect(
             write.deleteResource({ ...ON_ALPHA, kind: 'ConfigMap', name: 'ghost', namespace: 'team-a' }),
         ).rejects.toMatchObject({ kind: 'notFound' });
+    });
+});
+
+describe('restartResource', () => {
+    const web = { ...ON_ALPHA, kind: 'Deployment' as const, name: 'web', namespace: 'team-a' };
+
+    beforeEach(() => {
+        objects.patch.mockResolvedValue({});
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it('stamps the pod template with the moment of the restart and touches nothing else', async () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-09-16T10:00:00.000Z'));
+        expect(await write.restartResource(web)).toEqual({ kind: 'Deployment', name: 'web', namespace: 'team-a' });
+        expect(objects.patch).toHaveBeenCalledWith({
+            apiVersion: 'apps/v1',
+            kind: 'Deployment',
+            metadata: { name: 'web', namespace: 'team-a' },
+            spec: {
+                template: {
+                    metadata: { annotations: { [write.RESTART_ANNOTATION]: '2026-09-16T10:00:00.000Z' } },
+                },
+            },
+        });
+    });
+
+    it('addresses a stateful set and a daemon set through their own api version and kind', async () => {
+        await write.restartResource({ ...web, kind: 'StatefulSet', name: 'db' });
+        await write.restartResource({ ...web, kind: 'DaemonSet', name: 'agent' });
+        expect(objects.patch).toHaveBeenNthCalledWith(
+            1,
+            expect.objectContaining({ kind: 'StatefulSet', metadata: { name: 'db', namespace: 'team-a' } }),
+        );
+        expect(objects.patch).toHaveBeenNthCalledWith(
+            2,
+            expect.objectContaining({ kind: 'DaemonSet', metadata: { name: 'agent', namespace: 'team-a' } }),
+        );
+    });
+
+    it('refuses to restart without a namespace, never falling back to the active one', async () => {
+        await expect(write.restartResource({ ...web, namespace: '' })).rejects.toMatchObject({
+            kind: 'invalid',
+            op: 'resources.restart',
+        });
+        expect(objects.patch).not.toHaveBeenCalled();
+    });
+
+    it('reports a workload that is already gone as not found', async () => {
+        objects.patch.mockRejectedValue(new ApiException(404, 'gone', {}, {}));
+        await expect(write.restartResource(web)).rejects.toMatchObject({ kind: 'notFound' });
     });
 });
 

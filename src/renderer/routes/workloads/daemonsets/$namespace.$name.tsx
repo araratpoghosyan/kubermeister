@@ -11,6 +11,7 @@ import {
 import { manifestTab } from '@/components/templates/manifest-panel';
 import { EditResourceButton } from '@/components/templates/edit-resource-button';
 import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
+import { RestartButton } from '@/components/templates/restart-button';
 import { ipcQueryKey } from '@/lib/query';
 import { useResource } from '@/lib/resources';
 
@@ -60,6 +61,7 @@ function DaemonSetDetailPage() {
             actions={
                 <>
                     <RefreshButton queryKeys={[ipcQueryKey('resources.get', { kind: 'DaemonSet', name, namespace })]} />
+                    <RestartButton kind="DaemonSet" name={name} namespace={namespace} />
                     <EditResourceButton />
                     <DeleteResourceButton
                         kind="DaemonSet"

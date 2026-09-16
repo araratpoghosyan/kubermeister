@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { manifestKindSchema, refineManifestTarget } from './manifest.js';
 import { namespaceNameSchema } from './names.js';
-import { kindSchema } from './registry.js';
+import { kindSchema, restartKindSchema } from './registry.js';
 
 /** What a write reports back: enough to name the object in a toast and invalidate its screens. */
 export const writeResultSchema = z.object({
@@ -54,8 +54,20 @@ export const scaleInputSchema = z
     })
     .superRefine(refineManifestTarget);
 
+/**
+ * A rollout restart. Every restartable kind is namespaced, so the screen must name the namespace it
+ * rendered: the active selection is never consulted for a write that replaces running pods.
+ */
+export const restartInputSchema = z.object({
+    ...scopeStamp,
+    kind: restartKindSchema,
+    name: z.string().min(1),
+    namespace: namespaceNameSchema,
+});
+
 export type WriteResult = z.infer<typeof writeResultSchema>;
 export type ManifestIdentity = z.infer<typeof manifestIdentitySchema>;
 export type ManifestWrite = z.infer<typeof manifestWriteSchema>;
 export type DeleteInput = z.infer<typeof deleteInputSchema>;
 export type ScaleInput = z.infer<typeof scaleInputSchema>;
+export type RestartInput = z.infer<typeof restartInputSchema>;

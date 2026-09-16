@@ -6,6 +6,7 @@ import type {
     DeleteInput,
     ManifestIdentity,
     ManifestWrite,
+    RestartInput,
     ScaleInput,
     WriteResult,
 } from '../../../shared/k8s/write.js';
@@ -220,6 +221,40 @@ export function deleteResource(input: DeleteInput): Promise<WriteResult> {
             metadata: { name: input.name, namespace: target },
         });
         return { kind: facts.kind, name: input.name, namespace: target };
+    });
+}
+
+/**
+ * The annotation a rollout restart stamps. It is the key kubectl writes, deliberately: a restart
+ * from here and one from the command line then read as the same event on the object's history
+ * rather than as two competing conventions.
+ */
+export const RESTART_ANNOTATION = 'kubectl.kubernetes.io/restartedAt';
+
+/** A patch that touches nothing but the pod template's annotations. */
+interface TemplateStamp extends KubernetesObject {
+    spec: { template: { metadata: { annotations: Record<string, string> } } };
+}
+
+/**
+ * Restart one workload by stamping its pod template, which is what makes the controller roll its
+ * pods: the cluster replaces them at the kind's own update strategy rather than deleting any here.
+ * A strategic merge patch keeps every other field of the template as it is.
+ */
+export function restartResource(input: RestartInput): Promise<WriteResult> {
+    const op = 'resources.restart';
+    return withK8s(op, async () => {
+        assertContext(input.context, op);
+        const info = KIND_REGISTRY[input.kind];
+        const target = targetNamespace(input.kind, input.name, input.namespace, op)!;
+        const stamp: TemplateStamp = {
+            apiVersion: info.apiVersion,
+            kind: info.kind,
+            metadata: { name: input.name, namespace: target },
+            spec: { template: { metadata: { annotations: { [RESTART_ANNOTATION]: new Date().toISOString() } } } },
+        };
+        await apis().objects.patch(stamp);
+        return { kind: info.kind, name: input.name, namespace: target };
     });
 }
 

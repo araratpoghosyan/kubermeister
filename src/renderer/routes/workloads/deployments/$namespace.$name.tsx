@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { BoxesIcon, HeartIcon, HistoryIcon, LayersIcon, RefreshCwIcon, RotateCcwIcon } from 'lucide-react';
+import { BoxesIcon, HeartIcon, HistoryIcon, LayersIcon, RotateCcwIcon } from 'lucide-react';
 import { StatusBadge } from '@/components/data-display/status-badge';
 import { ComingSoonButton } from '@/components/coming-soon-button';
 import { RefreshButton } from '@/components/refresh-button';
@@ -8,6 +8,7 @@ import { eventsTab, labelsTab, ResourceDetail, type DetailTabGroup } from '@/com
 import { manifestTab } from '@/components/templates/manifest-panel';
 import { EditResourceButton } from '@/components/templates/edit-resource-button';
 import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
+import { RestartButton } from '@/components/templates/restart-button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ipcQueryKey, useIpcQuery } from '@/lib/query';
 import { useResource } from '@/lib/resources';
@@ -209,10 +210,7 @@ function DeploymentDetailPage() {
                             ipcQueryKey('resources.getYaml', { kind: 'Deployment', name, namespace }),
                         ]}
                     />
-                    <ComingSoonButton variant="outline" size="sm" tip="Restart arrives with write actions">
-                        <RefreshCwIcon />
-                        Restart
-                    </ComingSoonButton>
+                    <RestartButton kind="Deployment" name={name} namespace={namespace} />
                     <EditResourceButton />
                     <DeleteResourceButton
                         kind="Deployment"

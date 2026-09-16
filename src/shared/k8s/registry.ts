@@ -172,6 +172,14 @@ export function kindInfo(kind: Kind): KindInfo {
 }
 
 /**
+ * Kinds carrying a pod template whose controller rolls its pods when the template changes. A
+ * restart is a fresh stamp on that template, so a kind without one cannot be restarted at all.
+ */
+export const RESTARTABLE_KINDS = ['Deployment', 'StatefulSet', 'DaemonSet'] as const satisfies readonly Kind[];
+export const restartKindSchema = z.enum(RESTARTABLE_KINDS);
+export type RestartKind = (typeof RESTARTABLE_KINDS)[number];
+
+/**
  * Cluster-scoped kinds the app does not model but still meets: nodes have bespoke channels, the
  * rest may arrive in a manifest a user applies from the editor. The one list every scope decision
  * (namespace stamping, event lookup) consults, so two call sites can never disagree about a kind.
