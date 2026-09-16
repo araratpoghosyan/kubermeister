@@ -24,6 +24,7 @@ import { addDebugContainer, copyFromPod, copyToPod, startNodeShell } from '../k8
 import type { PodCopyResult, PodFileInput } from '../../shared/k8s/debug.js';
 import { getObjectYaml } from '../k8s/resources/manifest.js';
 import { getObjectMeta } from '../k8s/resources/meta.js';
+import { getRelated } from '../k8s/resources/related.js';
 import { getNamespaceDetail } from '../k8s/resources/namespaces.js';
 import {
     getCustomResourceInstance,
@@ -205,6 +206,7 @@ const handlers: Handlers = {
     'customResources.get': ({ crd, name, namespace }) => getCustomResourceInstance(crd, name, namespace),
     'customResources.getYaml': ({ crd, name, namespace }) => getCustomResourceYaml(crd, name, namespace),
     'resources.meta': ({ kind, name, namespace }) => getObjectMeta(kind, name, namespace),
+    'resources.related': ({ kind, name, namespace }) => getRelated(kind, name, namespace),
     'resources.getYaml': ({ kind, name, namespace }) => getObjectYaml(kind, name, namespace),
     'resources.describe': (input) => describeObject(input),
     'resources.create': (input) => createResource(input),

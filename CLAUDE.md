@@ -246,6 +246,11 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   the screen that made it, because user data belongs in the settings file. Which **columns** a list
   shows is the opposite — a preference about one window, like the theme — so it lives in
   `localStorage` per screen and every access is wrapped, since a private window throws.
+  **Related objects** (`resources.related`, `src/main/k8s/resources/related.ts`) answer what else an
+  object is tied to, and every link says _why_: "mounted as volume", "envFrom in web", "selects
+  these pods", "runs as". A relation that cannot be explained is a guess, so everything comes from
+  the object's own spec or from a selector that actually covers its labels — never from names that
+  merely look alike. Pods first, since a pod is where every relation is concrete.
   Deployments also have `deployments.replicaSets`, `deployments.rollouts`,
   `deployments.rolloutStatus` and `metrics.deploymentSeries` (the sum of the selected pods' tracked
   series), plus the two writes that belong to a rollout rather than to a kind in general:
