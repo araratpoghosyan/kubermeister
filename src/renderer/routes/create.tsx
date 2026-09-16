@@ -240,7 +240,10 @@ function CreateResourcePage() {
     // A pending template switch awaiting confirmation, or null when no dialog is open.
     const [pendingTemplate, setPendingTemplate] = useState<Template | null>(null);
     const fileInput = useRef<HTMLInputElement>(null);
-    const scope = `${context?.name ?? '—'} / ${namespace?.name ?? 'default'}`;
+    // Under "All namespaces" nothing is stamped onto the manifest: a namespaced object must name
+    // its own, or main refuses it rather than letting the client pick a default the user never saw.
+    const allNamespaces = namespace !== undefined && namespace?.name === null;
+    const scope = `${context?.name ?? '—'} / ${namespace?.name ?? (allNamespaces ? 'the namespace each manifest names' : '—')}`;
     const empty = text.trim().length === 0;
 
     const applyTemplate = (tpl: Template) => {
@@ -264,7 +267,9 @@ function CreateResourcePage() {
     const handleCreate = async () => {
         const created = await create.mutateAsync({ manifest: text }).catch(() => null);
         if (!created) return;
-        toast.success(`${created.kind} “${created.name}” created`);
+        toast.success(`${created.kind} “${created.name}” created`, {
+            description: created.namespace ? `in namespace ${created.namespace}` : undefined,
+        });
         const listPath = KIND_LIST_PATHS[created.kind];
         if (listPath) navigateTo(listPath);
     };

@@ -1,43 +1,27 @@
-import type { KubernetesObject, V1Scale } from '@kubernetes/client-node';
+import type { KubernetesObject, V1APIResource, V1Scale } from '@kubernetes/client-node';
 import { load as loadYaml } from 'js-yaml';
-import type { ManifestKind } from '../../../shared/k8s/manifest.js';
-import { KINDS, KIND_REGISTRY, type Kind } from '../../../shared/k8s/registry.js';
-import type { WriteResult } from '../../../shared/k8s/write.js';
-import { apis, getActiveNamespace, resolveObjectNamespace } from '../client.js';
+import { isClusterScopedManifestKind, type ManifestKind } from '../../../shared/k8s/manifest.js';
+import { isClusterScopedKindName, isKnownKindName, KIND_REGISTRY, type Kind } from '../../../shared/k8s/registry.js';
+import type {
+    DeleteInput,
+    ManifestIdentity,
+    ManifestWrite,
+    ScaleInput,
+    WriteResult,
+} from '../../../shared/k8s/write.js';
+import { activeContextName, apis, getActiveNamespace } from '../client.js';
 import { K8sError, withK8s } from '../errors.js';
 
 /*
  * The write path. Creates and replaces go through the generic object client, which derives the API
  * path from the manifest's own apiVersion and kind, so a custom resource rides the same call as a
  * Pod. Deletes and scales are addressed by kind instead, since there is no manifest to read it from.
+ *
+ * Every write fails closed on its target. The context the screen believed active must be the one
+ * main is on; a namespaced object must name its namespace, explicitly or through the active
+ * selection, and is never left to the client library's own default; and a replace must aim at the
+ * very object the editor was opened on.
  */
-
-/**
- * Cluster-scoped kinds the app does not model but a user may still apply from the editor. Unioned
- * with the registry's own, so the two can never disagree about a kind both know.
- */
-const EXTRA_CLUSTER_SCOPED_KINDS = [
-    'APIService',
-    'CSIDriver',
-    'CSINode',
-    'IngressClass',
-    'MutatingWebhookConfiguration',
-    'Namespace',
-    'PriorityClass',
-    'RuntimeClass',
-    'ValidatingWebhookConfiguration',
-    'VolumeAttachment',
-    'VolumeSnapshotClass',
-];
-
-/**
- * Kinds whose objects live outside any namespace. A manifest that omits one is given the active
- * namespace, but never for these, where a namespace would mean nothing.
- */
-export const CLUSTER_SCOPED_KINDS = new Set([
-    ...KINDS.filter((kind) => KIND_REGISTRY[kind].clusterScoped),
-    ...EXTRA_CLUSTER_SCOPED_KINDS,
-]);
 
 /** Parse a single-document manifest, rejecting anything unusable before the cluster sees it. */
 export function parseManifest(manifestYaml: string, op: string): KubernetesObject {
@@ -66,22 +50,82 @@ export function parseManifest(manifestYaml: string, op: string): KubernetesObjec
     return obj;
 }
 
-function applyActiveNamespace(spec: KubernetesObject): void {
-    if (spec.metadata!.namespace || CLUSTER_SCOPED_KINDS.has(spec.kind!)) return;
+/**
+ * The screen stamps every write with the context it was rendered under. Rows and detail pages can
+ * outlive a context switch by a refetch round trip, so without this check a delete issued from the
+ * previous cluster's rows would land on the same-named object in the new one.
+ */
+export function assertContext(expected: string, op: string): void {
+    const actual = activeContextName();
+    if (expected !== actual) {
+        throw new K8sError(
+            'conflict',
+            `This action was meant for context "${expected}" but the app is now on "${actual}". Reload the screen and try again.`,
+            op,
+        );
+    }
+}
+
+/**
+ * Whether a manifest kind lives in a namespace. Registered kinds and the known cluster-scoped
+ * extras answer from the registry; anything else, a custom resource typically, is asked of the API
+ * server's discovery so a cluster-scoped CR is never stamped with a namespace and a namespaced one
+ * never slips through without.
+ */
+async function isNamespacedKind(spec: KubernetesObject, op: string): Promise<boolean> {
+    const kind = spec.kind!;
+    if (isClusterScopedKindName(kind)) return false;
+    if (isKnownKindName(kind)) return true;
+    const resource = await discoverResource(spec.apiVersion!, kind);
+    if (!resource) throw new K8sError('invalid', `The API server does not know ${spec.apiVersion} ${kind}.`, op);
+    return resource.namespaced;
+}
+
+/**
+ * The object client keeps its discovery lookup to itself, but it is the one place that already
+ * knows how to resolve an apiVersion/kind pair against the server, so it is reused here rather
+ * than duplicated.
+ */
+function discoverResource(apiVersion: string, kind: string): Promise<V1APIResource | undefined> {
+    const client = apis().objects as unknown as {
+        resource: (apiVersion: string, kind: string) => Promise<V1APIResource | undefined>;
+    };
+    return client.resource(apiVersion, kind);
+}
+
+/**
+ * Give a namespaced manifest its namespace: the one it states, else the active selection. With
+ * neither, refuse rather than let the client library pick the kubeconfig's default, which the user
+ * never saw. A cluster-scoped kind is never given one.
+ */
+async function resolveManifestNamespace(spec: KubernetesObject, op: string): Promise<void> {
+    if (!(await isNamespacedKind(spec, op))) {
+        delete spec.metadata!.namespace;
+        return;
+    }
+    if (spec.metadata!.namespace) return;
     const active = getActiveNamespace();
-    if (active) spec.metadata!.namespace = active;
+    if (!active) {
+        throw new K8sError(
+            'invalid',
+            `${spec.kind} "${spec.metadata!.name ?? spec.metadata!.generateName}" needs a namespace: select one or add metadata.namespace.`,
+            op,
+        );
+    }
+    spec.metadata!.namespace = active;
 }
 
 /**
  * Create one object from a manifest. A dry run puts the object through the full admission chain and
  * persists nothing, which is how the editor checks a manifest before writing it.
  */
-export function createResource(manifestYaml: string, dryRun?: boolean): Promise<WriteResult> {
+export function createResource(input: ManifestWrite): Promise<WriteResult> {
     const op = 'resources.create';
     return withK8s(op, async () => {
-        const spec = parseManifest(manifestYaml, op);
-        applyActiveNamespace(spec);
-        const created = await apis().objects.create(spec, undefined, dryRun ? 'All' : undefined);
+        assertContext(input.context, op);
+        const spec = parseManifest(input.manifest, op);
+        await resolveManifestNamespace(spec, op);
+        const created = await apis().objects.create(spec, undefined, input.dryRun ? 'All' : undefined);
         return {
             kind: created.kind ?? spec.kind!,
             name: created.metadata?.name ?? spec.metadata!.name ?? '',
@@ -90,14 +134,30 @@ export function createResource(manifestYaml: string, dryRun?: boolean): Promise<
     });
 }
 
+/** The manifest must still describe the object the editor was opened on, or the save is aimed elsewhere. */
+function assertIdentity(spec: KubernetesObject, expect: ManifestIdentity, op: string): void {
+    const facts = factsFor(expect.kind);
+    const actual = `${spec.kind} "${spec.metadata?.namespace ? `${spec.metadata.namespace}/` : ''}${spec.metadata?.name}"`;
+    const wanted = `${facts.kind} "${expect.namespace ? `${expect.namespace}/` : ''}${expect.name}"`;
+    const sameNamespace = (spec.metadata?.namespace || undefined) === expect.namespace;
+    if (spec.kind !== facts.kind || spec.metadata?.name !== expect.name || !sameNamespace) {
+        throw new K8sError(
+            'invalid',
+            `The manifest describes ${actual}, but this editor is for ${wanted}. Restore the kind, name and namespace, or use Create resource for a new object.`,
+            op,
+        );
+    }
+}
+
 /**
  * Replace one object from a manifest. The manifest must carry the resource version it was read
  * with: that is what turns a concurrent change into a rejection instead of a silent overwrite.
  */
-export function replaceResource(manifestYaml: string, dryRun?: boolean): Promise<WriteResult> {
+export function replaceResource(input: ManifestWrite): Promise<WriteResult> {
     const op = 'resources.replace';
     return withK8s(op, async () => {
-        const spec = parseManifest(manifestYaml, op);
+        assertContext(input.context, op);
+        const spec = parseManifest(input.manifest, op);
         if (!spec.metadata?.name) {
             throw new K8sError('invalid', 'The manifest must declare metadata.name.', op);
         }
@@ -108,8 +168,9 @@ export function replaceResource(manifestYaml: string, dryRun?: boolean): Promise
                 op,
             );
         }
-        applyActiveNamespace(spec);
-        const updated = await apis().objects.replace(spec, undefined, dryRun ? 'All' : undefined);
+        if (input.expect) assertIdentity(spec, input.expect, op);
+        await resolveManifestNamespace(spec, op);
+        const updated = await apis().objects.replace(spec, undefined, input.dryRun ? 'All' : undefined);
         return {
             kind: updated.kind ?? spec.kind!,
             name: updated.metadata?.name ?? spec.metadata.name,
@@ -127,26 +188,38 @@ function factsFor(kind: ManifestKind): { apiVersion: string; kind: string; clust
 }
 
 /**
- * Delete one object. Destructive writes fail closed on their target: a namespaced kind is deleted
- * only in one concrete namespace, resolved from the caller or the active selection. With neither,
- * the request is refused rather than guessing which same-named object across the cluster was meant.
+ * The namespace a destructive write addresses. The caller names it for a namespaced kind and omits
+ * it for a cluster-scoped one; the active selection is never consulted, so a screen can only ever
+ * act on the object it displayed. The schema enforces the same rule at the boundary; this is the
+ * guard for direct callers.
  */
-export function deleteResource(kind: ManifestKind, name: string, namespace?: string): Promise<WriteResult> {
+function targetNamespace(
+    kind: ManifestKind,
+    name: string,
+    namespace: string | undefined,
+    op: string,
+): string | undefined {
+    const clusterScoped = isClusterScopedManifestKind(kind);
+    if (clusterScoped) return undefined;
+    if (!namespace) {
+        throw new K8sError('invalid', `A namespace is required to address ${factsFor(kind).kind} "${name}".`, op);
+    }
+    return namespace;
+}
+
+/** Delete one object in exactly the namespace the caller named. */
+export function deleteResource(input: DeleteInput): Promise<WriteResult> {
     const op = 'resources.delete';
     return withK8s(op, async () => {
-        const facts = factsFor(kind);
-        let target: string | undefined;
-        if (!facts.clusterScoped) {
-            target = resolveObjectNamespace(namespace) ?? undefined;
-            if (!target)
-                throw new K8sError('invalid', `A namespace is required to delete ${facts.kind} "${name}".`, op);
-        }
+        assertContext(input.context, op);
+        const facts = factsFor(input.kind);
+        const target = targetNamespace(input.kind, input.name, input.namespace, op);
         await apis().objects.delete({
             apiVersion: facts.apiVersion,
             kind: facts.kind,
-            metadata: { name, namespace: target },
+            metadata: { name: input.name, namespace: target },
         });
-        return { kind: facts.kind, name, namespace: target };
+        return { kind: facts.kind, name: input.name, namespace: target };
     });
 }
 
@@ -169,22 +242,20 @@ const SCALERS: Partial<Record<Kind, ScaleOps>> = {
 
 /**
  * Scale one object: read the current scale for its resource version, set the desired count and put
- * it back, so a concurrent change is rejected rather than lost. The namespace fails closed as a
- * delete does; both scalable kinds are namespaced.
+ * it back, so a concurrent change is rejected rather than lost. Both scalable kinds are namespaced.
  */
-export function scaleResource(kind: Kind, name: string, replicas: number, namespace?: string): Promise<WriteResult> {
+export function scaleResource(input: ScaleInput): Promise<WriteResult> {
     const op = 'resources.scale';
     return withK8s(op, async () => {
-        const info = KIND_REGISTRY[kind];
-        const ops = SCALERS[kind];
+        assertContext(input.context, op);
+        const info = KIND_REGISTRY[input.kind];
+        const ops = SCALERS[input.kind];
         if (!info.scalable || !ops) throw new K8sError('invalid', `${info.kind} cannot be scaled.`, op);
 
-        const target = resolveObjectNamespace(namespace) ?? undefined;
-        if (!target) throw new K8sError('invalid', `A namespace is required to scale ${info.kind} "${name}".`, op);
-
-        const scale = await ops.read(name, target);
-        scale.spec = { ...(scale.spec ?? {}), replicas };
-        await ops.replace(name, target, scale);
-        return { kind: info.kind, name, namespace: target };
+        const target = targetNamespace(input.kind, input.name, input.namespace, op)!;
+        const scale = await ops.read(input.name, target);
+        scale.spec = { ...(scale.spec ?? {}), replicas: input.replicas };
+        await ops.replace(input.name, target, scale);
+        return { kind: info.kind, name: input.name, namespace: target };
     });
 }

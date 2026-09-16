@@ -6,18 +6,25 @@ describe('query helpers', () => {
         expect(ipcQueryKey('nodes.get', { name: 'n1' })).toEqual(['nodes.get', { name: 'n1' }]);
     });
 
-    it('invalidates cluster-scoped queries and leaves app-level ones alone', async () => {
-        queryClient.setQueryData(['nodes.list', {}], []);
-        queryClient.setQueryData(['contexts.list', {}], []);
+    it('forgets cluster data on a scope switch, refetches the contexts and leaves app-level queries alone', async () => {
+        queryClient.setQueryData(['nodes.list', {}], [{ name: 'old-cluster-node' }]);
+        queryClient.setQueryData(['resources.list', { kind: 'Pod' }], { kind: 'Pod', items: [{ name: 'old' }] });
+        queryClient.setQueryData(['contexts.list', {}], [{ name: 'alpha' }]);
+        queryClient.setQueryData(['settings.get', {}], { version: 1 });
         queryClient.setQueryData(['app.info', {}], {});
         queryClient.setQueryData(['update.state', {}], {});
         queryClient.setQueryData(['startupChecks', {}], {});
         await invalidateClusterQueries();
-        const stale = (key: string) => queryClient.getQueryState([key, {}])?.isInvalidated ?? false;
-        expect(stale('nodes.list')).toBe(true);
-        expect(stale('contexts.list')).toBe(true);
-        expect(stale('app.info')).toBe(false);
-        expect(stale('update.state')).toBe(false);
-        expect(stale('startupChecks')).toBe(false);
+        const state = (key: unknown[]) => queryClient.getQueryState(key);
+        // Reset, not merely stale: a screen must not keep rendering the previous cluster's rows
+        // while a write could already reach the new one.
+        expect(state(['nodes.list', {}])?.data).toBeUndefined();
+        expect(state(['resources.list', { kind: 'Pod' }])?.data).toBeUndefined();
+        expect(state(['contexts.list', {}])?.data).toEqual([{ name: 'alpha' }]);
+        expect(state(['contexts.list', {}])?.isInvalidated).toBe(true);
+        for (const channel of ['settings.get', 'app.info', 'update.state', 'startupChecks']) {
+            expect(state([channel, {}])?.data).toBeDefined();
+            expect(state([channel, {}])?.isInvalidated).toBe(false);
+        }
     });
 });

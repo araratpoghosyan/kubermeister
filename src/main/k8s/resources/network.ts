@@ -207,12 +207,7 @@ export function listServices(namespace?: string): Promise<Service[]> {
 }
 
 function readService(name: string, namespace?: string): Promise<V1Service | undefined> {
-    return getNamespaced(
-        name,
-        namespace,
-        (n, ns) => apis().core.readNamespacedService({ name: n, namespace: ns }),
-        (fieldSelector) => apis().core.listServiceForAllNamespaces({ fieldSelector }),
-    );
+    return getNamespaced(name, namespace, (n, ns) => apis().core.readNamespacedService({ name: n, namespace: ns }));
 }
 
 export function getService(name: string, namespace?: string): Promise<ServiceDetail | null> {
@@ -232,11 +227,8 @@ export function getServicePorts(name: string, namespace: string): Promise<Servic
 /** The endpoints object shares the service's name, so the backing pods come from one read. */
 export function getServiceEndpoints(name: string, namespace: string): Promise<ServiceEndpoint[]> {
     return withK8s('services.endpoints', async () => {
-        const endpoints = await getNamespaced(
-            name,
-            namespace,
-            (n, ns) => apis().core.readNamespacedEndpoints({ name: n, namespace: ns }),
-            (fieldSelector) => apis().core.listEndpointsForAllNamespaces({ fieldSelector }),
+        const endpoints = await getNamespaced(name, namespace, (n, ns) =>
+            apis().core.readNamespacedEndpoints({ name: n, namespace: ns }),
         );
         return endpoints ? toServiceEndpoints(endpoints) : [];
     });
@@ -254,12 +246,7 @@ export function listIngresses(namespace?: string): Promise<Ingress[]> {
 }
 
 function readIngress(name: string, namespace?: string): Promise<V1Ingress | undefined> {
-    return getNamespaced(
-        name,
-        namespace,
-        (n, ns) => apis().net.readNamespacedIngress({ name: n, namespace: ns }),
-        (fieldSelector) => apis().net.listIngressForAllNamespaces({ fieldSelector }),
-    );
+    return getNamespaced(name, namespace, (n, ns) => apis().net.readNamespacedIngress({ name: n, namespace: ns }));
 }
 
 export function getIngress(name: string, namespace?: string): Promise<IngressDetail | null> {
@@ -289,11 +276,8 @@ export function listEndpoints(namespace?: string): Promise<Endpoints[]> {
 
 export function getEndpoints(name: string, namespace?: string): Promise<EndpointsDetail | null> {
     return withK8s('resources.get', async () => {
-        const endpoints = await getNamespaced(
-            name,
-            namespace,
-            (n, ns) => apis().core.readNamespacedEndpoints({ name: n, namespace: ns }),
-            (fieldSelector) => apis().core.listEndpointsForAllNamespaces({ fieldSelector }),
+        const endpoints = await getNamespaced(name, namespace, (n, ns) =>
+            apis().core.readNamespacedEndpoints({ name: n, namespace: ns }),
         );
         return endpoints ? toEndpointsDetail(endpoints) : null;
     });
@@ -312,11 +296,8 @@ export function listNetworkPolicies(namespace?: string): Promise<NetworkPolicy[]
 
 export function getNetworkPolicy(name: string, namespace?: string): Promise<NetworkPolicyDetail | null> {
     return withK8s('resources.get', async () => {
-        const policy = await getNamespaced(
-            name,
-            namespace,
-            (n, ns) => apis().net.readNamespacedNetworkPolicy({ name: n, namespace: ns }),
-            (fieldSelector) => apis().net.listNetworkPolicyForAllNamespaces({ fieldSelector }),
+        const policy = await getNamespaced(name, namespace, (n, ns) =>
+            apis().net.readNamespacedNetworkPolicy({ name: n, namespace: ns }),
         );
         return policy ? toNetworkPolicyDetail(policy) : null;
     });

@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { manifestKindSchema } from './manifest.js';
+import { manifestKindSchema, refineManifestTarget } from './manifest.js';
+import { namespaceNameSchema } from './names.js';
 import { kindSchema } from './registry.js';
 
 /** What a write reports back: enough to name the object in a toast and invalidate its screens. */
@@ -9,26 +10,52 @@ export const writeResultSchema = z.object({
     namespace: z.string().optional(),
 });
 
+/**
+ * Every write names the context the screen believes is active. Main compares it with the context
+ * it is really on and refuses a mismatch, so a write issued from rows that were rendered before a
+ * context switch can never land in the cluster the switch moved to.
+ */
+const scopeStamp = { context: z.string().min(1) };
+
+/** The object a manifest edit started from; a save whose manifest names anything else is refused. */
+export const manifestIdentitySchema = z
+    .object({
+        kind: manifestKindSchema,
+        name: z.string().min(1),
+        namespace: namespaceNameSchema.optional(),
+    })
+    .superRefine(refineManifestTarget);
+
 export const manifestWriteSchema = z.object({
+    ...scopeStamp,
     manifest: z.string().min(1),
     /** Run the object through admission without persisting it. */
     dryRun: z.boolean().optional(),
+    /** For a replace: the object being edited, pinned so the manifest cannot be aimed elsewhere. */
+    expect: manifestIdentitySchema.optional(),
 });
 
-export const deleteInputSchema = z.object({
-    kind: manifestKindSchema,
-    name: z.string().min(1),
-    namespace: z.string().min(1).optional(),
-});
+export const deleteInputSchema = z
+    .object({
+        ...scopeStamp,
+        kind: manifestKindSchema,
+        name: z.string().min(1),
+        namespace: namespaceNameSchema.optional(),
+    })
+    .superRefine(refineManifestTarget);
 
-export const scaleInputSchema = z.object({
-    kind: kindSchema,
-    name: z.string().min(1),
-    namespace: z.string().min(1).optional(),
-    replicas: z.number().int().min(0).max(1000),
-});
+export const scaleInputSchema = z
+    .object({
+        ...scopeStamp,
+        kind: kindSchema,
+        name: z.string().min(1),
+        namespace: namespaceNameSchema.optional(),
+        replicas: z.number().int().min(0).max(1000),
+    })
+    .superRefine(refineManifestTarget);
 
 export type WriteResult = z.infer<typeof writeResultSchema>;
+export type ManifestIdentity = z.infer<typeof manifestIdentitySchema>;
 export type ManifestWrite = z.infer<typeof manifestWriteSchema>;
 export type DeleteInput = z.infer<typeof deleteInputSchema>;
 export type ScaleInput = z.infer<typeof scaleInputSchema>;

@@ -10,7 +10,8 @@ const sampler = {
 vi.mock('../../../src/main/k8s/sampler.js', () => sampler);
 const apps = { readNamespacedDeployment: vi.fn() };
 const core = { listNamespacedPod: vi.fn() };
-vi.mock('../../../src/main/k8s/client.js', () => ({
+vi.mock('../../../src/main/k8s/client.js', async () => ({
+    ...(await vi.importActual<typeof import('../../../src/main/k8s/client.js')>('../../../src/main/k8s/client.js')),
     apis: () => ({ apps, core }),
     readOrNull: async <T>(read: () => Promise<T>) => {
         try {
@@ -69,5 +70,13 @@ describe('metrics readers', () => {
         expect(sampler.trackResourceSeries).toHaveBeenCalledWith('team-a', 'web-1');
         apps.readNamespacedDeployment.mockRejectedValue(new Error('404'));
         await expect(metrics.getDeploymentSeries('team-a', 'gone')).resolves.toEqual({ cpu: [], mem: [] });
+    });
+
+    it('lists no pods when a selector label could rewrite the query', async () => {
+        apps.readNamespacedDeployment.mockResolvedValue({
+            spec: { selector: { matchLabels: { app: 'web,tier!=fe' } } },
+        });
+        await expect(metrics.getDeploymentSeries('team-a', 'web')).resolves.toEqual({ cpu: [], mem: [] });
+        expect(core.listNamespacedPod).not.toHaveBeenCalled();
     });
 });

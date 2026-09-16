@@ -106,6 +106,13 @@ describe('startResourceWatch', () => {
     });
     afterEach(() => vi.useRealTimers());
 
+    it('refuses a malformed namespace before it can reach the watch path', async () => {
+        for (const namespace of ['', 'a/pods/../deployments', 'Team-A', 'a?watch=false']) {
+            await expect(startResourceWatch({ kind: 'Pod', namespace }, vi.fn())).rejects.toThrow();
+        }
+        expect(makeInformer).not.toHaveBeenCalled();
+    });
+
     it('watches the resolved namespace path with the matching list function', async () => {
         const send = vi.fn();
         await startResourceWatch({ kind: 'Pod', namespace: 'explicit' }, send);

@@ -21,6 +21,13 @@ export const namespaceSchema = z.object({
     tone: namespaceToneSchema,
 });
 
+/**
+ * The active selection: `name` is null under "All namespaces", never a display label, so no caller
+ * can mistake the label for a namespace and hand it to a cluster call.
+ */
+export const activeNamespaceSchema = namespaceSchema.extend({ name: z.string().nullable() });
+
 export type Cluster = z.infer<typeof clusterSchema>;
 export type NamespaceTone = z.infer<typeof namespaceToneSchema>;
 export type Namespace = z.infer<typeof namespaceSchema>;
+export type ActiveNamespace = z.infer<typeof activeNamespaceSchema>;

@@ -165,15 +165,49 @@ describe('namespace helpers', () => {
         await expect(readOrNull(() => Promise.resolve('found'))).resolves.toBe('found');
     });
 
-    it('getNamespaced reads directly with a namespace and lists by name without one', async () => {
+    it('getNamespaced reads directly in the explicit or active namespace and fails closed without one', async () => {
         const { getNamespaced, setActiveNamespace } = await loadClient();
         const readOne = vi.fn(async (name: string, ns: string) => `${ns}/${name}`);
-        const listByName = vi.fn(async (selector: string) => ({ items: [`listed:${selector}`] }));
-        expect(await getNamespaced('web', 'explicit', readOne, listByName)).toBe('explicit/web');
-        expect(await getNamespaced('web', undefined, readOne, listByName)).toBe('team-a/web');
+        expect(await getNamespaced('web', 'explicit', readOne)).toBe('explicit/web');
+        expect(await getNamespaced('web', undefined, readOne)).toBe('team-a/web');
         setActiveNamespace(null);
-        expect(await getNamespaced('web', undefined, readOne, listByName)).toBe('listed:metadata.name=web');
-        expect(await getNamespaced('web,evil=1', undefined, readOne, listByName)).toBeUndefined();
-        expect(listByName).toHaveBeenCalledTimes(1);
+        // No namespace means not found: the cluster is never searched for a same-named object.
+        expect(await getNamespaced('web', undefined, readOne)).toBeUndefined();
+        expect(readOne).toHaveBeenCalledTimes(2);
+    });
+
+    it('isSafeLabelKey and isSafeLabelValue accept real labels and reject selector syntax', async () => {
+        const { isSafeLabelKey, isSafeLabelValue } = await loadClient();
+        expect(isSafeLabelKey('app.kubernetes.io/name')).toBe(true);
+        expect(isSafeLabelValue('')).toBe(true);
+        expect(isSafeLabelValue('web_1.2-3')).toBe(true);
+        for (const bad of ['a,b', 'a=b', 'a!b', 'a b']) {
+            expect(isSafeLabelKey(bad)).toBe(false);
+            expect(isSafeLabelValue(bad)).toBe(false);
+        }
+    });
+
+    it('only accepts a well-formed namespace name as the active selection', async () => {
+        const { setActiveNamespace, getActiveNamespace } = await loadClient();
+        for (const bad of ['', 'Team-A', 'a b', 'ns/other', 'a,b']) {
+            setActiveNamespace(bad);
+            expect(getActiveNamespace()).toBeNull();
+        }
+        setActiveNamespace('kube-system');
+        expect(getActiveNamespace()).toBe('kube-system');
+    });
+
+    it('drops a malformed remembered namespace at startup instead of activating it', async () => {
+        withSettings({ lastContext: 'beta', lastNamespace: '' });
+        expect((await loadClient()).getActiveNamespace()).toBeNull();
+        withSettings({ lastContext: 'alpha', lastNamespace: 'Not A Namespace' });
+        expect((await loadClient()).getActiveNamespace()).toBeNull();
+    });
+
+    it('names the context every call currently goes to', async () => {
+        const { activeContextName, kubeConfig } = await loadClient();
+        expect(activeContextName()).toBe('alpha');
+        kubeConfig().setCurrentContext('beta');
+        expect(activeContextName()).toBe('beta');
     });
 });

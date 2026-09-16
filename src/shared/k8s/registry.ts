@@ -170,3 +170,38 @@ export const kindSchema = z.enum(KINDS);
 export function kindInfo(kind: Kind): KindInfo {
     return KIND_REGISTRY[kind];
 }
+
+/**
+ * Cluster-scoped kinds the app does not model but still meets: nodes have bespoke channels, the
+ * rest may arrive in a manifest a user applies from the editor. The one list every scope decision
+ * (namespace stamping, event lookup) consults, so two call sites can never disagree about a kind.
+ */
+export const CLUSTER_SCOPED_EXTRA_KINDS: readonly string[] = [
+    'APIService',
+    'CSIDriver',
+    'CSINode',
+    'IngressClass',
+    'MutatingWebhookConfiguration',
+    'Namespace',
+    'Node',
+    'PriorityClass',
+    'RuntimeClass',
+    'ValidatingWebhookConfiguration',
+    'VolumeAttachment',
+    'VolumeSnapshotClass',
+];
+
+const CLUSTER_SCOPED_KIND_NAMES: ReadonlySet<string> = new Set([
+    ...KINDS.filter((kind) => KIND_REGISTRY[kind].clusterScoped).map((kind) => KIND_REGISTRY[kind].kind),
+    ...CLUSTER_SCOPED_EXTRA_KINDS,
+]);
+
+/** Whether a manifest `kind` is known to live outside any namespace. Unknown kinds answer false. */
+export function isClusterScopedKindName(kind: string): boolean {
+    return CLUSTER_SCOPED_KIND_NAMES.has(kind);
+}
+
+/** Whether a manifest `kind` names a kind the app knows at all, registered or in the extras list. */
+export function isKnownKindName(kind: string): boolean {
+    return CLUSTER_SCOPED_KIND_NAMES.has(kind) || KINDS.some((k) => KIND_REGISTRY[k].kind === kind);
+}

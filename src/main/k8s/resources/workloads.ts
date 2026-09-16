@@ -155,12 +155,7 @@ export function listDeployments(namespace?: string): Promise<Deployment[]> {
 }
 
 function readDeployment(name: string, namespace?: string): Promise<V1Deployment | undefined> {
-    return getNamespaced(
-        name,
-        namespace,
-        (n, ns) => apis().apps.readNamespacedDeployment({ name: n, namespace: ns }),
-        (fieldSelector) => apis().apps.listDeploymentForAllNamespaces({ fieldSelector }),
-    );
+    return getNamespaced(name, namespace, (n, ns) => apis().apps.readNamespacedDeployment({ name: n, namespace: ns }));
 }
 
 export function getDeployment(name: string, namespace?: string): Promise<DeploymentDetail | null> {
@@ -206,11 +201,8 @@ export function listStatefulSets(namespace?: string): Promise<StatefulSet[]> {
 
 export function getStatefulSet(name: string, namespace?: string): Promise<StatefulSetDetail | null> {
     return withK8s('resources.get', async () => {
-        const s = await getNamespaced(
-            name,
-            namespace,
-            (n, ns) => apis().apps.readNamespacedStatefulSet({ name: n, namespace: ns }),
-            (fieldSelector) => apis().apps.listStatefulSetForAllNamespaces({ fieldSelector }),
+        const s = await getNamespaced(name, namespace, (n, ns) =>
+            apis().apps.readNamespacedStatefulSet({ name: n, namespace: ns }),
         );
         return s ? toStatefulSetDetail(s) : null;
     });
@@ -229,11 +221,8 @@ export function listDaemonSets(namespace?: string): Promise<DaemonSet[]> {
 
 export function getDaemonSet(name: string, namespace?: string): Promise<DaemonSetDetail | null> {
     return withK8s('resources.get', async () => {
-        const d = await getNamespaced(
-            name,
-            namespace,
-            (n, ns) => apis().apps.readNamespacedDaemonSet({ name: n, namespace: ns }),
-            (fieldSelector) => apis().apps.listDaemonSetForAllNamespaces({ fieldSelector }),
+        const d = await getNamespaced(name, namespace, (n, ns) =>
+            apis().apps.readNamespacedDaemonSet({ name: n, namespace: ns }),
         );
         return d ? toDaemonSetDetail(d) : null;
     });
@@ -329,11 +318,8 @@ export function listJobs(namespace?: string): Promise<Job[]> {
 
 export function getJob(name: string, namespace?: string): Promise<JobDetail | null> {
     return withK8s('resources.get', async () => {
-        const job = await getNamespaced(
-            name,
-            namespace,
-            (n, ns) => apis().batch.readNamespacedJob({ name: n, namespace: ns }),
-            (fieldSelector) => apis().batch.listJobForAllNamespaces({ fieldSelector }),
+        const job = await getNamespaced(name, namespace, (n, ns) =>
+            apis().batch.readNamespacedJob({ name: n, namespace: ns }),
         );
         return job ? toJobDetail(job) : null;
     });
@@ -352,11 +338,8 @@ export function listCronJobs(namespace?: string): Promise<CronJob[]> {
 
 export function getCronJob(name: string, namespace?: string): Promise<CronJobDetail | null> {
     return withK8s('resources.get', async () => {
-        const cronJob = await getNamespaced(
-            name,
-            namespace,
-            (n, ns) => apis().batch.readNamespacedCronJob({ name: n, namespace: ns }),
-            (fieldSelector) => apis().batch.listCronJobForAllNamespaces({ fieldSelector }),
+        const cronJob = await getNamespaced(name, namespace, (n, ns) =>
+            apis().batch.readNamespacedCronJob({ name: n, namespace: ns }),
         );
         return cronJob ? toCronJobDetail(cronJob) : null;
     });
@@ -375,11 +358,8 @@ export function listAutoscalers(namespace?: string): Promise<Autoscaler[]> {
 
 export function getAutoscaler(name: string, namespace?: string): Promise<AutoscalerDetail | null> {
     return withK8s('resources.get', async () => {
-        const autoscaler = await getNamespaced(
-            name,
-            namespace,
-            (n, ns) => apis().hpa.readNamespacedHorizontalPodAutoscaler({ name: n, namespace: ns }),
-            (fieldSelector) => apis().hpa.listHorizontalPodAutoscalerForAllNamespaces({ fieldSelector }),
+        const autoscaler = await getNamespaced(name, namespace, (n, ns) =>
+            apis().hpa.readNamespacedHorizontalPodAutoscaler({ name: n, namespace: ns }),
         );
         return autoscaler ? toAutoscalerDetail(autoscaler) : null;
     });

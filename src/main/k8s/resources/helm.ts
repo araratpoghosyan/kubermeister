@@ -11,6 +11,8 @@ import { ago } from '../format.js';
  * base64(gzip(json)), and one Secret exists per revision. Everything here is read-only decoding.
  */
 const HELM_SECRET_TYPE = 'helm.sh/release.v1';
+/** Ceiling for one decoded release. Secrets cap at about 1 MiB and gzip can inflate a thousandfold. */
+const MAX_RELEASE_BYTES = 32 * 1024 * 1024;
 
 interface HelmReleaseData {
     name?: string;
@@ -42,16 +44,24 @@ export function decodeRelease(secret: V1Secret): HelmReleaseData | null {
     if (!stored) return null;
     try {
         const gzipped = Buffer.from(Buffer.from(stored, 'base64').toString('utf8'), 'base64');
-        return JSON.parse(gunzipSync(gzipped).toString('utf8')) as HelmReleaseData;
+        return JSON.parse(
+            gunzipSync(gzipped, { maxOutputLength: MAX_RELEASE_BYTES }).toString('utf8'),
+        ) as HelmReleaseData;
     } catch {
+        // Undecodable, or larger than any real release: a corrupt or hostile Secret is skipped, not inflated.
         return null;
     }
 }
 
-async function decodedReleases(): Promise<HelmReleaseData[]> {
+/**
+ * Release Secrets: the explicit namespace when a caller has one, else the active selection, else
+ * every namespace. The per-release reads always pass one, so a release is looked up where its
+ * screen says it is rather than where the top bar happens to point.
+ */
+async function decodedReleases(namespace?: string): Promise<HelmReleaseData[]> {
     const fieldSelector = `type=${HELM_SECRET_TYPE}`;
     const { items } = await listItems(
-        undefined,
+        namespace,
         (ns) => apis().core.listNamespacedSecret({ namespace: ns, fieldSelector }),
         () => apis().core.listSecretForAllNamespaces({ fieldSelector }),
     );
@@ -126,25 +136,27 @@ export function toCharts(releases: HelmReleaseData[]): HelmChart[] {
     return [...byChart.values()];
 }
 
-function matching(releases: HelmReleaseData[], name: string, namespace?: string): HelmReleaseData[] {
-    return releases.filter((release) => release.name === name && (!namespace || release.namespace === namespace));
+function matching(releases: HelmReleaseData[], name: string, namespace: string): HelmReleaseData[] {
+    return releases.filter((release) => release.name === name && release.namespace === namespace);
 }
 
 export function listReleases(): Promise<Release[]> {
     return withK8s('releases.list', async () => latestPerRelease(await decodedReleases()).map((r) => toRelease(r)));
 }
 
-export function getRelease(name: string, namespace?: string): Promise<Release | null> {
+export function getRelease(name: string, namespace: string): Promise<Release | null> {
     return withK8s('releases.get', async () => {
-        const matches = matching(await decodedReleases(), name, namespace);
+        const matches = matching(await decodedReleases(namespace), name, namespace);
         if (matches.length === 0) return null;
         const latest = matches.reduce((a, b) => ((b.version ?? 0) > (a.version ?? 0) ? b : a));
         return toRelease(latest, releaseValues(latest));
     });
 }
 
-export function getReleaseRevisions(name: string, namespace?: string): Promise<ReleaseRevision[]> {
-    return withK8s('releases.revisions', async () => toRevisions(matching(await decodedReleases(), name, namespace)));
+export function getReleaseRevisions(name: string, namespace: string): Promise<ReleaseRevision[]> {
+    return withK8s('releases.revisions', async () =>
+        toRevisions(matching(await decodedReleases(namespace), name, namespace)),
+    );
 }
 
 export function listHelmCharts(): Promise<HelmChart[]> {

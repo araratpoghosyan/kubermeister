@@ -54,6 +54,10 @@ const writeMod = {
     scaleResource: vi.fn(),
 };
 const alertsMod = { listAlerts: vi.fn() };
+const samplerMod = { resetHistory: vi.fn() };
+const streamsMod = { endAllStreams: vi.fn() };
+vi.mock('../../../src/main/k8s/sampler.js', () => samplerMod);
+vi.mock('../../../src/main/ipc/streams.js', () => streamsMod);
 vi.mock('../../../src/main/updater.js', () => updater);
 vi.mock('../../../src/main/k8s/client.js', () => client);
 vi.mock('../../../src/main/k8s/context.js', () => context);
@@ -156,6 +160,29 @@ describe('registerHandlers', () => {
         expect(context.setNamespace).toHaveBeenCalledWith('x');
     });
 
+    it('ends every live stream and drops sampled usage before a context switch takes effect', async () => {
+        const order: string[] = [];
+        streamsMod.endAllStreams.mockImplementation(() => order.push('streams'));
+        samplerMod.resetHistory.mockImplementation(() => order.push('sampler'));
+        context.setContext.mockImplementation(() => {
+            order.push('switch');
+            return { ...alpha, name: 'beta' };
+        });
+        await invoke('context.set', { name: 'beta' });
+        expect(order).toEqual(['streams', 'sampler', 'switch']);
+        expect(streamsMod.endAllStreams).toHaveBeenCalledWith('The context changed to "beta"');
+        // A namespace switch changes nothing about the connection, so streams stay up.
+        await invoke('namespace.set', { namespace: 'x' });
+        expect(streamsMod.endAllStreams).toHaveBeenCalledOnce();
+    });
+
+    it('refuses a malformed namespace before it can become the active selection', async () => {
+        for (const namespace of ['', 'Team-A', 'a b', 'ns/other']) {
+            await expect(invoke('namespace.set', { namespace })).rejects.toThrow();
+        }
+        expect(context.setNamespace).not.toHaveBeenCalled();
+    });
+
     it('runs the startup checks', async () => {
         startup.runStartupChecks.mockResolvedValue({ checks: [], ok: true });
         await expect(invoke('startupChecks', {})).resolves.toEqual({ checks: [], ok: true });
@@ -178,6 +205,9 @@ describe('registerHandlers', () => {
         );
         expect(store.updateSettings).toHaveBeenCalledWith({ connection: { kubeconfigPath: '/home/u/.kube/other' } });
         expect(client.reloadKubeConfig).toHaveBeenCalledOnce();
+        // Streams and sampled usage belong to the kubeconfig that was just left.
+        expect(streamsMod.endAllStreams).toHaveBeenCalledWith('The kubeconfig changed');
+        expect(samplerMod.resetHistory).toHaveBeenCalledOnce();
     });
 
     it('leaves settings alone when the picker is cancelled', async () => {
@@ -390,10 +420,14 @@ describe('registerHandlers', () => {
             revision: 2,
         });
         expect(helmMod.getRelease).toHaveBeenCalledWith('traefik', 'kube-system');
-        await expect(invoke('releases.revisions', { name: 'traefik' })).resolves.toHaveLength(1);
-        expect(helmMod.getReleaseRevisions).toHaveBeenCalledWith('traefik', undefined);
+        await expect(invoke('releases.revisions', { name: 'traefik', namespace: 'kube-system' })).resolves.toHaveLength(
+            1,
+        );
+        expect(helmMod.getReleaseRevisions).toHaveBeenCalledWith('traefik', 'kube-system');
         await expect(invoke('helmCharts.list', {})).resolves.toHaveLength(1);
-        await expect(invoke('releases.get', { name: '' })).rejects.toThrow();
+        await expect(invoke('releases.get', { name: '', namespace: 'kube-system' })).rejects.toThrow();
+        // A release is looked up where its screen says it is, so the namespace is not optional.
+        await expect(invoke('releases.get', { name: 'traefik' })).rejects.toThrow();
     });
 
     it('forwards the manifest read and rejects an unknown kind', async () => {
@@ -415,19 +449,30 @@ describe('registerHandlers', () => {
         writeMod.deleteResource.mockResolvedValue(result);
         writeMod.scaleResource.mockResolvedValue({ kind: 'Deployment', name: 'web', namespace: 'team-a' });
 
-        await expect(invoke('resources.create', { manifest: 'kind: ConfigMap' })).resolves.toMatchObject(result);
-        expect(writeMod.createResource).toHaveBeenCalledWith('kind: ConfigMap', undefined);
-        await expect(invoke('resources.replace', { manifest: 'kind: ConfigMap', dryRun: true })).resolves.toBeTruthy();
-        expect(writeMod.replaceResource).toHaveBeenCalledWith('kind: ConfigMap', true);
-        await expect(invoke('resources.delete', { kind: 'ConfigMap', name: 'app-config' })).resolves.toBeTruthy();
-        expect(writeMod.deleteResource).toHaveBeenCalledWith('ConfigMap', 'app-config', undefined);
-        await expect(invoke('resources.scale', { kind: 'Deployment', name: 'web', replicas: 3 })).resolves.toBeTruthy();
-        expect(writeMod.scaleResource).toHaveBeenCalledWith('Deployment', 'web', 3, undefined);
+        const create = { context: 'alpha', manifest: 'kind: ConfigMap' };
+        await expect(invoke('resources.create', create)).resolves.toMatchObject(result);
+        expect(writeMod.createResource).toHaveBeenCalledWith(create);
+        const replace = { context: 'alpha', manifest: 'kind: ConfigMap', dryRun: true };
+        await expect(invoke('resources.replace', replace)).resolves.toBeTruthy();
+        expect(writeMod.replaceResource).toHaveBeenCalledWith(replace);
+        const del = { context: 'alpha', kind: 'ConfigMap', name: 'app-config', namespace: 'team-a' };
+        await expect(invoke('resources.delete', del)).resolves.toBeTruthy();
+        expect(writeMod.deleteResource).toHaveBeenCalledWith(del);
+        const scale = { context: 'alpha', kind: 'Deployment', name: 'web', namespace: 'team-a', replicas: 3 };
+        await expect(invoke('resources.scale', scale)).resolves.toBeTruthy();
+        expect(writeMod.scaleResource).toHaveBeenCalledWith(scale);
 
-        await expect(invoke('resources.create', { manifest: '' })).rejects.toThrow();
-        await expect(invoke('resources.scale', { kind: 'Deployment', name: 'web', replicas: -1 })).rejects.toThrow();
+        await expect(invoke('resources.create', { context: 'alpha', manifest: '' })).rejects.toThrow();
+        // Without the context stamp main cannot tell which cluster the screen meant.
+        await expect(invoke('resources.create', { manifest: 'kind: ConfigMap' })).rejects.toThrow();
+        // A namespaced kind must name its namespace; the active one is never assumed for a write.
+        await expect(invoke('resources.delete', { ...del, namespace: undefined })).rejects.toThrow();
+        await expect(invoke('resources.scale', { ...scale, namespace: undefined })).rejects.toThrow();
+        await expect(invoke('resources.scale', { ...scale, replicas: -1 })).rejects.toThrow();
         // A node has no scale subresource and is not a registered kind, so the contract refuses it.
-        await expect(invoke('resources.scale', { kind: 'Node', name: 'node-1', replicas: 1 })).rejects.toThrow();
+        await expect(invoke('resources.scale', { ...scale, kind: 'Node', name: 'node-1' })).rejects.toThrow();
+        expect(writeMod.deleteResource).toHaveBeenCalledOnce();
+        expect(writeMod.scaleResource).toHaveBeenCalledOnce();
     });
 
     it('resets to the default kubeconfig and reloads', async () => {
@@ -436,5 +481,7 @@ describe('registerHandlers', () => {
         });
         expect(store.updateSettings).toHaveBeenCalledWith({ connection: { kubeconfigPath: null } });
         expect(client.reloadKubeConfig).toHaveBeenCalledOnce();
+        expect(streamsMod.endAllStreams).toHaveBeenCalledWith('The kubeconfig changed');
+        expect(samplerMod.resetHistory).toHaveBeenCalledOnce();
     });
 });

@@ -105,9 +105,13 @@ export function ManifestPanel({ kind, name, namespace }: ManifestPanelProps) {
         withResolver: true,
     });
 
+    // The object this panel was opened on. Main refuses a manifest that names any other object, so
+    // an edited name or a removed namespace line cannot turn a save into a write elsewhere.
+    const expect = { kind, name, namespace };
+
     const handleSave = async () => {
         // The global mutation toast already reports the failure; a conflict additionally arms the banner.
-        const updated = await replace.mutateAsync({ manifest: text }).catch((error: unknown) => {
+        const updated = await replace.mutateAsync({ manifest: text, expect }).catch((error: unknown) => {
             if (describeError(error).kind === 'conflict') setConflict(true);
             return null;
         });
@@ -117,7 +121,7 @@ export function ManifestPanel({ kind, name, namespace }: ManifestPanelProps) {
     };
 
     const handleDryRun = async () => {
-        const checked = await replace.mutateAsync({ manifest: text, dryRun: true }).catch(() => null);
+        const checked = await replace.mutateAsync({ manifest: text, dryRun: true, expect }).catch(() => null);
         if (!checked) return;
         toast.success('Dry run passed', { description: `${checked.kind} “${checked.name}” is valid.` });
     };

@@ -1,6 +1,6 @@
 import type { V1Namespace, V1Node, V1Pod } from '@kubernetes/client-node';
 import type { KubeContext } from '../../../shared/k8s/contexts.js';
-import type { Cluster, Namespace, NamespaceTone } from '../../../shared/k8s/cluster.js';
+import type { ActiveNamespace, Cluster, Namespace, NamespaceTone } from '../../../shared/k8s/cluster.js';
 import { apis, getActiveNamespace } from '../client.js';
 import { getCurrentContext, listContexts } from '../context.js';
 import { withK8s } from '../errors.js';
@@ -92,14 +92,17 @@ export function listNamespaces(): Promise<Namespace[]> {
     });
 }
 
-/** The active namespace with its pod count, or the all-namespaces total when none is selected. */
-export function getActiveNamespaceInfo(): Promise<Namespace | null> {
+/**
+ * The active namespace with its pod count, or a null name with the all-namespaces total when none
+ * is selected. The renderer labels the null case; main never hands out a label as a name.
+ */
+export function getActiveNamespaceInfo(): Promise<ActiveNamespace | null> {
     return withK8s('namespace.active', async () => {
         const active = getActiveNamespace();
         const podCounts = await podsPerNamespace();
         if (!active) {
             const total = [...podCounts.values()].reduce((sum, n) => sum + n, 0);
-            return { name: 'All namespaces', pods: total, tone: 'accent' };
+            return { name: null, pods: total, tone: 'accent' };
         }
         return { name: active, pods: podCounts.get(active) ?? 0, tone: 'accent' };
     });

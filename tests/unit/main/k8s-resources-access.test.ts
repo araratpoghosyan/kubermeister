@@ -50,11 +50,10 @@ const client = {
         name: string,
         namespace: string | undefined,
         readOne: (name: string, ns: string) => Promise<T>,
-        listByName: (selector: string) => Promise<{ items: T[] }>,
     ) => {
         const ns = client.resolveObjectNamespace(namespace);
-        if (ns) return client.readOrNull(() => readOne(name, ns));
-        return (await listByName(`metadata.name=${name}`)).items[0];
+        if (!ns) return undefined;
+        return client.readOrNull(() => readOne(name, ns));
     },
 };
 vi.mock('../../../src/main/k8s/client.js', () => client);
@@ -211,18 +210,17 @@ describe('access readers', () => {
         expect(await access.getRole('ghost')).toBeNull();
     });
 
-    it('finds a namespaced object by field selector when no namespace is active', async () => {
+    it('answers not found for a namespaced object when no namespace is known, without searching', async () => {
         client.getActiveNamespace.mockReturnValue(null);
         rbac.listRoleBindingForAllNamespaces.mockResolvedValue({ items: [binding] });
-        core.listServiceAccountForAllNamespaces.mockResolvedValue({ items: [] });
         rbac.listRoleForAllNamespaces.mockResolvedValue({ items: [role] });
 
-        expect(await access.getRoleBinding('reader-binding')).toMatchObject({ role: 'Role/reader' });
-        expect(rbac.listRoleBindingForAllNamespaces).toHaveBeenCalledWith({
-            fieldSelector: 'metadata.name=reader-binding',
-        });
+        expect(await access.getRoleBinding('reader-binding')).toBeNull();
         expect(await access.getServiceAccount('nobody')).toBeNull();
-        expect(await access.getRole('reader')).toMatchObject({ rules: 2 });
+        expect(await access.getRole('reader')).toBeNull();
+        expect(rbac.listRoleBindingForAllNamespaces).not.toHaveBeenCalled();
+        expect(rbac.listRoleForAllNamespaces).not.toHaveBeenCalled();
+        expect(rbac.readNamespacedRole).not.toHaveBeenCalled();
     });
 
     it('reads the cluster-scoped kinds without a namespace', async () => {

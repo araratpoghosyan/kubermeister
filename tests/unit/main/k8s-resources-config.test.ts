@@ -34,11 +34,10 @@ const client = {
         name: string,
         namespace: string | undefined,
         readOne: (name: string, ns: string) => Promise<T>,
-        listByName: (selector: string) => Promise<{ items: T[] }>,
     ) => {
         const ns = client.resolveObjectNamespace(namespace);
-        if (ns) return client.readOrNull(() => readOne(name, ns));
-        return (await listByName(`metadata.name=${name}`)).items[0];
+        if (!ns) return undefined;
+        return client.readOrNull(() => readOne(name, ns));
     },
 };
 vi.mock('../../../src/main/k8s/client.js', () => client);
