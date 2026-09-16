@@ -74,7 +74,14 @@ const client = {
             listNamespacedHorizontalPodAutoscaler,
             listHorizontalPodAutoscalerForAllNamespaces: listAny,
         },
-        storage: { listStorageClass: listAny },
+        storage: {
+            listStorageClass: listAny,
+            listCSIDriver: listAny,
+            listCSINode: listAny,
+            listNamespacedCSIStorageCapacity: listAny,
+            listCSIStorageCapacityForAllNamespaces: listAny,
+        },
+        runtime: { listRuntimeClass: listAny },
         policy: {
             listNamespacedPodDisruptionBudget: listAny,
             listPodDisruptionBudgetForAllNamespaces: listAny,
@@ -95,6 +102,7 @@ const client = {
             listIngressForAllNamespaces: listAny,
             listNamespacedNetworkPolicy: listAny,
             listNetworkPolicyForAllNamespaces: listAny,
+            listIngressClass: listAny,
         },
     }),
     resolveNamespace: (explicit?: string) => explicit ?? 'team-a',

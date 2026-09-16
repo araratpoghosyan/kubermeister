@@ -206,6 +206,11 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   rollouts of one deployment apart. PodDisruptionBudgets, PriorityClasses and Leases read through
   `apis().policy`, `apis().scheduling` and `apis().coordination`; a budget allowing no disruption
   reads Blocked, since a drain stops on it and no count says so on its own.
+  RuntimeClasses and IngressClasses are the class kinds other objects point at by name, read
+  through `apis().runtime` (the `node.k8s.io` group, which holds no nodes) and `apis().net`; the
+  CSI kinds (drivers, nodes, storage capacity) read through `apis().storage`. A CSIDriver's
+  `attachRequired` defaults to **true** when unset, unlike its other flags, so an omitted spec must
+  not read as a driver that needs no attach step.
   Deployments also have `deployments.replicaSets`, `deployments.rollouts`,
   `deployments.rolloutStatus` and `metrics.deploymentSeries` (the sum of the selected pods' tracked
   series), plus the two writes that belong to a rollout rather than to a kind in general:

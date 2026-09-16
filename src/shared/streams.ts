@@ -6,6 +6,8 @@ import { podSchema } from './k8s/pods.js';
 import { endpointsSchema, ingressSchema, networkPolicySchema, serviceSchema } from './k8s/network.js';
 import { customResourceSchema } from './k8s/addons.js';
 import { leaseSchema, podDisruptionBudgetSchema, priorityClassSchema } from './k8s/policy.js';
+import { ingressClassSchema, runtimeClassSchema } from './k8s/classes.js';
+import { csiCapacitySchema, csiDriverSchema, csiNodeSchema } from './k8s/csi.js';
 import { drainOptionsSchema, type DrainEvent } from './k8s/drain.js';
 import {
     clusterRoleBindingSchema,
@@ -63,15 +65,20 @@ export const watchEventSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('PodDisruptionBudget'), type: watchType, item: podDisruptionBudgetSchema }),
     z.object({ kind: z.literal('PriorityClass'), type: watchType, item: priorityClassSchema }),
     z.object({ kind: z.literal('Lease'), type: watchType, item: leaseSchema }),
+    z.object({ kind: z.literal('RuntimeClass'), type: watchType, item: runtimeClassSchema }),
     z.object({ kind: z.literal('ConfigMap'), type: watchType, item: configMapSchema }),
     z.object({ kind: z.literal('Secret'), type: watchType, item: secretSchema }),
     z.object({ kind: z.literal('Service'), type: watchType, item: serviceSchema }),
     z.object({ kind: z.literal('Ingress'), type: watchType, item: ingressSchema }),
     z.object({ kind: z.literal('Endpoints'), type: watchType, item: endpointsSchema }),
     z.object({ kind: z.literal('NetworkPolicy'), type: watchType, item: networkPolicySchema }),
+    z.object({ kind: z.literal('IngressClass'), type: watchType, item: ingressClassSchema }),
     z.object({ kind: z.literal('PersistentVolume'), type: watchType, item: volumeSchema }),
     z.object({ kind: z.literal('PersistentVolumeClaim'), type: watchType, item: claimSchema }),
     z.object({ kind: z.literal('StorageClass'), type: watchType, item: storageClassSchema }),
+    z.object({ kind: z.literal('CSIDriver'), type: watchType, item: csiDriverSchema }),
+    z.object({ kind: z.literal('CSINode'), type: watchType, item: csiNodeSchema }),
+    z.object({ kind: z.literal('CSIStorageCapacity'), type: watchType, item: csiCapacitySchema }),
     z.object({ kind: z.literal('ServiceAccount'), type: watchType, item: serviceAccountSchema }),
     z.object({ kind: z.literal('Role'), type: watchType, item: roleSchema }),
     z.object({ kind: z.literal('RoleBinding'), type: watchType, item: roleBindingSchema }),

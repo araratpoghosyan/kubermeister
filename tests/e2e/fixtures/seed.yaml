@@ -260,3 +260,39 @@ metadata:
 spec:
   holderIdentity: km-e2e-1
   leaseDurationSeconds: 15
+---
+# k3s creates no RuntimeClass or IngressClass of its own (traefik is disabled in the harness), so
+# the class screens are seeded with one each.
+apiVersion: node.k8s.io/v1
+kind: RuntimeClass
+metadata:
+  name: km-e2e-runtime
+handler: runc
+scheduling:
+  nodeSelector:
+    kubernetes.io/os: linux
+overhead:
+  podFixed:
+    cpu: 10m
+---
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: km-e2e-ingress
+  annotations:
+    ingressclass.kubernetes.io/is-default-class: 'true'
+spec:
+  controller: example.com/km-e2e
+---
+# A capacity object is a plain API object: no CSI driver has to exist for the screen to have a row.
+apiVersion: storage.k8s.io/v1
+kind: CSIStorageCapacity
+metadata:
+  name: km-e2e-capacity
+  namespace: km-e2e
+storageClassName: local-path
+capacity: 10Gi
+maximumVolumeSize: 5Gi
+nodeTopology:
+  matchLabels:
+    kubernetes.io/os: linux

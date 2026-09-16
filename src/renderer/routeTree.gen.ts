@@ -30,6 +30,8 @@ import { Route as AddonsCrdsIndexRouteImport } from './routes/addons/crds/index'
 import { Route as AddonsCrdsNameRouteImport } from './routes/addons/crds_.$name';
 import { Route as AddonsReleasesIndexRouteImport } from './routes/addons/releases/index';
 import { Route as NetworkEndpointsIndexRouteImport } from './routes/network/endpoints/index';
+import { Route as NetworkIngressclassesIndexRouteImport } from './routes/network/ingressclasses/index';
+import { Route as NetworkIngressclassesNameRouteImport } from './routes/network/ingressclasses_.$name';
 import { Route as NetworkIngressesIndexRouteImport } from './routes/network/ingresses/index';
 import { Route as NetworkNetworkpoliciesIndexRouteImport } from './routes/network/networkpolicies/index';
 import { Route as NetworkServicesIndexRouteImport } from './routes/network/services/index';
@@ -37,7 +39,14 @@ import { Route as OverviewLeasesIndexRouteImport } from './routes/overview/lease
 import { Route as OverviewNodesNameRouteImport } from './routes/overview/nodes_.$name';
 import { Route as OverviewPriorityclassesIndexRouteImport } from './routes/overview/priorityclasses/index';
 import { Route as OverviewPriorityclassesNameRouteImport } from './routes/overview/priorityclasses_.$name';
+import { Route as OverviewRuntimeclassesIndexRouteImport } from './routes/overview/runtimeclasses/index';
+import { Route as OverviewRuntimeclassesNameRouteImport } from './routes/overview/runtimeclasses_.$name';
+import { Route as StorageCapacityIndexRouteImport } from './routes/storage/capacity/index';
 import { Route as StorageClaimsIndexRouteImport } from './routes/storage/claims/index';
+import { Route as StorageCsidriversIndexRouteImport } from './routes/storage/csidrivers/index';
+import { Route as StorageCsidriversNameRouteImport } from './routes/storage/csidrivers_.$name';
+import { Route as StorageCsinodesIndexRouteImport } from './routes/storage/csinodes/index';
+import { Route as StorageCsinodesNameRouteImport } from './routes/storage/csinodes_.$name';
 import { Route as StorageSnapshotsIndexRouteImport } from './routes/storage/snapshots/index';
 import { Route as StorageStorageclassesIndexRouteImport } from './routes/storage/storageclasses/index';
 import { Route as StorageStorageclassesNameRouteImport } from './routes/storage/storageclasses_.$name';
@@ -64,6 +73,7 @@ import { Route as NetworkIngressesNamespaceNameRouteImport } from './routes/netw
 import { Route as NetworkNetworkpoliciesNamespaceNameRouteImport } from './routes/network/networkpolicies/$namespace.$name';
 import { Route as NetworkServicesNamespaceNameRouteImport } from './routes/network/services/$namespace.$name';
 import { Route as OverviewLeasesNamespaceNameRouteImport } from './routes/overview/leases/$namespace.$name';
+import { Route as StorageCapacityNamespaceNameRouteImport } from './routes/storage/capacity/$namespace.$name';
 import { Route as StorageClaimsNamespaceNameRouteImport } from './routes/storage/claims/$namespace.$name';
 import { Route as StorageSnapshotsNamespaceNameRouteImport } from './routes/storage/snapshots/$namespace.$name';
 import { Route as WorkloadsAutoscalersNamespaceNameRouteImport } from './routes/workloads/autoscalers/$namespace.$name';
@@ -187,6 +197,18 @@ const NetworkEndpointsIndexRoute = NetworkEndpointsIndexRouteImport.update({
   path: '/network/endpoints/',
   getParentRoute: () => rootRouteImport,
 } as any);
+const NetworkIngressclassesIndexRoute =
+  NetworkIngressclassesIndexRouteImport.update({
+    id: '/network/ingressclasses/',
+    path: '/network/ingressclasses/',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const NetworkIngressclassesNameRoute =
+  NetworkIngressclassesNameRouteImport.update({
+    id: '/network/ingressclasses_/$name',
+    path: '/network/ingressclasses/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
 const NetworkIngressesIndexRoute = NetworkIngressesIndexRouteImport.update({
   id: '/network/ingresses/',
   path: '/network/ingresses/',
@@ -225,9 +247,46 @@ const OverviewPriorityclassesNameRoute =
     path: '/overview/priorityclasses/$name',
     getParentRoute: () => rootRouteImport,
   } as any);
+const OverviewRuntimeclassesIndexRoute =
+  OverviewRuntimeclassesIndexRouteImport.update({
+    id: '/overview/runtimeclasses/',
+    path: '/overview/runtimeclasses/',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const OverviewRuntimeclassesNameRoute =
+  OverviewRuntimeclassesNameRouteImport.update({
+    id: '/overview/runtimeclasses_/$name',
+    path: '/overview/runtimeclasses/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const StorageCapacityIndexRoute = StorageCapacityIndexRouteImport.update({
+  id: '/storage/capacity/',
+  path: '/storage/capacity/',
+  getParentRoute: () => rootRouteImport,
+} as any);
 const StorageClaimsIndexRoute = StorageClaimsIndexRouteImport.update({
   id: '/storage/claims/',
   path: '/storage/claims/',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const StorageCsidriversIndexRoute = StorageCsidriversIndexRouteImport.update({
+  id: '/storage/csidrivers/',
+  path: '/storage/csidrivers/',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const StorageCsidriversNameRoute = StorageCsidriversNameRouteImport.update({
+  id: '/storage/csidrivers_/$name',
+  path: '/storage/csidrivers/$name',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const StorageCsinodesIndexRoute = StorageCsinodesIndexRouteImport.update({
+  id: '/storage/csinodes/',
+  path: '/storage/csinodes/',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const StorageCsinodesNameRoute = StorageCsinodesNameRouteImport.update({
+  id: '/storage/csinodes_/$name',
+  path: '/storage/csinodes/$name',
   getParentRoute: () => rootRouteImport,
 } as any);
 const StorageSnapshotsIndexRoute = StorageSnapshotsIndexRouteImport.update({
@@ -379,6 +438,12 @@ const OverviewLeasesNamespaceNameRoute =
     path: '/overview/leases/$namespace/$name',
     getParentRoute: () => rootRouteImport,
   } as any);
+const StorageCapacityNamespaceNameRoute =
+  StorageCapacityNamespaceNameRouteImport.update({
+    id: '/storage/capacity/$namespace/$name',
+    path: '/storage/capacity/$namespace/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
 const StorageClaimsNamespaceNameRoute =
   StorageClaimsNamespaceNameRouteImport.update({
     id: '/storage/claims/$namespace/$name',
@@ -478,8 +543,12 @@ export interface FileRoutesByFullPath {
   '/access/clusterrolebindings/$name': typeof AccessClusterrolebindingsNameRoute;
   '/access/clusterroles/$name': typeof AccessClusterrolesNameRoute;
   '/addons/crds/$name': typeof AddonsCrdsNameRoute;
+  '/network/ingressclasses/$name': typeof NetworkIngressclassesNameRoute;
   '/overview/nodes/$name': typeof OverviewNodesNameRoute;
   '/overview/priorityclasses/$name': typeof OverviewPriorityclassesNameRoute;
+  '/overview/runtimeclasses/$name': typeof OverviewRuntimeclassesNameRoute;
+  '/storage/csidrivers/$name': typeof StorageCsidriversNameRoute;
+  '/storage/csinodes/$name': typeof StorageCsinodesNameRoute;
   '/storage/storageclasses/$name': typeof StorageStorageclassesNameRoute;
   '/storage/volumes/$name': typeof StorageVolumesNameRoute;
   '/access/clusterrolebindings/': typeof AccessClusterrolebindingsIndexRoute;
@@ -490,12 +559,17 @@ export interface FileRoutesByFullPath {
   '/addons/crds/': typeof AddonsCrdsIndexRoute;
   '/addons/releases/': typeof AddonsReleasesIndexRoute;
   '/network/endpoints/': typeof NetworkEndpointsIndexRoute;
+  '/network/ingressclasses/': typeof NetworkIngressclassesIndexRoute;
   '/network/ingresses/': typeof NetworkIngressesIndexRoute;
   '/network/networkpolicies/': typeof NetworkNetworkpoliciesIndexRoute;
   '/network/services/': typeof NetworkServicesIndexRoute;
   '/overview/leases/': typeof OverviewLeasesIndexRoute;
   '/overview/priorityclasses/': typeof OverviewPriorityclassesIndexRoute;
+  '/overview/runtimeclasses/': typeof OverviewRuntimeclassesIndexRoute;
+  '/storage/capacity/': typeof StorageCapacityIndexRoute;
   '/storage/claims/': typeof StorageClaimsIndexRoute;
+  '/storage/csidrivers/': typeof StorageCsidriversIndexRoute;
+  '/storage/csinodes/': typeof StorageCsinodesIndexRoute;
   '/storage/snapshots/': typeof StorageSnapshotsIndexRoute;
   '/storage/storageclasses/': typeof StorageStorageclassesIndexRoute;
   '/storage/volumes/': typeof StorageVolumesIndexRoute;
@@ -520,6 +594,7 @@ export interface FileRoutesByFullPath {
   '/network/networkpolicies/$namespace/$name': typeof NetworkNetworkpoliciesNamespaceNameRoute;
   '/network/services/$namespace/$name': typeof NetworkServicesNamespaceNameRoute;
   '/overview/leases/$namespace/$name': typeof OverviewLeasesNamespaceNameRoute;
+  '/storage/capacity/$namespace/$name': typeof StorageCapacityNamespaceNameRoute;
   '/storage/claims/$namespace/$name': typeof StorageClaimsNamespaceNameRoute;
   '/storage/snapshots/$namespace/$name': typeof StorageSnapshotsNamespaceNameRoute;
   '/workloads/autoscalers/$namespace/$name': typeof WorkloadsAutoscalersNamespaceNameRoute;
@@ -549,8 +624,12 @@ export interface FileRoutesByTo {
   '/access/clusterrolebindings/$name': typeof AccessClusterrolebindingsNameRoute;
   '/access/clusterroles/$name': typeof AccessClusterrolesNameRoute;
   '/addons/crds/$name': typeof AddonsCrdsNameRoute;
+  '/network/ingressclasses/$name': typeof NetworkIngressclassesNameRoute;
   '/overview/nodes/$name': typeof OverviewNodesNameRoute;
   '/overview/priorityclasses/$name': typeof OverviewPriorityclassesNameRoute;
+  '/overview/runtimeclasses/$name': typeof OverviewRuntimeclassesNameRoute;
+  '/storage/csidrivers/$name': typeof StorageCsidriversNameRoute;
+  '/storage/csinodes/$name': typeof StorageCsinodesNameRoute;
   '/storage/storageclasses/$name': typeof StorageStorageclassesNameRoute;
   '/storage/volumes/$name': typeof StorageVolumesNameRoute;
   '/access/clusterrolebindings': typeof AccessClusterrolebindingsIndexRoute;
@@ -561,12 +640,17 @@ export interface FileRoutesByTo {
   '/addons/crds': typeof AddonsCrdsIndexRoute;
   '/addons/releases': typeof AddonsReleasesIndexRoute;
   '/network/endpoints': typeof NetworkEndpointsIndexRoute;
+  '/network/ingressclasses': typeof NetworkIngressclassesIndexRoute;
   '/network/ingresses': typeof NetworkIngressesIndexRoute;
   '/network/networkpolicies': typeof NetworkNetworkpoliciesIndexRoute;
   '/network/services': typeof NetworkServicesIndexRoute;
   '/overview/leases': typeof OverviewLeasesIndexRoute;
   '/overview/priorityclasses': typeof OverviewPriorityclassesIndexRoute;
+  '/overview/runtimeclasses': typeof OverviewRuntimeclassesIndexRoute;
+  '/storage/capacity': typeof StorageCapacityIndexRoute;
   '/storage/claims': typeof StorageClaimsIndexRoute;
+  '/storage/csidrivers': typeof StorageCsidriversIndexRoute;
+  '/storage/csinodes': typeof StorageCsinodesIndexRoute;
   '/storage/snapshots': typeof StorageSnapshotsIndexRoute;
   '/storage/storageclasses': typeof StorageStorageclassesIndexRoute;
   '/storage/volumes': typeof StorageVolumesIndexRoute;
@@ -591,6 +675,7 @@ export interface FileRoutesByTo {
   '/network/networkpolicies/$namespace/$name': typeof NetworkNetworkpoliciesNamespaceNameRoute;
   '/network/services/$namespace/$name': typeof NetworkServicesNamespaceNameRoute;
   '/overview/leases/$namespace/$name': typeof OverviewLeasesNamespaceNameRoute;
+  '/storage/capacity/$namespace/$name': typeof StorageCapacityNamespaceNameRoute;
   '/storage/claims/$namespace/$name': typeof StorageClaimsNamespaceNameRoute;
   '/storage/snapshots/$namespace/$name': typeof StorageSnapshotsNamespaceNameRoute;
   '/workloads/autoscalers/$namespace/$name': typeof WorkloadsAutoscalersNamespaceNameRoute;
@@ -621,8 +706,12 @@ export interface FileRoutesById {
   '/access/clusterrolebindings_/$name': typeof AccessClusterrolebindingsNameRoute;
   '/access/clusterroles_/$name': typeof AccessClusterrolesNameRoute;
   '/addons/crds_/$name': typeof AddonsCrdsNameRoute;
+  '/network/ingressclasses_/$name': typeof NetworkIngressclassesNameRoute;
   '/overview/nodes_/$name': typeof OverviewNodesNameRoute;
   '/overview/priorityclasses_/$name': typeof OverviewPriorityclassesNameRoute;
+  '/overview/runtimeclasses_/$name': typeof OverviewRuntimeclassesNameRoute;
+  '/storage/csidrivers_/$name': typeof StorageCsidriversNameRoute;
+  '/storage/csinodes_/$name': typeof StorageCsinodesNameRoute;
   '/storage/storageclasses_/$name': typeof StorageStorageclassesNameRoute;
   '/storage/volumes_/$name': typeof StorageVolumesNameRoute;
   '/access/clusterrolebindings/': typeof AccessClusterrolebindingsIndexRoute;
@@ -633,12 +722,17 @@ export interface FileRoutesById {
   '/addons/crds/': typeof AddonsCrdsIndexRoute;
   '/addons/releases/': typeof AddonsReleasesIndexRoute;
   '/network/endpoints/': typeof NetworkEndpointsIndexRoute;
+  '/network/ingressclasses/': typeof NetworkIngressclassesIndexRoute;
   '/network/ingresses/': typeof NetworkIngressesIndexRoute;
   '/network/networkpolicies/': typeof NetworkNetworkpoliciesIndexRoute;
   '/network/services/': typeof NetworkServicesIndexRoute;
   '/overview/leases/': typeof OverviewLeasesIndexRoute;
   '/overview/priorityclasses/': typeof OverviewPriorityclassesIndexRoute;
+  '/overview/runtimeclasses/': typeof OverviewRuntimeclassesIndexRoute;
+  '/storage/capacity/': typeof StorageCapacityIndexRoute;
   '/storage/claims/': typeof StorageClaimsIndexRoute;
+  '/storage/csidrivers/': typeof StorageCsidriversIndexRoute;
+  '/storage/csinodes/': typeof StorageCsinodesIndexRoute;
   '/storage/snapshots/': typeof StorageSnapshotsIndexRoute;
   '/storage/storageclasses/': typeof StorageStorageclassesIndexRoute;
   '/storage/volumes/': typeof StorageVolumesIndexRoute;
@@ -663,6 +757,7 @@ export interface FileRoutesById {
   '/network/networkpolicies/$namespace/$name': typeof NetworkNetworkpoliciesNamespaceNameRoute;
   '/network/services/$namespace/$name': typeof NetworkServicesNamespaceNameRoute;
   '/overview/leases/$namespace/$name': typeof OverviewLeasesNamespaceNameRoute;
+  '/storage/capacity/$namespace/$name': typeof StorageCapacityNamespaceNameRoute;
   '/storage/claims/$namespace/$name': typeof StorageClaimsNamespaceNameRoute;
   '/storage/snapshots/$namespace/$name': typeof StorageSnapshotsNamespaceNameRoute;
   '/workloads/autoscalers/$namespace/$name': typeof WorkloadsAutoscalersNamespaceNameRoute;
@@ -694,8 +789,12 @@ export interface FileRouteTypes {
     | '/access/clusterrolebindings/$name'
     | '/access/clusterroles/$name'
     | '/addons/crds/$name'
+    | '/network/ingressclasses/$name'
     | '/overview/nodes/$name'
     | '/overview/priorityclasses/$name'
+    | '/overview/runtimeclasses/$name'
+    | '/storage/csidrivers/$name'
+    | '/storage/csinodes/$name'
     | '/storage/storageclasses/$name'
     | '/storage/volumes/$name'
     | '/access/clusterrolebindings/'
@@ -706,12 +805,17 @@ export interface FileRouteTypes {
     | '/addons/crds/'
     | '/addons/releases/'
     | '/network/endpoints/'
+    | '/network/ingressclasses/'
     | '/network/ingresses/'
     | '/network/networkpolicies/'
     | '/network/services/'
     | '/overview/leases/'
     | '/overview/priorityclasses/'
+    | '/overview/runtimeclasses/'
+    | '/storage/capacity/'
     | '/storage/claims/'
+    | '/storage/csidrivers/'
+    | '/storage/csinodes/'
     | '/storage/snapshots/'
     | '/storage/storageclasses/'
     | '/storage/volumes/'
@@ -736,6 +840,7 @@ export interface FileRouteTypes {
     | '/network/networkpolicies/$namespace/$name'
     | '/network/services/$namespace/$name'
     | '/overview/leases/$namespace/$name'
+    | '/storage/capacity/$namespace/$name'
     | '/storage/claims/$namespace/$name'
     | '/storage/snapshots/$namespace/$name'
     | '/workloads/autoscalers/$namespace/$name'
@@ -765,8 +870,12 @@ export interface FileRouteTypes {
     | '/access/clusterrolebindings/$name'
     | '/access/clusterroles/$name'
     | '/addons/crds/$name'
+    | '/network/ingressclasses/$name'
     | '/overview/nodes/$name'
     | '/overview/priorityclasses/$name'
+    | '/overview/runtimeclasses/$name'
+    | '/storage/csidrivers/$name'
+    | '/storage/csinodes/$name'
     | '/storage/storageclasses/$name'
     | '/storage/volumes/$name'
     | '/access/clusterrolebindings'
@@ -777,12 +886,17 @@ export interface FileRouteTypes {
     | '/addons/crds'
     | '/addons/releases'
     | '/network/endpoints'
+    | '/network/ingressclasses'
     | '/network/ingresses'
     | '/network/networkpolicies'
     | '/network/services'
     | '/overview/leases'
     | '/overview/priorityclasses'
+    | '/overview/runtimeclasses'
+    | '/storage/capacity'
     | '/storage/claims'
+    | '/storage/csidrivers'
+    | '/storage/csinodes'
     | '/storage/snapshots'
     | '/storage/storageclasses'
     | '/storage/volumes'
@@ -807,6 +921,7 @@ export interface FileRouteTypes {
     | '/network/networkpolicies/$namespace/$name'
     | '/network/services/$namespace/$name'
     | '/overview/leases/$namespace/$name'
+    | '/storage/capacity/$namespace/$name'
     | '/storage/claims/$namespace/$name'
     | '/storage/snapshots/$namespace/$name'
     | '/workloads/autoscalers/$namespace/$name'
@@ -836,8 +951,12 @@ export interface FileRouteTypes {
     | '/access/clusterrolebindings_/$name'
     | '/access/clusterroles_/$name'
     | '/addons/crds_/$name'
+    | '/network/ingressclasses_/$name'
     | '/overview/nodes_/$name'
     | '/overview/priorityclasses_/$name'
+    | '/overview/runtimeclasses_/$name'
+    | '/storage/csidrivers_/$name'
+    | '/storage/csinodes_/$name'
     | '/storage/storageclasses_/$name'
     | '/storage/volumes_/$name'
     | '/access/clusterrolebindings/'
@@ -848,12 +967,17 @@ export interface FileRouteTypes {
     | '/addons/crds/'
     | '/addons/releases/'
     | '/network/endpoints/'
+    | '/network/ingressclasses/'
     | '/network/ingresses/'
     | '/network/networkpolicies/'
     | '/network/services/'
     | '/overview/leases/'
     | '/overview/priorityclasses/'
+    | '/overview/runtimeclasses/'
+    | '/storage/capacity/'
     | '/storage/claims/'
+    | '/storage/csidrivers/'
+    | '/storage/csinodes/'
     | '/storage/snapshots/'
     | '/storage/storageclasses/'
     | '/storage/volumes/'
@@ -878,6 +1002,7 @@ export interface FileRouteTypes {
     | '/network/networkpolicies/$namespace/$name'
     | '/network/services/$namespace/$name'
     | '/overview/leases/$namespace/$name'
+    | '/storage/capacity/$namespace/$name'
     | '/storage/claims/$namespace/$name'
     | '/storage/snapshots/$namespace/$name'
     | '/workloads/autoscalers/$namespace/$name'
@@ -908,8 +1033,12 @@ export interface RootRouteChildren {
   AccessClusterrolebindingsNameRoute: typeof AccessClusterrolebindingsNameRoute;
   AccessClusterrolesNameRoute: typeof AccessClusterrolesNameRoute;
   AddonsCrdsNameRoute: typeof AddonsCrdsNameRoute;
+  NetworkIngressclassesNameRoute: typeof NetworkIngressclassesNameRoute;
   OverviewNodesNameRoute: typeof OverviewNodesNameRoute;
   OverviewPriorityclassesNameRoute: typeof OverviewPriorityclassesNameRoute;
+  OverviewRuntimeclassesNameRoute: typeof OverviewRuntimeclassesNameRoute;
+  StorageCsidriversNameRoute: typeof StorageCsidriversNameRoute;
+  StorageCsinodesNameRoute: typeof StorageCsinodesNameRoute;
   StorageStorageclassesNameRoute: typeof StorageStorageclassesNameRoute;
   StorageVolumesNameRoute: typeof StorageVolumesNameRoute;
   AccessClusterrolebindingsIndexRoute: typeof AccessClusterrolebindingsIndexRoute;
@@ -920,12 +1049,17 @@ export interface RootRouteChildren {
   AddonsCrdsIndexRoute: typeof AddonsCrdsIndexRoute;
   AddonsReleasesIndexRoute: typeof AddonsReleasesIndexRoute;
   NetworkEndpointsIndexRoute: typeof NetworkEndpointsIndexRoute;
+  NetworkIngressclassesIndexRoute: typeof NetworkIngressclassesIndexRoute;
   NetworkIngressesIndexRoute: typeof NetworkIngressesIndexRoute;
   NetworkNetworkpoliciesIndexRoute: typeof NetworkNetworkpoliciesIndexRoute;
   NetworkServicesIndexRoute: typeof NetworkServicesIndexRoute;
   OverviewLeasesIndexRoute: typeof OverviewLeasesIndexRoute;
   OverviewPriorityclassesIndexRoute: typeof OverviewPriorityclassesIndexRoute;
+  OverviewRuntimeclassesIndexRoute: typeof OverviewRuntimeclassesIndexRoute;
+  StorageCapacityIndexRoute: typeof StorageCapacityIndexRoute;
   StorageClaimsIndexRoute: typeof StorageClaimsIndexRoute;
+  StorageCsidriversIndexRoute: typeof StorageCsidriversIndexRoute;
+  StorageCsinodesIndexRoute: typeof StorageCsinodesIndexRoute;
   StorageSnapshotsIndexRoute: typeof StorageSnapshotsIndexRoute;
   StorageStorageclassesIndexRoute: typeof StorageStorageclassesIndexRoute;
   StorageVolumesIndexRoute: typeof StorageVolumesIndexRoute;
@@ -950,6 +1084,7 @@ export interface RootRouteChildren {
   NetworkNetworkpoliciesNamespaceNameRoute: typeof NetworkNetworkpoliciesNamespaceNameRoute;
   NetworkServicesNamespaceNameRoute: typeof NetworkServicesNamespaceNameRoute;
   OverviewLeasesNamespaceNameRoute: typeof OverviewLeasesNamespaceNameRoute;
+  StorageCapacityNamespaceNameRoute: typeof StorageCapacityNamespaceNameRoute;
   StorageClaimsNamespaceNameRoute: typeof StorageClaimsNamespaceNameRoute;
   StorageSnapshotsNamespaceNameRoute: typeof StorageSnapshotsNamespaceNameRoute;
   WorkloadsAutoscalersNamespaceNameRoute: typeof WorkloadsAutoscalersNamespaceNameRoute;
@@ -1115,6 +1250,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NetworkEndpointsIndexRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/network/ingressclasses/': {
+      id: '/network/ingressclasses/';
+      path: '/network/ingressclasses';
+      fullPath: '/network/ingressclasses/';
+      preLoaderRoute: typeof NetworkIngressclassesIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/network/ingressclasses_/$name': {
+      id: '/network/ingressclasses_/$name';
+      path: '/network/ingressclasses/$name';
+      fullPath: '/network/ingressclasses/$name';
+      preLoaderRoute: typeof NetworkIngressclassesNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/network/ingresses/': {
       id: '/network/ingresses/';
       path: '/network/ingresses';
@@ -1164,11 +1313,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OverviewPriorityclassesNameRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/overview/runtimeclasses/': {
+      id: '/overview/runtimeclasses/';
+      path: '/overview/runtimeclasses';
+      fullPath: '/overview/runtimeclasses/';
+      preLoaderRoute: typeof OverviewRuntimeclassesIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/overview/runtimeclasses_/$name': {
+      id: '/overview/runtimeclasses_/$name';
+      path: '/overview/runtimeclasses/$name';
+      fullPath: '/overview/runtimeclasses/$name';
+      preLoaderRoute: typeof OverviewRuntimeclassesNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/storage/capacity/': {
+      id: '/storage/capacity/';
+      path: '/storage/capacity';
+      fullPath: '/storage/capacity/';
+      preLoaderRoute: typeof StorageCapacityIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/storage/claims/': {
       id: '/storage/claims/';
       path: '/storage/claims';
       fullPath: '/storage/claims/';
       preLoaderRoute: typeof StorageClaimsIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/storage/csidrivers/': {
+      id: '/storage/csidrivers/';
+      path: '/storage/csidrivers';
+      fullPath: '/storage/csidrivers/';
+      preLoaderRoute: typeof StorageCsidriversIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/storage/csidrivers_/$name': {
+      id: '/storage/csidrivers_/$name';
+      path: '/storage/csidrivers/$name';
+      fullPath: '/storage/csidrivers/$name';
+      preLoaderRoute: typeof StorageCsidriversNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/storage/csinodes/': {
+      id: '/storage/csinodes/';
+      path: '/storage/csinodes';
+      fullPath: '/storage/csinodes/';
+      preLoaderRoute: typeof StorageCsinodesIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/storage/csinodes_/$name': {
+      id: '/storage/csinodes_/$name';
+      path: '/storage/csinodes/$name';
+      fullPath: '/storage/csinodes/$name';
+      preLoaderRoute: typeof StorageCsinodesNameRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/storage/snapshots/': {
@@ -1353,6 +1551,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OverviewLeasesNamespaceNameRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/storage/capacity/$namespace/$name': {
+      id: '/storage/capacity/$namespace/$name';
+      path: '/storage/capacity/$namespace/$name';
+      fullPath: '/storage/capacity/$namespace/$name';
+      preLoaderRoute: typeof StorageCapacityNamespaceNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/storage/claims/$namespace/$name': {
       id: '/storage/claims/$namespace/$name';
       path: '/storage/claims/$namespace/$name';
@@ -1468,8 +1673,12 @@ const rootRouteChildren: RootRouteChildren = {
   AccessClusterrolebindingsNameRoute: AccessClusterrolebindingsNameRoute,
   AccessClusterrolesNameRoute: AccessClusterrolesNameRoute,
   AddonsCrdsNameRoute: AddonsCrdsNameRoute,
+  NetworkIngressclassesNameRoute: NetworkIngressclassesNameRoute,
   OverviewNodesNameRoute: OverviewNodesNameRoute,
   OverviewPriorityclassesNameRoute: OverviewPriorityclassesNameRoute,
+  OverviewRuntimeclassesNameRoute: OverviewRuntimeclassesNameRoute,
+  StorageCsidriversNameRoute: StorageCsidriversNameRoute,
+  StorageCsinodesNameRoute: StorageCsinodesNameRoute,
   StorageStorageclassesNameRoute: StorageStorageclassesNameRoute,
   StorageVolumesNameRoute: StorageVolumesNameRoute,
   AccessClusterrolebindingsIndexRoute: AccessClusterrolebindingsIndexRoute,
@@ -1480,12 +1689,17 @@ const rootRouteChildren: RootRouteChildren = {
   AddonsCrdsIndexRoute: AddonsCrdsIndexRoute,
   AddonsReleasesIndexRoute: AddonsReleasesIndexRoute,
   NetworkEndpointsIndexRoute: NetworkEndpointsIndexRoute,
+  NetworkIngressclassesIndexRoute: NetworkIngressclassesIndexRoute,
   NetworkIngressesIndexRoute: NetworkIngressesIndexRoute,
   NetworkNetworkpoliciesIndexRoute: NetworkNetworkpoliciesIndexRoute,
   NetworkServicesIndexRoute: NetworkServicesIndexRoute,
   OverviewLeasesIndexRoute: OverviewLeasesIndexRoute,
   OverviewPriorityclassesIndexRoute: OverviewPriorityclassesIndexRoute,
+  OverviewRuntimeclassesIndexRoute: OverviewRuntimeclassesIndexRoute,
+  StorageCapacityIndexRoute: StorageCapacityIndexRoute,
   StorageClaimsIndexRoute: StorageClaimsIndexRoute,
+  StorageCsidriversIndexRoute: StorageCsidriversIndexRoute,
+  StorageCsinodesIndexRoute: StorageCsinodesIndexRoute,
   StorageSnapshotsIndexRoute: StorageSnapshotsIndexRoute,
   StorageStorageclassesIndexRoute: StorageStorageclassesIndexRoute,
   StorageVolumesIndexRoute: StorageVolumesIndexRoute,
@@ -1513,6 +1727,7 @@ const rootRouteChildren: RootRouteChildren = {
     NetworkNetworkpoliciesNamespaceNameRoute,
   NetworkServicesNamespaceNameRoute: NetworkServicesNamespaceNameRoute,
   OverviewLeasesNamespaceNameRoute: OverviewLeasesNamespaceNameRoute,
+  StorageCapacityNamespaceNameRoute: StorageCapacityNamespaceNameRoute,
   StorageClaimsNamespaceNameRoute: StorageClaimsNamespaceNameRoute,
   StorageSnapshotsNamespaceNameRoute: StorageSnapshotsNamespaceNameRoute,
   WorkloadsAutoscalersNamespaceNameRoute:
