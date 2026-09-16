@@ -63,13 +63,16 @@ const LIST_FNS: Record<ManifestKind, ListFn> = {
     FlowSchema: () => apis().flowcontrol.listFlowSchema(),
     CustomResourceDefinition: () => apis().apiextensions.listCustomResourceDefinition(),
     Node: () => apis().core.listNode(),
+    Namespace: () => apis().core.listNamespace(),
 };
 
-/** A node is not a registered kind, so its type meta is stated here. */
+/** Neither a node nor a namespace is a registered kind, so their type meta is stated here. */
 const NODE_FACTS = { apiVersion: 'v1', kind: 'Node' };
+const NAMESPACE_FACTS = { apiVersion: 'v1', kind: 'Namespace' };
 
 function typeMeta(kind: ManifestKind): { apiVersion: string; kind: string } {
     if (kind === 'Node') return NODE_FACTS;
+    if (kind === 'Namespace') return NAMESPACE_FACTS;
     const info = KIND_REGISTRY[kind];
     return { apiVersion: info.apiVersion, kind: info.kind };
 }

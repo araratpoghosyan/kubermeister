@@ -226,6 +226,14 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   kind, since that call derives the API path from the manifest's own `apiVersion` and `kind`; the
   editor's `expect` pin therefore takes a kind name rather than a registry kind, and scope is
   checked only for kinds the registry knows.
+  **A namespace has a screen of its own** (`namespaces.detail`): it does nothing by itself, so its
+  detail is a roll-up — what lives in it (each count linking to that kind's list), the quotas and
+  limit ranges it carries, and the usage of its pods against what they asked for. `Namespace` joins
+  `Node` as a manifest kind outside the registry so it can be read, created and deleted through the
+  ordinary write path, and it is in `DANGEROUS_KINDS`, since deleting one takes every object inside
+  it. Pod rows carry the controller that owns them, which is what lets the cluster-wide list group
+  by node or by workload (`groupBy` on `DataTable`, which interleaves heading rows into the
+  virtualised list rather than nesting tables).
   Deployments also have `deployments.replicaSets`, `deployments.rollouts`,
   `deployments.rolloutStatus` and `metrics.deploymentSeries` (the sum of the selected pods' tracked
   series), plus the two writes that belong to a rollout rather than to a kind in general:

@@ -2,6 +2,7 @@ import type { V1ObjectMeta, V1OwnerReference, V1Pod } from '@kubernetes/client-n
 import type { OwnerChain, OwnerLink, PodOwnerKind } from '../../../shared/k8s/owners.js';
 import { ownerPath } from '../../../shared/k8s/owners.js';
 import type { Pod } from '../../../shared/k8s/pods.js';
+import { controllerRef } from './controller.js';
 import { apis, readOrNull } from '../client.js';
 import { withK8s } from '../errors.js';
 import { toPod, usageFor } from './pods.js';
@@ -12,11 +13,7 @@ import { toPod, usageFor } from './pods.js';
  * Two pods of two deployments can share labels; they can never share an owner reference.
  */
 
-/** The reference that controls an object, or the first one when none is marked as controller. */
-export function controllerRef(metadata?: V1ObjectMeta): V1OwnerReference | undefined {
-    const refs = metadata?.ownerReferences ?? [];
-    return refs.find((ref) => ref.controller) ?? refs[0];
-}
+export { controllerRef };
 
 const linkFor = (ref: V1OwnerReference, namespace: string): OwnerLink => ({
     kind: ref.kind,

@@ -4,6 +4,7 @@ import { BoxesIcon } from 'lucide-react';
 import type { Namespace } from '../../../shared/k8s/cluster';
 import { StatusBadge } from '@/components/data-display/status-badge';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
+import { CreateNamespaceButton } from '@/components/namespace/create-namespace-button';
 import { nameColumn, textColumn } from '@/components/templates/list-columns';
 import { useIpcQuery } from '@/lib/query';
 import { useRefreshIntervalMs } from '@/lib/settings';
@@ -13,8 +14,10 @@ export const Route = createFileRoute('/overview/namespaces')({ component: Namesp
 
 const TONE_LABEL = { accent: 'Active', ok: 'Ready', warn: 'Terminating' } as const;
 
+const detailPath = (ns: Pick<Namespace, 'name'>) => `/overview/namespaces/${encodeURIComponent(ns.name)}`;
+
 const columns: ColumnDef<Namespace>[] = [
-    nameColumn<Namespace>({ icon: BoxesIcon }),
+    nameColumn<Namespace>({ icon: BoxesIcon, href: detailPath }),
     {
         id: 'tone',
         header: 'Status',
@@ -35,6 +38,8 @@ function NamespacesPage() {
             title="Namespaces"
             columns={columns}
             query={namespaces}
+            detailPath={detailPath}
+            toolbar={<CreateNamespaceButton />}
             rowProps={(ns) => ({ 'data-namespace': ns.name })}
             testId="namespaces-table"
         />

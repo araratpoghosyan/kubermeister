@@ -12,6 +12,7 @@ import type {
 import type { Usage } from '../../../shared/k8s/metrics.js';
 import { apis, listItems, readOrNull, resolveObjectNamespace } from '../client.js';
 import { withK8s } from '../errors.js';
+import { ownerLabel } from './controller.js';
 import { age, ago, cpuToMillicores, dash, memToMi, toPairs } from '../format.js';
 
 export { toPairs };
@@ -53,6 +54,7 @@ export function toPod(pod: V1Pod, now = Date.now(), usage?: Usage): Pod {
         restarts: statuses.reduce((sum, cs) => sum + cs.restartCount, 0),
         age: age(pod.metadata?.creationTimestamp, now),
         node: dash(pod.spec?.nodeName),
+        owner: ownerLabel(pod.metadata),
         cpu: usage?.cpu ?? 0,
         mem: usage?.mem ?? 0,
         cpuLimit: containers.reduce((sum, c) => sum + cpuToMillicores(c.resources?.limits?.cpu), 0),

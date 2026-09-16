@@ -836,6 +836,44 @@ test('browses the instances of a definition through the columns it declares', as
     await window.getByTestId('sidebar').getByRole('link', { name: 'Pods' }).click();
 });
 
+test('opens a namespace, reads what is in it, and groups the pod list by node', async () => {
+    const { window } = launched;
+    const sidebar = window.getByTestId('sidebar');
+    await sidebar.getByRole('link', { name: 'Namespaces' }).click();
+    await window.getByTestId('namespaces-table').locator('[data-namespace="km-e2e"]').getByRole('link').click();
+
+    const page = window.getByTestId('namespace-page');
+    await expect(page).toContainText('phase: Active');
+    await page.getByRole('tab', { name: 'Contents' }).click();
+    const counts = page.getByTestId('namespace-counts');
+    // The seeded namespace holds at least the deployment's pod and the config map beside it.
+    await expect(counts.locator('[data-count="Pod"]')).toBeVisible();
+    await expect(counts.locator('[data-count="ConfigMap"]')).toBeVisible();
+
+    await page.getByRole('tab', { name: 'Budgets' }).click();
+    // The seed carries a quota and a limit range for this namespace.
+    await expect(page.getByTestId('namespace-quotas')).toContainText('pods');
+    await expect(page.getByTestId('namespace-limits')).toContainText('cpu');
+
+    // A namespace created here is a real namespace, and the list picks it up.
+    await sidebar.getByRole('link', { name: 'Namespaces' }).click();
+    await window.getByTestId('create-namespace').click();
+    const dialog = window.getByRole('alertdialog');
+    await dialog.getByLabel('Namespace name').fill('km-e2e-made');
+    await dialog.getByRole('button', { name: 'Create' }).click();
+    await expect(window.getByTestId('namespaces-table').locator('[data-namespace="km-e2e-made"]')).toBeVisible({
+        timeout: 30_000,
+    });
+
+    // Grouping turns a wall of pod names into what runs where.
+    await sidebar.getByRole('link', { name: 'Pods' }).click();
+    await window.getByRole('combobox', { name: 'Group pods' }).click();
+    await window.getByRole('option', { name: 'By node' }).click();
+    await expect(window.getByTestId('pods-table').locator('[data-group]').first()).toBeVisible();
+    await window.getByRole('combobox', { name: 'Group pods' }).click();
+    await window.getByRole('option', { name: 'No grouping' }).click();
+});
+
 test('stops at the startup screen when the kubeconfig path names nothing', async () => {
     const missing = join(tmpdir(), `km-e2e-missing-${Date.now()}.yaml`);
     const bad = await launchApp({ kubeconfigPath: missing });

@@ -11,6 +11,7 @@ import {
 } from './k8s/addons.js';
 import { kubeContextSchema } from './k8s/contexts.js';
 import { manifestInputSchema, manifestSchema } from './k8s/manifest.js';
+import { namespaceDetailInputSchema, namespaceDetailSchema } from './k8s/namespaces.js';
 import {
     customResourceGetInputSchema,
     customResourceGetOutputSchema,
@@ -210,6 +211,7 @@ export const ipcSchemas = {
     'releases.rollback': { input: releaseRollbackInputSchema, output: releaseWriteResultSchema },
     'releases.uninstall': { input: releaseUninstallInputSchema, output: releaseWriteResultSchema },
     'helmCharts.list': { input: noInput, output: z.array(helmChartSchema) },
+    'namespaces.detail': { input: namespaceDetailInputSchema, output: namespaceDetailSchema.nullable() },
     'customResources.list': { input: customResourceListInputSchema, output: customResourceListOutputSchema },
     'customResources.get': { input: customResourceGetInputSchema, output: customResourceGetOutputSchema },
     'customResources.getYaml': { input: customResourceGetInputSchema, output: manifestSchema },

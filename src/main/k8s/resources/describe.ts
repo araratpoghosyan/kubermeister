@@ -10,7 +10,7 @@ import { apis, readOrNull, resolveObjectNamespace } from '../client.js';
 import { K8sError, withK8s } from '../errors.js';
 import { ago, joinSelector } from '../format.js';
 import { eventTimestamp, sortedByTimeDesc } from './events.js';
-import { controllerRef } from './owners.js';
+import { controllerRef } from './controller.js';
 
 /*
  * The flat reading of an object: what `kubectl describe` prints, built from the same objects the

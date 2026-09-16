@@ -122,11 +122,25 @@ describe('toPod', () => {
             restarts: 0,
             age: '3d',
             node: 'n1',
+            owner: '—',
             cpu: 0,
             mem: 0,
             cpuLimit: 500,
             memLimit: 128,
         });
+    });
+
+    it('names the controller that owns the pod, which is how a list groups by workload', () => {
+        const owned = pod({
+            metadata: {
+                name: 'web-1',
+                namespace: 'team-a',
+                ownerReferences: [
+                    { apiVersion: 'apps/v1', kind: 'ReplicaSet', name: 'web-7d9', uid: 'r1', controller: true },
+                ],
+            },
+        });
+        expect(pods.toPod(owned, NOW).owner).toBe('ReplicaSet/web-7d9');
     });
 
     it('counts ready containers and restarts across containers and tolerates missing fields', () => {

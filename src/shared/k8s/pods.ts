@@ -21,6 +21,8 @@ export const podSchema = z.object({
     restarts: z.number().int().nonnegative(),
     age: z.string(),
     node: z.string(),
+    /** `Kind/name` of the controller that owns the pod, or a dash for one nobody owns. */
+    owner: z.string(),
     /** Current CPU usage in millicores from metrics-server; 0 when no sample exists yet. */
     cpu: z.number(),
     /** Current memory usage in MiB from metrics-server; 0 when no sample exists yet. */

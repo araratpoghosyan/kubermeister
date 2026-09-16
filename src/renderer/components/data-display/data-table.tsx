@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { flexRender, type Table as TanstackTable } from '@tanstack/react-table';
+import { flexRender, type Row, type Table as TanstackTable } from '@tanstack/react-table';
 import { ArrowDownIcon, ArrowUpIcon, ChevronsUpDownIcon } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
@@ -8,6 +8,11 @@ import { cn } from '@/lib/utils';
 interface DataTableProps<TData> {
     table: TanstackTable<TData>;
     onRowClick?: (row: TData) => void;
+    /**
+     * Group rows under headings by this key. The rows keep their order inside a group, so grouping
+     * only adds the headings: a list sorted by age stays sorted by age within each node or owner.
+     */
+    groupBy?: (row: TData) => string;
     /** Extra attributes per row (`data-*` hooks for tests and styling). */
     rowProps?: (row: TData) => Record<string, string>;
     containerClassName?: string;
@@ -21,11 +26,41 @@ const ROW_HEIGHT = 37;
  * Only the rows in view are mounted. A page of this list can hold thousands of objects, and the
  * cost of a list screen should be the size of the window rather than the size of the cluster.
  */
-export function DataTable<TData>({ table, onRowClick, rowProps, containerClassName, testId }: DataTableProps<TData>) {
+/** One entry of the virtualised list: a row, or the heading that opens a group of them. */
+type Entry<TData> = { kind: 'row'; row: Row<TData> } | { kind: 'group'; label: string; count: number };
+
+function entriesOf<TData>(rows: Row<TData>[], groupBy?: (row: TData) => string): Entry<TData>[] {
+    if (!groupBy) return rows.map((row) => ({ kind: 'row', row }));
+    const entries: Entry<TData>[] = [];
+    let current: string | null = null;
+    let heading: Extract<Entry<TData>, { kind: 'group' }> | null = null;
+    for (const row of rows) {
+        const label = groupBy(row.original);
+        if (label !== current) {
+            current = label;
+            heading = { kind: 'group', label, count: 0 };
+            entries.push(heading);
+        }
+        if (heading) heading.count += 1;
+        entries.push({ kind: 'row', row });
+    }
+    return entries;
+}
+
+export function DataTable<TData>({
+    table,
+    onRowClick,
+    groupBy,
+    rowProps,
+    containerClassName,
+    testId,
+}: DataTableProps<TData>) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const rows = table.getRowModel().rows;
+    const entries = entriesOf(rows, groupBy);
+    const columnCount = table.getVisibleFlatColumns().length;
     const virtualizer = useVirtualizer({
-        count: rows.length,
+        count: entries.length,
         getScrollElement: () => scrollRef.current,
         estimateSize: () => ROW_HEIGHT,
         overscan: 12,
@@ -96,7 +131,27 @@ export function DataTable<TData>({ table, onRowClick, rowProps, containerClassNa
                     without the rows themselves being in the document. */}
                 {before > 0 && <tr style={{ height: `${before}px` }} aria-hidden />}
                 {items.map((item) => {
-                    const row = rows[item.index]!;
+                    const entry = entries[item.index]!;
+                    if (entry.kind === 'group') {
+                        return (
+                            <TableRow
+                                key={`group:${entry.label}`}
+                                ref={virtualizer.measureElement}
+                                data-index={item.index}
+                                data-group={entry.label}
+                                className="border-border bg-elev-1 hover:bg-elev-1"
+                            >
+                                <TableCell
+                                    colSpan={columnCount}
+                                    className="px-3 py-1.5 text-caption font-medium tracking-wider text-text-muted uppercase"
+                                >
+                                    {entry.label}
+                                    <span className="ml-2 tabular-nums">{entry.count}</span>
+                                </TableCell>
+                            </TableRow>
+                        );
+                    }
+                    const row = entry.row;
                     return (
                         <TableRow
                             key={row.id}

@@ -60,6 +60,7 @@ export const IPC_CHANNELS = [
     'releases.rollback',
     'releases.uninstall',
     'helmCharts.list',
+    'namespaces.detail',
     'customResources.list',
     'customResources.get',
     'customResources.getYaml',

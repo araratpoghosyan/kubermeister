@@ -19,6 +19,7 @@ const row = {
     restarts: 0,
     age: '3d',
     node: 'n1',
+    owner: 'ReplicaSet/web-7d9',
     cpu: 0,
     mem: 0,
     cpuLimit: 0,

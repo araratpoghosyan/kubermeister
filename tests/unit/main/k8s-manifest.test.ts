@@ -157,7 +157,7 @@ describe('getObjectYaml', () => {
         const { manifestKindSchema } = await import('../../../src/shared/k8s/manifest.js');
         const { KIND_REGISTRY } = await import('../../../src/shared/k8s/registry.js');
         for (const kind of manifestKindSchema.options) {
-            const clusterScoped = kind === 'Node' || KIND_REGISTRY[kind].clusterScoped;
+            const clusterScoped = kind === 'Node' || kind === 'Namespace' || KIND_REGISTRY[kind].clusterScoped;
             // Nothing is listed, so every kind must report the object as missing rather than throw
             // for want of a list function. A namespaced kind with no namespace to read in is refused
             // before any list is made.
