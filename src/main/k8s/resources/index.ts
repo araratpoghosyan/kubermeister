@@ -33,6 +33,14 @@ import {
 } from './access.js';
 import { getPod, listPods } from './pods.js';
 import {
+    getLease,
+    getPodDisruptionBudget,
+    getPriorityClass,
+    listLeases,
+    listPodDisruptionBudgets,
+    listPriorityClasses,
+} from './policy.js';
+import {
     getClaim,
     getSnapshot,
     getStorageClass,
@@ -48,12 +56,16 @@ import {
     getDaemonSet,
     getDeployment,
     getJob,
+    getReplicaSet,
+    getReplicationController,
     getStatefulSet,
     listAutoscalers,
     listCronJobs,
     listDaemonSets,
     listDeployments,
     listJobs,
+    listReplicaSets,
+    listReplicationControllers,
     listStatefulSets,
 } from './workloads.js';
 
@@ -68,9 +80,14 @@ const SOURCES: { [K in Kind]: Source<K> } = {
     Deployment: { list: listDeployments, get: getDeployment },
     StatefulSet: { list: listStatefulSets, get: getStatefulSet },
     DaemonSet: { list: listDaemonSets, get: getDaemonSet },
+    ReplicaSet: { list: listReplicaSets, get: getReplicaSet },
+    ReplicationController: { list: listReplicationControllers, get: getReplicationController },
     Job: { list: listJobs, get: getJob },
     CronJob: { list: listCronJobs, get: getCronJob },
     HorizontalPodAutoscaler: { list: listAutoscalers, get: getAutoscaler },
+    PodDisruptionBudget: { list: listPodDisruptionBudgets, get: getPodDisruptionBudget },
+    PriorityClass: { list: () => listPriorityClasses(), get: (name) => getPriorityClass(name) },
+    Lease: { list: listLeases, get: getLease },
     ConfigMap: { list: listConfigMaps, get: getConfigMap },
     Secret: { list: listSecrets, get: getSecret },
     Service: { list: listServices, get: getService },
@@ -99,6 +116,13 @@ export async function listResources(input: ResourceListInput): Promise<ResourceL
             return { kind: 'StatefulSet', items: await SOURCES.StatefulSet.list(input.namespace) };
         case 'DaemonSet':
             return { kind: 'DaemonSet', items: await SOURCES.DaemonSet.list(input.namespace) };
+        case 'ReplicaSet':
+            return { kind: 'ReplicaSet', items: await SOURCES.ReplicaSet.list(input.namespace) };
+        case 'ReplicationController':
+            return {
+                kind: 'ReplicationController',
+                items: await SOURCES.ReplicationController.list(input.namespace),
+            };
         case 'Job':
             return { kind: 'Job', items: await SOURCES.Job.list(input.namespace) };
         case 'CronJob':
@@ -108,6 +132,12 @@ export async function listResources(input: ResourceListInput): Promise<ResourceL
                 kind: 'HorizontalPodAutoscaler',
                 items: await SOURCES.HorizontalPodAutoscaler.list(input.namespace),
             };
+        case 'PodDisruptionBudget':
+            return { kind: 'PodDisruptionBudget', items: await SOURCES.PodDisruptionBudget.list(input.namespace) };
+        case 'PriorityClass':
+            return { kind: 'PriorityClass', items: await SOURCES.PriorityClass.list() };
+        case 'Lease':
+            return { kind: 'Lease', items: await SOURCES.Lease.list(input.namespace) };
         case 'ConfigMap':
             return { kind: 'ConfigMap', items: await SOURCES.ConfigMap.list(input.namespace) };
         case 'Secret':
@@ -153,6 +183,13 @@ export async function getResource(input: ResourceGetInput): Promise<ResourceGetO
             return { kind: 'StatefulSet', item: await SOURCES.StatefulSet.get(input.name, input.namespace) };
         case 'DaemonSet':
             return { kind: 'DaemonSet', item: await SOURCES.DaemonSet.get(input.name, input.namespace) };
+        case 'ReplicaSet':
+            return { kind: 'ReplicaSet', item: await SOURCES.ReplicaSet.get(input.name, input.namespace) };
+        case 'ReplicationController':
+            return {
+                kind: 'ReplicationController',
+                item: await SOURCES.ReplicationController.get(input.name, input.namespace),
+            };
         case 'Job':
             return { kind: 'Job', item: await SOURCES.Job.get(input.name, input.namespace) };
         case 'CronJob':
@@ -162,6 +199,15 @@ export async function getResource(input: ResourceGetInput): Promise<ResourceGetO
                 kind: 'HorizontalPodAutoscaler',
                 item: await SOURCES.HorizontalPodAutoscaler.get(input.name, input.namespace),
             };
+        case 'PodDisruptionBudget':
+            return {
+                kind: 'PodDisruptionBudget',
+                item: await SOURCES.PodDisruptionBudget.get(input.name, input.namespace),
+            };
+        case 'PriorityClass':
+            return { kind: 'PriorityClass', item: await SOURCES.PriorityClass.get(input.name) };
+        case 'Lease':
+            return { kind: 'Lease', item: await SOURCES.Lease.get(input.name, input.namespace) };
         case 'ConfigMap':
             return { kind: 'ConfigMap', item: await SOURCES.ConfigMap.get(input.name, input.namespace) };
         case 'Secret':

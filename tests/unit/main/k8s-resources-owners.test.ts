@@ -73,8 +73,7 @@ describe('controllerRef', () => {
 describe('owner chain', () => {
     it('walks a pod up through its replica set to its deployment, with links to both screens', async () => {
         await expect(owners.getPodOwners('web-abc-1', 'team-a')).resolves.toEqual([
-            // A ReplicaSet has no screen yet, so it is named but not linked.
-            { kind: 'ReplicaSet', name: 'web-abc', namespace: 'team-a', path: null },
+            { kind: 'ReplicaSet', name: 'web-abc', namespace: 'team-a', path: '/workloads/replicasets/team-a/web-abc' },
             { kind: 'Deployment', name: 'web', namespace: 'team-a', path: '/workloads/deployments/team-a/web' },
         ]);
     });
@@ -105,7 +104,9 @@ describe('owner chain', () => {
     it('keeps the link it has when the one above cannot be read', async () => {
         apps.readNamespacedReplicaSet.mockRejectedValue(new ApiException(404, 'gone', null, {}));
         const chain = await owners.getPodOwners('web-abc-1', 'team-a');
-        expect(chain).toEqual([{ kind: 'ReplicaSet', name: 'web-abc', namespace: 'team-a', path: null }]);
+        expect(chain).toEqual([
+            { kind: 'ReplicaSet', name: 'web-abc', namespace: 'team-a', path: '/workloads/replicasets/team-a/web-abc' },
+        ]);
     });
 });
 

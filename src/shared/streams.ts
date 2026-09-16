@@ -5,6 +5,7 @@ import { namespaceNameSchema } from './k8s/names.js';
 import { podSchema } from './k8s/pods.js';
 import { endpointsSchema, ingressSchema, networkPolicySchema, serviceSchema } from './k8s/network.js';
 import { customResourceSchema } from './k8s/addons.js';
+import { leaseSchema, podDisruptionBudgetSchema, priorityClassSchema } from './k8s/policy.js';
 import { drainOptionsSchema, type DrainEvent } from './k8s/drain.js';
 import {
     clusterRoleBindingSchema,
@@ -23,6 +24,7 @@ import {
     daemonSetSchema,
     deploymentSchema,
     jobSchema,
+    replicaSetRowSchema,
     secretSchema,
     statefulSetSchema,
 } from './k8s/workloads.js';
@@ -53,9 +55,14 @@ export const watchEventSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('Deployment'), type: watchType, item: deploymentSchema }),
     z.object({ kind: z.literal('StatefulSet'), type: watchType, item: statefulSetSchema }),
     z.object({ kind: z.literal('DaemonSet'), type: watchType, item: daemonSetSchema }),
+    z.object({ kind: z.literal('ReplicaSet'), type: watchType, item: replicaSetRowSchema }),
+    z.object({ kind: z.literal('ReplicationController'), type: watchType, item: replicaSetRowSchema }),
     z.object({ kind: z.literal('Job'), type: watchType, item: jobSchema }),
     z.object({ kind: z.literal('CronJob'), type: watchType, item: cronJobSchema }),
     z.object({ kind: z.literal('HorizontalPodAutoscaler'), type: watchType, item: autoscalerSchema }),
+    z.object({ kind: z.literal('PodDisruptionBudget'), type: watchType, item: podDisruptionBudgetSchema }),
+    z.object({ kind: z.literal('PriorityClass'), type: watchType, item: priorityClassSchema }),
+    z.object({ kind: z.literal('Lease'), type: watchType, item: leaseSchema }),
     z.object({ kind: z.literal('ConfigMap'), type: watchType, item: configMapSchema }),
     z.object({ kind: z.literal('Secret'), type: watchType, item: secretSchema }),
     z.object({ kind: z.literal('Service'), type: watchType, item: serviceSchema }),

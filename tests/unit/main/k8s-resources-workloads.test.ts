@@ -12,6 +12,8 @@ const apps = {
     listDeploymentForAllNamespaces: vi.fn(),
     readNamespacedDeployment: vi.fn(),
     listNamespacedReplicaSet: vi.fn(),
+    listReplicaSetForAllNamespaces: vi.fn(),
+    readNamespacedReplicaSet: vi.fn(),
     patchNamespacedDeployment: vi.fn(),
     listNamespacedStatefulSet: vi.fn(),
     listStatefulSetForAllNamespaces: vi.fn(),
@@ -33,9 +35,14 @@ const hpa = {
     listHorizontalPodAutoscalerForAllNamespaces: vi.fn(),
     readNamespacedHorizontalPodAutoscaler: vi.fn(),
 };
+const core = {
+    listNamespacedReplicationController: vi.fn(),
+    listReplicationControllerForAllNamespaces: vi.fn(),
+    readNamespacedReplicationController: vi.fn(),
+};
 const objects = { patch: vi.fn() };
 const client = {
-    apis: () => ({ apps, batch, hpa, objects }),
+    apis: () => ({ apps, batch, core, hpa, objects }),
     activeContextName: vi.fn<() => string>(() => 'alpha'),
     getActiveNamespace: vi.fn<() => string | null>(),
     resolveObjectNamespace: (explicit?: string) => explicit ?? client.getActiveNamespace(),
@@ -466,6 +473,63 @@ describe('statefulset and daemonset transforms', () => {
     });
 });
 
+describe('replica set and replication controller transforms', () => {
+    const rs = {
+        metadata: {
+            name: 'web-7d9',
+            namespace: 'team-a',
+            creationTimestamp: new Date(NOW - HOUR),
+            labels: { app: 'web' },
+            ownerReferences: [{ apiVersion: 'apps/v1', kind: 'Deployment', name: 'web', uid: 'd1', controller: true }],
+        },
+        spec: { replicas: 3, template: { spec: { containers: [{ name: 'web', image: 'nginx:1.27' }] } } },
+        status: { replicas: 3, readyReplicas: 2 },
+    } as V1ReplicaSet;
+
+    it('names the controller above the set, which is the only way to tell two rollouts apart', () => {
+        expect(workloads.toReplicaSetRow(rs, NOW)).toEqual({
+            name: 'web-7d9',
+            namespace: 'team-a',
+            owner: 'Deployment/web',
+            desired: 3,
+            current: 3,
+            ready: 2,
+            image: 'nginx:1.27',
+            age: '1h',
+        });
+        expect(workloads.toReplicaSetDetail(rs, NOW)).toMatchObject({ labels: [['app', 'web']], annotations: [] });
+    });
+
+    it('dashes the owner of a set nobody controls, and the image of one with no containers', () => {
+        expect(workloads.toReplicaSetRow({ metadata: { name: 'orphan' } }, NOW)).toMatchObject({
+            owner: '—',
+            image: '—',
+            namespace: '',
+            desired: 0,
+        });
+    });
+
+    it('reads a replication controller as the same row', () => {
+        const rc = {
+            metadata: { name: 'legacy', namespace: 'team-a', creationTimestamp: new Date(NOW - 2 * HOUR) },
+            spec: { replicas: 1, template: { spec: { containers: [{ name: 'app', image: 'busybox:1.36' }] } } },
+            status: { replicas: 1, readyReplicas: 1 },
+        };
+        expect(workloads.toReplicationController(rc, NOW)).toEqual({
+            name: 'legacy',
+            namespace: 'team-a',
+            owner: '—',
+            desired: 1,
+            current: 1,
+            ready: 1,
+            image: 'busybox:1.36',
+            age: '2h',
+        });
+        expect(workloads.toReplicationControllerDetail(rc, NOW)).toMatchObject({ labels: [], annotations: [] });
+        expect(workloads.toReplicationController({}, NOW)).toMatchObject({ name: '', desired: 0, age: '—' });
+    });
+});
+
 describe('readers', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -515,6 +579,31 @@ describe('readers', () => {
         client.getActiveNamespace.mockReturnValue(null);
         await workloads.listDaemonSets();
         expect(apps.listDaemonSetForAllNamespaces).toHaveBeenCalled();
+    });
+
+    it('lists and gets replica sets and replication controllers', async () => {
+        apps.listReplicaSetForAllNamespaces.mockResolvedValue({ items: [replicaSet('1')] });
+        apps.readNamespacedReplicaSet.mockResolvedValue(replicaSet('1'));
+        core.listNamespacedReplicationController.mockResolvedValue({ items: [{ metadata: { name: 'legacy' } }] });
+        core.listReplicationControllerForAllNamespaces.mockResolvedValue({ items: [] });
+        core.readNamespacedReplicationController.mockResolvedValue({ metadata: { name: 'legacy' } });
+
+        await expect(workloads.listReplicaSets('team-a')).resolves.toHaveLength(2);
+        expect(apps.listNamespacedReplicaSet).toHaveBeenCalledWith({ namespace: 'team-a' });
+        await expect(workloads.getReplicaSet('web-1', 'team-a')).resolves.toMatchObject({ owner: 'Deployment/web' });
+        await expect(workloads.listReplicationControllers('team-a')).resolves.toMatchObject([{ name: 'legacy' }]);
+        await expect(workloads.getReplicationController('legacy', 'team-a')).resolves.toMatchObject({
+            name: 'legacy',
+        });
+
+        client.getActiveNamespace.mockReturnValue(null);
+        await expect(workloads.listReplicaSets()).resolves.toHaveLength(1);
+        expect(apps.listReplicaSetForAllNamespaces).toHaveBeenCalled();
+        await expect(workloads.listReplicationControllers()).resolves.toEqual([]);
+        expect(core.listReplicationControllerForAllNamespaces).toHaveBeenCalled();
+        // A single object still refuses to guess a namespace.
+        await expect(workloads.getReplicaSet('web-1')).resolves.toBeNull();
+        await expect(workloads.getReplicationController('legacy')).resolves.toBeNull();
     });
 
     it('answers not found for a single object when no namespace is known, without searching the cluster', async () => {

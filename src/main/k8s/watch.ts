@@ -4,6 +4,7 @@ import {
     type V1ClusterRoleBinding,
     type V1CronJob,
     type V1CustomResourceDefinition,
+    type V1PriorityClass,
     type V1RoleBinding,
     type V1StorageClass,
     type V2HorizontalPodAutoscaler,
@@ -18,8 +19,18 @@ import { toCustomResource } from './resources/crds.js';
 import { toEndpoints, toIngress, toNetworkPolicy, toService } from './resources/network.js';
 import { toClusterRole, toClusterRoleBinding, toRole, toRoleBinding, toServiceAccount } from './resources/access.js';
 import { toPod, usageFor } from './resources/pods.js';
+import { toLease, toPodDisruptionBudget, toPriorityClass } from './resources/policy.js';
 import { toClaim, toStorageClass, toVolume } from './resources/storage.js';
-import { toAutoscaler, toCronJob, toDaemonSet, toDeployment, toJob, toStatefulSet } from './resources/workloads.js';
+import {
+    toAutoscaler,
+    toCronJob,
+    toDaemonSet,
+    toDeployment,
+    toJob,
+    toReplicaSetRow,
+    toReplicationController,
+    toStatefulSet,
+} from './resources/workloads.js';
 
 /** How long to wait before restarting an informer after its watch connection failed. */
 export const WATCH_RETRY_MS = 5_000;
@@ -68,6 +79,26 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
                 : () => apis().apps.listDaemonSetForAllNamespaces(),
         toRow: (d) => toDaemonSet(d),
     },
+    ReplicaSet: {
+        path: (ns) =>
+            ns ? `/apis/apps/v1/namespaces/${encodeURIComponent(ns)}/replicasets` : '/apis/apps/v1/replicasets',
+        list: (ns) =>
+            ns
+                ? () => apis().apps.listNamespacedReplicaSet({ namespace: ns })
+                : () => apis().apps.listReplicaSetForAllNamespaces(),
+        toRow: (rs) => toReplicaSetRow(rs),
+    },
+    ReplicationController: {
+        path: (ns) =>
+            ns
+                ? `/api/v1/namespaces/${encodeURIComponent(ns)}/replicationcontrollers`
+                : '/api/v1/replicationcontrollers',
+        list: (ns) =>
+            ns
+                ? () => apis().core.listNamespacedReplicationController({ namespace: ns })
+                : () => apis().core.listReplicationControllerForAllNamespaces(),
+        toRow: (rc) => toReplicationController(rc),
+    },
     Job: {
         path: (ns) => (ns ? `/apis/batch/v1/namespaces/${encodeURIComponent(ns)}/jobs` : '/apis/batch/v1/jobs'),
         list: (ns) =>
@@ -94,6 +125,34 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
                 ? () => apis().hpa.listNamespacedHorizontalPodAutoscaler({ namespace: ns })
                 : () => apis().hpa.listHorizontalPodAutoscalerForAllNamespaces(),
         toRow: (autoscaler) => toAutoscaler(autoscaler as V2HorizontalPodAutoscaler),
+    },
+    PodDisruptionBudget: {
+        path: (ns) =>
+            ns
+                ? `/apis/policy/v1/namespaces/${encodeURIComponent(ns)}/poddisruptionbudgets`
+                : '/apis/policy/v1/poddisruptionbudgets',
+        list: (ns) =>
+            ns
+                ? () => apis().policy.listNamespacedPodDisruptionBudget({ namespace: ns })
+                : () => apis().policy.listPodDisruptionBudgetForAllNamespaces(),
+        toRow: (pdb) => toPodDisruptionBudget(pdb),
+    },
+    PriorityClass: {
+        path: () => '/apis/scheduling.k8s.io/v1/priorityclasses',
+        list: () => () => apis().scheduling.listPriorityClass(),
+        // A PriorityClass keeps `value` at the top level, which the generic object type omits.
+        toRow: (priorityClass) => toPriorityClass(priorityClass as V1PriorityClass),
+    },
+    Lease: {
+        path: (ns) =>
+            ns
+                ? `/apis/coordination.k8s.io/v1/namespaces/${encodeURIComponent(ns)}/leases`
+                : '/apis/coordination.k8s.io/v1/leases',
+        list: (ns) =>
+            ns
+                ? () => apis().coordination.listNamespacedLease({ namespace: ns })
+                : () => apis().coordination.listLeaseForAllNamespaces(),
+        toRow: (lease) => toLease(lease),
     },
     ConfigMap: {
         path: (ns) => (ns ? `/api/v1/namespaces/${encodeURIComponent(ns)}/configmaps` : '/api/v1/configmaps'),

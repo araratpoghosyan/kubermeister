@@ -28,9 +28,14 @@ describe('kind registry', () => {
             'Deployment',
             'StatefulSet',
             'DaemonSet',
+            'ReplicaSet',
+            'ReplicationController',
             'Job',
             'CronJob',
             'HorizontalPodAutoscaler',
+            'PodDisruptionBudget',
+            'PriorityClass',
+            'Lease',
             'ConfigMap',
             'Secret',
             'Service',
@@ -78,7 +83,8 @@ describe('kind registry', () => {
         expect(kindSchema.safeParse('Pod').success).toBe(true);
         expect(kindSchema.safeParse('pod').success).toBe(false);
         expect(kindSchema.safeParse('Deployment').success).toBe(true);
-        expect(kindSchema.safeParse('ReplicaSet').success).toBe(false);
+        expect(kindSchema.safeParse('ReplicaSet').success).toBe(true);
+        expect(kindSchema.safeParse('ReplicaSets').success).toBe(false);
     });
 });
 

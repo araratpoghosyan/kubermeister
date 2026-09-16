@@ -4,7 +4,9 @@ import type {
     V1DaemonSet,
     V1Deployment,
     V1Job,
+    V1ObjectMeta,
     V1ReplicaSet,
+    V1ReplicationController,
     V1StatefulSet,
     V2HorizontalPodAutoscaler,
 } from '@kubernetes/client-node';
@@ -22,6 +24,8 @@ import type {
     JobDetail,
     JobStatus,
     ReplicaSet,
+    ReplicaSetDetail,
+    ReplicaSetRow,
     Rollout,
     RolloutCondition,
     RolloutReplicaSet,
@@ -33,6 +37,7 @@ import type { PauseInput, RollbackInput, RollbackResult, WriteResult } from '../
 import { apis, getNamespaced, listItems } from '../client.js';
 import { K8sError, withK8s } from '../errors.js';
 import { assertContext } from './write.js';
+import { controllerRef } from './owners.js';
 import { age, ago, dash, duration, joinSelector, readyRatio, toPairs } from '../format.js';
 
 /*
@@ -127,6 +132,58 @@ export function toReplicaSet(rs: V1ReplicaSet, now = Date.now()): ReplicaSet {
         current: rs.status?.replicas ?? 0,
         ready: rs.status?.readyReplicas ?? 0,
         age: age(rs.metadata?.creationTimestamp, now),
+    };
+}
+
+/** `Kind/name` of the controller above an object, which for a ReplicaSet is its Deployment. */
+export function ownerLabel(metadata?: V1ObjectMeta): string {
+    const ref = controllerRef(metadata);
+    return ref ? `${ref.kind}/${ref.name}` : '—';
+}
+
+/**
+ * A ReplicaSet as its own list row. The Deployment screens show the sets they own without a
+ * namespace or an owner, since both are the Deployment's; a cluster-wide list needs them.
+ */
+export function toReplicaSetRow(rs: V1ReplicaSet, now = Date.now()): ReplicaSetRow {
+    return {
+        ...toReplicaSet(rs, now),
+        namespace: rs.metadata?.namespace ?? '',
+        owner: ownerLabel(rs.metadata),
+        image: firstImage(rs.spec?.template?.spec?.containers),
+    };
+}
+
+export function toReplicaSetDetail(rs: V1ReplicaSet, now = Date.now()): ReplicaSetDetail {
+    return {
+        ...toReplicaSetRow(rs, now),
+        labels: toPairs(rs.metadata?.labels),
+        annotations: toPairs(rs.metadata?.annotations),
+    };
+}
+
+/**
+ * The ReplicationController predates ReplicaSets and is still what a few old charts ship. It
+ * carries the same counts under the same names, so it renders as the same row.
+ */
+export function toReplicationController(rc: V1ReplicationController, now = Date.now()): ReplicaSetRow {
+    return {
+        name: rc.metadata?.name ?? '',
+        namespace: rc.metadata?.namespace ?? '',
+        owner: ownerLabel(rc.metadata),
+        desired: rc.spec?.replicas ?? 0,
+        current: rc.status?.replicas ?? 0,
+        ready: rc.status?.readyReplicas ?? 0,
+        image: firstImage(rc.spec?.template?.spec?.containers),
+        age: age(rc.metadata?.creationTimestamp, now),
+    };
+}
+
+export function toReplicationControllerDetail(rc: V1ReplicationController, now = Date.now()): ReplicaSetDetail {
+    return {
+        ...toReplicationController(rc, now),
+        labels: toPairs(rc.metadata?.labels),
+        annotations: toPairs(rc.metadata?.annotations),
     };
 }
 
@@ -401,6 +458,46 @@ export function setDeploymentPaused(input: PauseInput): Promise<WriteResult> {
         };
         await apis().objects.patch(patch);
         return { kind: 'Deployment', name: input.name, namespace: input.namespace };
+    });
+}
+
+export function listReplicaSets(namespace?: string): Promise<ReplicaSetRow[]> {
+    return withK8s('resources.list', async () => {
+        const { items } = await listItems(
+            namespace,
+            (ns) => apis().apps.listNamespacedReplicaSet({ namespace: ns }),
+            () => apis().apps.listReplicaSetForAllNamespaces(),
+        );
+        return items.map((rs) => toReplicaSetRow(rs));
+    });
+}
+
+export function getReplicaSet(name: string, namespace?: string): Promise<ReplicaSetDetail | null> {
+    return withK8s('resources.get', async () => {
+        const rs = await getNamespaced(name, namespace, (n, ns) =>
+            apis().apps.readNamespacedReplicaSet({ name: n, namespace: ns }),
+        );
+        return rs ? toReplicaSetDetail(rs) : null;
+    });
+}
+
+export function listReplicationControllers(namespace?: string): Promise<ReplicaSetRow[]> {
+    return withK8s('resources.list', async () => {
+        const { items } = await listItems(
+            namespace,
+            (ns) => apis().core.listNamespacedReplicationController({ namespace: ns }),
+            () => apis().core.listReplicationControllerForAllNamespaces(),
+        );
+        return items.map((rc) => toReplicationController(rc));
+    });
+}
+
+export function getReplicationController(name: string, namespace?: string): Promise<ReplicaSetDetail | null> {
+    return withK8s('resources.get', async () => {
+        const rc = await getNamespaced(name, namespace, (n, ns) =>
+            apis().core.readNamespacedReplicationController({ name: n, namespace: ns }),
+        );
+        return rc ? toReplicationControllerDetail(rc) : null;
     });
 }
 
