@@ -89,6 +89,13 @@ export const KIND_REGISTRY = {
         scalable: false,
         listPath: '/overview/leases',
     },
+    RuntimeClass: {
+        kind: 'RuntimeClass',
+        apiVersion: 'node.k8s.io/v1',
+        clusterScoped: true,
+        scalable: false,
+        listPath: '/overview/runtimeclasses',
+    },
     ConfigMap: {
         kind: 'ConfigMap',
         apiVersion: 'v1',
@@ -125,6 +132,13 @@ export const KIND_REGISTRY = {
         scalable: false,
         listPath: '/network/networkpolicies',
     },
+    IngressClass: {
+        kind: 'IngressClass',
+        apiVersion: 'networking.k8s.io/v1',
+        clusterScoped: true,
+        scalable: false,
+        listPath: '/network/ingressclasses',
+    },
     PersistentVolume: {
         kind: 'PersistentVolume',
         apiVersion: 'v1',
@@ -152,6 +166,27 @@ export const KIND_REGISTRY = {
         clusterScoped: false,
         scalable: false,
         listPath: '/storage/snapshots',
+    },
+    CSIDriver: {
+        kind: 'CSIDriver',
+        apiVersion: 'storage.k8s.io/v1',
+        clusterScoped: true,
+        scalable: false,
+        listPath: '/storage/csidrivers',
+    },
+    CSINode: {
+        kind: 'CSINode',
+        apiVersion: 'storage.k8s.io/v1',
+        clusterScoped: true,
+        scalable: false,
+        listPath: '/storage/csinodes',
+    },
+    CSIStorageCapacity: {
+        kind: 'CSIStorageCapacity',
+        apiVersion: 'storage.k8s.io/v1',
+        clusterScoped: false,
+        scalable: false,
+        listPath: '/storage/capacity',
     },
     ServiceAccount: {
         kind: 'ServiceAccount',
@@ -221,13 +256,9 @@ export type RestartKind = (typeof RESTARTABLE_KINDS)[number];
  */
 export const CLUSTER_SCOPED_EXTRA_KINDS: readonly string[] = [
     'APIService',
-    'CSIDriver',
-    'CSINode',
-    'IngressClass',
     'MutatingWebhookConfiguration',
     'Namespace',
     'Node',
-    'RuntimeClass',
     'ValidatingWebhookConfiguration',
     'VolumeAttachment',
     'VolumeSnapshotClass',

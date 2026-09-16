@@ -79,6 +79,7 @@ describe('kubeConfig', () => {
                 'objects',
                 'policy',
                 'rbac',
+                'runtime',
                 'scheduling',
                 'storage',
                 'version',

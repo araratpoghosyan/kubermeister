@@ -126,6 +126,26 @@ export function textColumn<T>(
     };
 }
 
+type BooleanKey<T> = Extract<{ [K in keyof T]: T[K] extends boolean ? K : never }[keyof T], string>;
+
+/**
+ * A boolean cell, in the API's own words rather than an icon: these flags read as `true`/`false`
+ * in every manifest and every `kubectl get -o yaml`, and a tick would be one more thing to learn.
+ */
+export function flagColumn<T>(id: BooleanKey<T>, header: string, size = 120): ColumnDef<T> {
+    return {
+        id,
+        header,
+        size,
+        accessorFn: (row) => row[id] as boolean,
+        cell: ({ row }) => (
+            <span className={(row.original[id] as boolean) ? 'text-text-2' : 'text-text-muted'}>
+                {String(row.original[id])}
+            </span>
+        ),
+    };
+}
+
 /**
  * The Namespace column, for "All namespaces" views where same-named objects in different namespaces
  * would otherwise be indistinguishable. `ResourceListPage` auto-injects this when rows span multiple

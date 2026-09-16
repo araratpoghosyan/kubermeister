@@ -19,6 +19,8 @@ import {
     listServices,
 } from './network.js';
 import { getCustomResource, listCustomResources } from './crds.js';
+import { getIngressClass, getRuntimeClass, listIngressClasses, listRuntimeClasses } from './classes.js';
+import { getCsiCapacity, getCsiDriver, getCsiNode, listCsiCapacities, listCsiDrivers, listCsiNodes } from './csi.js';
 import {
     getClusterRole,
     getClusterRoleBinding,
@@ -88,16 +90,21 @@ const SOURCES: { [K in Kind]: Source<K> } = {
     PodDisruptionBudget: { list: listPodDisruptionBudgets, get: getPodDisruptionBudget },
     PriorityClass: { list: () => listPriorityClasses(), get: (name) => getPriorityClass(name) },
     Lease: { list: listLeases, get: getLease },
+    RuntimeClass: { list: () => listRuntimeClasses(), get: (name) => getRuntimeClass(name) },
     ConfigMap: { list: listConfigMaps, get: getConfigMap },
     Secret: { list: listSecrets, get: getSecret },
     Service: { list: listServices, get: getService },
     Ingress: { list: listIngresses, get: getIngress },
     Endpoints: { list: listEndpoints, get: getEndpoints },
     NetworkPolicy: { list: listNetworkPolicies, get: getNetworkPolicy },
+    IngressClass: { list: () => listIngressClasses(), get: (name) => getIngressClass(name) },
     PersistentVolume: { list: () => listVolumes(), get: (name) => getVolume(name) },
     PersistentVolumeClaim: { list: listClaims, get: getClaim },
     StorageClass: { list: () => listStorageClasses(), get: (name) => getStorageClass(name) },
     VolumeSnapshot: { list: listSnapshots, get: getSnapshot },
+    CSIDriver: { list: () => listCsiDrivers(), get: (name) => getCsiDriver(name) },
+    CSINode: { list: () => listCsiNodes(), get: (name) => getCsiNode(name) },
+    CSIStorageCapacity: { list: listCsiCapacities, get: getCsiCapacity },
     ServiceAccount: { list: listServiceAccounts, get: getServiceAccount },
     Role: { list: listRoles, get: getRole },
     RoleBinding: { list: listRoleBindings, get: getRoleBinding },
@@ -138,6 +145,8 @@ export async function listResources(input: ResourceListInput): Promise<ResourceL
             return { kind: 'PriorityClass', items: await SOURCES.PriorityClass.list() };
         case 'Lease':
             return { kind: 'Lease', items: await SOURCES.Lease.list(input.namespace) };
+        case 'RuntimeClass':
+            return { kind: 'RuntimeClass', items: await SOURCES.RuntimeClass.list() };
         case 'ConfigMap':
             return { kind: 'ConfigMap', items: await SOURCES.ConfigMap.list(input.namespace) };
         case 'Secret':
@@ -150,6 +159,8 @@ export async function listResources(input: ResourceListInput): Promise<ResourceL
             return { kind: 'Endpoints', items: await SOURCES.Endpoints.list(input.namespace) };
         case 'NetworkPolicy':
             return { kind: 'NetworkPolicy', items: await SOURCES.NetworkPolicy.list(input.namespace) };
+        case 'IngressClass':
+            return { kind: 'IngressClass', items: await SOURCES.IngressClass.list() };
         case 'PersistentVolume':
             return { kind: 'PersistentVolume', items: await SOURCES.PersistentVolume.list() };
         case 'PersistentVolumeClaim':
@@ -158,6 +169,12 @@ export async function listResources(input: ResourceListInput): Promise<ResourceL
             return { kind: 'StorageClass', items: await SOURCES.StorageClass.list() };
         case 'VolumeSnapshot':
             return { kind: 'VolumeSnapshot', items: await SOURCES.VolumeSnapshot.list(input.namespace) };
+        case 'CSIDriver':
+            return { kind: 'CSIDriver', items: await SOURCES.CSIDriver.list() };
+        case 'CSINode':
+            return { kind: 'CSINode', items: await SOURCES.CSINode.list() };
+        case 'CSIStorageCapacity':
+            return { kind: 'CSIStorageCapacity', items: await SOURCES.CSIStorageCapacity.list(input.namespace) };
         case 'ServiceAccount':
             return { kind: 'ServiceAccount', items: await SOURCES.ServiceAccount.list(input.namespace) };
         case 'Role':
@@ -208,6 +225,8 @@ export async function getResource(input: ResourceGetInput): Promise<ResourceGetO
             return { kind: 'PriorityClass', item: await SOURCES.PriorityClass.get(input.name) };
         case 'Lease':
             return { kind: 'Lease', item: await SOURCES.Lease.get(input.name, input.namespace) };
+        case 'RuntimeClass':
+            return { kind: 'RuntimeClass', item: await SOURCES.RuntimeClass.get(input.name) };
         case 'ConfigMap':
             return { kind: 'ConfigMap', item: await SOURCES.ConfigMap.get(input.name, input.namespace) };
         case 'Secret':
@@ -220,6 +239,8 @@ export async function getResource(input: ResourceGetInput): Promise<ResourceGetO
             return { kind: 'Endpoints', item: await SOURCES.Endpoints.get(input.name, input.namespace) };
         case 'NetworkPolicy':
             return { kind: 'NetworkPolicy', item: await SOURCES.NetworkPolicy.get(input.name, input.namespace) };
+        case 'IngressClass':
+            return { kind: 'IngressClass', item: await SOURCES.IngressClass.get(input.name) };
         case 'PersistentVolume':
             return { kind: 'PersistentVolume', item: await SOURCES.PersistentVolume.get(input.name) };
         case 'PersistentVolumeClaim':
@@ -231,6 +252,15 @@ export async function getResource(input: ResourceGetInput): Promise<ResourceGetO
             return { kind: 'StorageClass', item: await SOURCES.StorageClass.get(input.name) };
         case 'VolumeSnapshot':
             return { kind: 'VolumeSnapshot', item: await SOURCES.VolumeSnapshot.get(input.name, input.namespace) };
+        case 'CSIDriver':
+            return { kind: 'CSIDriver', item: await SOURCES.CSIDriver.get(input.name) };
+        case 'CSINode':
+            return { kind: 'CSINode', item: await SOURCES.CSINode.get(input.name) };
+        case 'CSIStorageCapacity':
+            return {
+                kind: 'CSIStorageCapacity',
+                item: await SOURCES.CSIStorageCapacity.get(input.name, input.namespace),
+            };
         case 'ServiceAccount':
             return { kind: 'ServiceAccount', item: await SOURCES.ServiceAccount.get(input.name, input.namespace) };
         case 'Role':

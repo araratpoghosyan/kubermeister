@@ -4,7 +4,12 @@ import {
     type V1ClusterRoleBinding,
     type V1CronJob,
     type V1CustomResourceDefinition,
+    type V1CSIDriver,
+    type V1CSINode,
+    type V1CSIStorageCapacity,
+    type V1IngressClass,
     type V1PriorityClass,
+    type V1RuntimeClass,
     type V1RoleBinding,
     type V1StorageClass,
     type V2HorizontalPodAutoscaler,
@@ -19,6 +24,8 @@ import { toCustomResource } from './resources/crds.js';
 import { toEndpoints, toIngress, toNetworkPolicy, toService } from './resources/network.js';
 import { toClusterRole, toClusterRoleBinding, toRole, toRoleBinding, toServiceAccount } from './resources/access.js';
 import { toPod, usageFor } from './resources/pods.js';
+import { toIngressClass, toRuntimeClass } from './resources/classes.js';
+import { toCsiCapacity, toCsiDriver, toCsiNode } from './resources/csi.js';
 import { toLease, toPodDisruptionBudget, toPriorityClass } from './resources/policy.js';
 import { toClaim, toStorageClass, toVolume } from './resources/storage.js';
 import {
@@ -154,6 +161,12 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
                 : () => apis().coordination.listLeaseForAllNamespaces(),
         toRow: (lease) => toLease(lease),
     },
+    RuntimeClass: {
+        path: () => '/apis/node.k8s.io/v1/runtimeclasses',
+        list: () => () => apis().runtime.listRuntimeClass(),
+        // A RuntimeClass carries `handler` at the top level, which the generic object type omits.
+        toRow: (runtimeClass) => toRuntimeClass(runtimeClass as V1RuntimeClass),
+    },
     ConfigMap: {
         path: (ns) => (ns ? `/api/v1/namespaces/${encodeURIComponent(ns)}/configmaps` : '/api/v1/configmaps'),
         list: (ns) =>
@@ -207,6 +220,34 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
                 ? () => apis().net.listNamespacedNetworkPolicy({ namespace: ns })
                 : () => apis().net.listNetworkPolicyForAllNamespaces(),
         toRow: (policy) => toNetworkPolicy(policy),
+    },
+    IngressClass: {
+        path: () => '/apis/networking.k8s.io/v1/ingressclasses',
+        list: () => () => apis().net.listIngressClass(),
+        toRow: (ingressClass) => toIngressClass(ingressClass as V1IngressClass),
+    },
+    CSIDriver: {
+        path: () => '/apis/storage.k8s.io/v1/csidrivers',
+        list: () => () => apis().storage.listCSIDriver(),
+        // The client's types require `spec` here; the informer hands over the generic object type
+        // and the transforms read every field defensively.
+        toRow: (driver) => toCsiDriver(driver as V1CSIDriver),
+    },
+    CSINode: {
+        path: () => '/apis/storage.k8s.io/v1/csinodes',
+        list: () => () => apis().storage.listCSINode(),
+        toRow: (node) => toCsiNode(node as V1CSINode),
+    },
+    CSIStorageCapacity: {
+        path: (ns) =>
+            ns
+                ? `/apis/storage.k8s.io/v1/namespaces/${encodeURIComponent(ns)}/csistoragecapacities`
+                : '/apis/storage.k8s.io/v1/csistoragecapacities',
+        list: (ns) =>
+            ns
+                ? () => apis().storage.listNamespacedCSIStorageCapacity({ namespace: ns })
+                : () => apis().storage.listCSIStorageCapacityForAllNamespaces(),
+        toRow: (capacity) => toCsiCapacity(capacity as V1CSIStorageCapacity),
     },
     PersistentVolume: {
         path: () => '/api/v1/persistentvolumes',

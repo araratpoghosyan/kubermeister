@@ -9,6 +9,7 @@ import { Meter } from '@/components/data-display/meter';
 import {
     ageColumn,
     ageToSeconds,
+    flagColumn,
     meterColumn,
     nameColumn,
     namespaceColumn,
@@ -26,11 +27,22 @@ interface Row {
     cpu: number;
     used: number | null;
     note?: string;
+    enabled: boolean;
     age: string;
 }
 const rows: Row[] = [
-    { name: 'a', namespace: 'ns-1', status: 'Ready', ready: '2/2', cpu: 4, used: 95, note: 'x', age: '3d' },
-    { name: 'b', status: 'NotReady', ready: '1/3', cpu: 2, used: null, age: '5m' },
+    {
+        name: 'a',
+        namespace: 'ns-1',
+        status: 'Ready',
+        ready: '2/2',
+        cpu: 4,
+        used: 95,
+        note: 'x',
+        enabled: true,
+        age: '3d',
+    },
+    { name: 'b', status: 'NotReady', ready: '1/3', cpu: 2, used: null, enabled: false, age: '5m' },
 ];
 
 function Harness({ columns, onRowClick }: { columns: ColumnDef<Row>[]; onRowClick?: (row: Row) => void }) {
@@ -102,6 +114,16 @@ describe('column factories', () => {
         );
         expect(within(rowA).getByText('x')).toBeInTheDocument();
         expect(within(rowA).getByText('3d')).toHaveClass('font-mono');
+    });
+
+    it('renders a boolean flag in the API’s own words, muted when false', async () => {
+        renderColumns([nameColumn<Row>(), flagColumn<Row>('enabled', 'Enabled')]);
+        const table = await screen.findByTestId('t');
+        const rowA = table.querySelector('[data-row="a"]') as HTMLElement;
+        const rowB = table.querySelector('[data-row="b"]') as HTMLElement;
+        expect(within(rowA).getByText('true')).toHaveClass('text-text-2');
+        expect(within(rowB).getByText('false')).toHaveClass('text-text-muted');
+        expect(accessor(flagColumn<Row>('enabled', 'Enabled'), rows[0]!)).toBe(true);
     });
 
     it('renders a plain name without a link when no href is given', async () => {

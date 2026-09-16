@@ -37,7 +37,7 @@ test('shows the cluster summary for the test context', async () => {
 
 test('lists the k3s node as Ready and the seeded namespace', async () => {
     const { window } = launched;
-    await window.getByTestId('sidebar').getByRole('link', { name: 'Nodes' }).click();
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Nodes', exact: true }).click();
     const nodes = window.getByTestId('nodes-table');
     await expect(nodes.getByRole('row')).toHaveCount(2);
     await expect(nodes).toContainText('Ready');
@@ -54,7 +54,7 @@ test('lists the k3s node as Ready and the seeded namespace', async () => {
     await expect(nodePage.getByTestId('system-info')).toContainText('v1.36.4+k3s1');
     await window.getByRole('tab', { name: /Conditions/ }).click();
     await expect(nodePage.getByTestId('node-conditions')).toContainText('Ready: True');
-    await window.getByTestId('sidebar').getByRole('link', { name: 'Nodes' }).click();
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Nodes', exact: true }).click();
 
     await window.getByRole('link', { name: 'Namespaces' }).click();
     const namespaces = window.getByTestId('namespaces-table');
@@ -167,7 +167,7 @@ test('follows pod logs, runs a command in the pod shell, and starts a port-forwa
     await expect(terminal).toContainText('km-shell-42', { timeout: 30_000 });
 
     // Going elsewhere leaves the session open, with its scrollback intact, and coming back finds it.
-    await window.getByTestId('sidebar').getByRole('link', { name: 'Nodes' }).click();
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Nodes', exact: true }).click();
     await expect(window.getByTestId('nodes-table')).toBeVisible();
     await expect(drawer.getByTestId('shell-host')).toContainText('km-shell-42');
     await window.getByTestId('sidebar').getByRole('link', { name: 'Pods' }).click();
@@ -185,7 +185,7 @@ test('follows pod logs, runs a command in the pod shell, and starts a port-forwa
     });
 
     // The forward outlives the page that started it, and the manager is where it is listed.
-    await window.getByTestId('sidebar').getByRole('link', { name: 'Nodes' }).click();
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Nodes', exact: true }).click();
     await window.getByRole('button', { name: 'Port forwards' }).click();
     const forwards = window.getByTestId('forward-list');
     await expect(
@@ -203,7 +203,7 @@ test('opens the command palette from the keyboard and jumps to a screen', async 
     await expect(palette).toBeVisible();
     await expect(palette.getByRole('option', { name: 'km-e2e-ctx' })).toBeVisible();
     await palette.getByPlaceholder('Switch cluster, namespace or resource…').fill('nodes');
-    await palette.getByRole('option', { name: 'Nodes' }).click();
+    await palette.getByRole('option', { name: 'Nodes', exact: true }).click();
     await expect(window.getByTestId('nodes-table')).toBeVisible();
     await expect(palette).toBeHidden();
 });
@@ -498,7 +498,7 @@ test('pauses, resumes and rolls the seeded deployment back to its first revision
 
 test('cordons the node, reads what a drain would move, and uncordons it again', async () => {
     const { window } = launched;
-    await window.getByTestId('sidebar').getByRole('link', { name: 'Nodes' }).click();
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Nodes', exact: true }).click();
     await window.getByTestId('nodes-table').getByRole('link').first().click();
     const page = window.getByTestId('node-page');
     await expect(page.getByRole('button', { name: 'Cordon' })).toBeVisible();
@@ -634,7 +634,7 @@ test('describes a pod and a node in the flat view', async () => {
     // Every container gets its own block, named after the container.
     await expect(podDescribe.locator('[data-section="Containers"] [data-block]').first()).toBeVisible();
 
-    await window.getByTestId('sidebar').getByRole('link', { name: 'Nodes' }).click();
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Nodes', exact: true }).click();
     await window.getByTestId('nodes-table').getByRole('link').first().click();
     await window.getByRole('tab', { name: 'Describe' }).click();
     const nodeDescribe = window.getByTestId('node-page').getByTestId('describe');
@@ -737,6 +737,40 @@ test('lists the replica set behind the deployment, the budget over it, and the c
     await expect(lease).toContainText('km-e2e-1');
     await lease.getByRole('link').click();
     await expect(window.getByTestId('lease-page')).toContainText('holder: km-e2e-1');
+
+    // Leave the app on a list, since the specs after this one start from wherever this one stopped.
+    await sidebar.getByRole('link', { name: 'Pods' }).click();
+});
+
+test('lists the class kinds and the CSI plumbing behind the volumes', async () => {
+    const { window } = launched;
+    const sidebar = window.getByTestId('sidebar');
+
+    await sidebar.getByRole('link', { name: 'RuntimeClasses' }).click();
+    const runtime = window.getByTestId('runtimeclasses-table').locator('[data-runtimeclass="km-e2e-runtime"]');
+    await expect(runtime).toContainText('runc');
+    await runtime.getByRole('link').click();
+    await expect(window.getByTestId('runtimeclass-page')).toContainText('handler: runc');
+
+    await sidebar.getByRole('link', { name: 'IngressClasses' }).click();
+    const ingress = window.getByTestId('ingressclasses-table').locator('[data-ingressclass="km-e2e-ingress"]');
+    await expect(ingress).toContainText('example.com/km-e2e');
+    await expect(ingress).toContainText('default');
+    await ingress.getByRole('link').click();
+    await expect(window.getByTestId('ingressclass-page')).toContainText('controller: example.com/km-e2e');
+
+    // k3s registers no CSI driver, so both driver screens show what an empty list looks like.
+    await sidebar.getByRole('link', { name: 'CSIDrivers' }).click();
+    await expect(window.getByText('No CSIDrivers found.')).toBeVisible();
+    await sidebar.getByRole('link', { name: 'CSINodes' }).click();
+    await expect(window.getByRole('heading', { name: 'CSINodes' })).toBeVisible();
+
+    await sidebar.getByRole('link', { name: 'StorageCapacity' }).click();
+    const capacity = window.getByTestId('capacity-table').locator('[data-capacity="km-e2e-capacity"]');
+    await expect(capacity).toContainText('local-path');
+    await expect(capacity).toContainText('10Gi');
+    await capacity.getByRole('link').click();
+    await expect(window.getByTestId('capacity-page')).toContainText('class: local-path');
 
     // Leave the app on a list, since the specs after this one start from wherever this one stopped.
     await sidebar.getByRole('link', { name: 'Pods' }).click();

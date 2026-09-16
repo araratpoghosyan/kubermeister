@@ -23,6 +23,7 @@ const client = {
         policy: rest,
         scheduling: rest,
         coordination: rest,
+        runtime: rest,
         apiextensions: rest,
     }),
     getActiveNamespace: vi.fn<() => string | null>(),

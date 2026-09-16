@@ -34,7 +34,7 @@ describe('Sidebar', () => {
         expect(within(sidebar).getByRole('link', { name: 'Nodes' })).not.toHaveAttribute('aria-current');
         expect(within(sidebar).getByRole('button', { name: 'Workloads' })).toHaveAttribute('aria-expanded', 'true');
         expect(within(sidebar).getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-expanded', 'true');
-        for (const label of ['COMPUTE', 'BATCH', 'CONFIG', 'TRAFFIC', 'POLICY'])
+        for (const label of ['COMPUTE', 'BATCH', 'CONFIG', 'TRAFFIC', 'POLICY', 'CSI'])
             expect(sidebar).toHaveTextContent(label);
         expect(
             within(sidebar)
@@ -49,6 +49,7 @@ describe('Sidebar', () => {
             'Limits',
             'PriorityClasses',
             'Leases',
+            'RuntimeClasses',
             'Pods',
             'Deployments',
             'StatefulSets',
@@ -64,11 +65,15 @@ describe('Sidebar', () => {
             'Services',
             'Ingresses',
             'Endpoints',
+            'IngressClasses',
             'NetworkPolicies',
             'Volumes',
             'Claims',
             'StorageClasses',
             'Snapshots',
+            'CSIDrivers',
+            'CSINodes',
+            'StorageCapacity',
             'ServiceAccounts',
             'Roles',
             'RoleBindings',

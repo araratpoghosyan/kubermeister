@@ -67,15 +67,40 @@ const policyMod = {
     getLease: vi.fn(),
 };
 vi.mock('../../../src/main/k8s/resources/policy.js', () => policyMod);
+const classesMod = {
+    listRuntimeClasses: vi.fn(),
+    getRuntimeClass: vi.fn(),
+    listIngressClasses: vi.fn(),
+    getIngressClass: vi.fn(),
+};
+vi.mock('../../../src/main/k8s/resources/classes.js', () => classesMod);
+const csiMod = {
+    listCsiDrivers: vi.fn(),
+    getCsiDriver: vi.fn(),
+    listCsiNodes: vi.fn(),
+    getCsiNode: vi.fn(),
+    listCsiCapacities: vi.fn(),
+    getCsiCapacity: vi.fn(),
+};
+vi.mock('../../../src/main/k8s/resources/csi.js', () => csiMod);
 const crdsMod = { listCustomResources: vi.fn(), getCustomResource: vi.fn() };
 vi.mock('../../../src/main/k8s/resources/crds.js', () => crdsMod);
 
 const { listResources, getResource } = await import('../../../src/main/k8s/resources/index.js');
 
 /** Every mocked reader, so the table-driven test below can reset and satisfy all of them. */
-const readers = [podsMod, configMod, networkMod, storageMod, workloadsMod, policyMod, accessMod, crdsMod].flatMap(
-    (mod) => Object.entries(mod),
-);
+const readers = [
+    podsMod,
+    configMod,
+    networkMod,
+    storageMod,
+    workloadsMod,
+    policyMod,
+    classesMod,
+    csiMod,
+    accessMod,
+    crdsMod,
+].flatMap((mod) => Object.entries(mod));
 
 describe('generic resource dispatch', () => {
     it('routes list and get to the kind source and tags the output with the kind', async () => {
