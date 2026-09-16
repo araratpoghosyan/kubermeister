@@ -15,6 +15,12 @@ export function useRefreshIntervalMs(fallbackMs = 12_000): number {
     return data ? data.data.refreshIntervalSec * 1000 : fallbackMs;
 }
 
+/** How many log lines a live follow keeps, from settings, falling back while they load. */
+export function useLogBufferLines(fallback = 2_000): number {
+    const { data } = useSettings();
+    return data ? data.data.logBufferLines : fallback;
+}
+
 /** Persist a patch; the merged result lands in the cache so controls reflect it at once. */
 export async function updateSettings(client: QueryClient, patch: SettingsInput): Promise<Settings> {
     const settings = await invoke('settings.set', patch);

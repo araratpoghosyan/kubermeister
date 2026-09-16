@@ -3,7 +3,7 @@ import type { LogLine } from '../../shared/k8s/logs';
 import type { PodExecInput, PodLogsInput, PodPortForwardInput, PortForwardStatus } from '../../shared/streams';
 import { stream, type StreamHandle } from './ipc';
 
-/** Lines kept per log view; a chatty container must not grow memory without bound. */
+/** Lines kept per log view when the caller states no cap of its own. */
 export const LOG_LINE_CAP = 2_000;
 
 /** Append lines and trim from the front so the buffer never exceeds the cap. */
@@ -27,7 +27,13 @@ export interface LogStreamState {
  */
 const EMPTY: LogStreamState = { lines: [], live: false, error: null, ended: false };
 
-export function usePodLogStream(input: PodLogsInput | null): LogStreamState {
+export function usePodLogStream(input: PodLogsInput | null, cap = LOG_LINE_CAP): LogStreamState {
+    // Kept in a ref so raising the buffer size trims differently from the next batch on, rather
+    // than tearing down a working follow and losing everything already on screen.
+    const capRef = useRef(cap);
+    useEffect(() => {
+        capRef.current = cap;
+    }, [cap]);
     const key = input ? JSON.stringify(input) : null;
     const [state, setState] = useState<LogStreamState>(EMPTY);
     // Reset during render when the target changes, so the old target's lines never show under the
@@ -47,7 +53,7 @@ export function usePodLogStream(input: PodLogsInput | null): LogStreamState {
             frame = undefined;
             const batch = pending;
             pending = [];
-            setState((s) => ({ ...s, lines: appendCapped(s.lines, batch), live: true }));
+            setState((s) => ({ ...s, lines: appendCapped(s.lines, batch, capRef.current), live: true }));
         };
         const handle = stream('pods.logs', parsed, (message) => {
             if (message.type === 'data') {

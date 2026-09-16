@@ -7,6 +7,7 @@ import { downloadTextFile } from '@/lib/download';
 import { invoke } from '@/lib/ipc';
 import { isBrokenPattern, visibleLines, NO_SEARCH, type LogSearch } from '@/lib/log-filter';
 import { usePodLogStream } from '@/lib/pod-streams';
+import { useLogBufferLines } from '@/lib/settings';
 import { useIpcQuery } from '@/lib/query';
 
 /** Pod logs tab: a snapshot of the selected container when idle, a live tail of it when Live is on. */
@@ -27,7 +28,7 @@ export function LogsTab({ name, namespace, pod }: { name: string; namespace: str
         ? { name, namespace, container, sinceSeconds: since.seconds, tailLines, previous: previous || undefined }
         : null;
     const snapshot = useIpcQuery('pods.logSnapshot', target ?? { name, namespace }, { enabled: !live && !!target });
-    const stream = usePodLogStream(live ? target : null);
+    const stream = usePodLogStream(live ? target : null, useLogBufferLines());
 
     const source = live ? stream.lines : (snapshot.data ?? []);
     // Defer the search over the (up to 2,000-line) buffer so keystrokes stay responsive.
