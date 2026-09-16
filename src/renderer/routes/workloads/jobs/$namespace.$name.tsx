@@ -12,6 +12,7 @@ import { podsTab } from '@/components/templates/owned-pods';
 import { manifestTab } from '@/components/templates/manifest-panel';
 import { EditResourceButton } from '@/components/templates/edit-resource-button';
 import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
+import { RetryJobButton } from '@/components/workload/job-actions';
 import { ipcQueryKey } from '@/lib/query';
 import { useResource } from '@/lib/resources';
 import { JOB_TONE } from '@/lib/status';
@@ -63,6 +64,7 @@ function JobDetailPage() {
                 <>
                     <RefreshButton queryKeys={[ipcQueryKey('resources.get', { kind: 'Job', name, namespace })]} />
                     <EditResourceButton />
+                    <RetryJobButton name={name} namespace={namespace} />
                     <DeleteResourceButton kind="Job" name={name} namespace={namespace} backTo="/workloads/jobs" />
                 </>
             }

@@ -53,6 +53,13 @@ const writeMod = {
     deleteResource: vi.fn(),
     scaleResource: vi.fn(),
 };
+const lifecycleMod = {
+    evictPod: vi.fn(),
+    retryJob: vi.fn(),
+    triggerCronJob: vi.fn(),
+    setCronJobSuspended: vi.fn(),
+};
+const ownersMod = { getPodOwners: vi.fn(), listOwnedPods: vi.fn() };
 const alertsMod = { listAlerts: vi.fn() };
 const samplerMod = { resetHistory: vi.fn() };
 const streamsMod = { endAllStreams: vi.fn() };
@@ -77,6 +84,8 @@ vi.mock('../../../src/main/k8s/resources/network.js', () => networkMod);
 vi.mock('../../../src/main/k8s/resources/helm.js', () => helmMod);
 vi.mock('../../../src/main/k8s/resources/manifest.js', () => manifestMod);
 vi.mock('../../../src/main/k8s/resources/write.js', () => writeMod);
+vi.mock('../../../src/main/k8s/resources/lifecycle.js', () => lifecycleMod);
+vi.mock('../../../src/main/k8s/resources/owners.js', () => ownersMod);
 
 const { registerHandlers } = await import('../../../src/main/ipc/index.js');
 const { ipcSchemas } = await import('../../../src/shared/ipc.js');
@@ -128,6 +137,38 @@ describe('registerHandlers', () => {
             node: process.versions.node,
             platform: process.platform,
         });
+    });
+
+    it('passes the lifecycle writes straight through, each with the screen’s own stamp', async () => {
+        const pod = { context: 'alpha', name: 'web-1', namespace: 'team-a' };
+        const job = { context: 'alpha', name: 'import', namespace: 'team-a' };
+        const cron = { context: 'alpha', name: 'nightly', namespace: 'team-a' };
+        lifecycleMod.evictPod.mockResolvedValue({ kind: 'Pod', name: 'web-1', namespace: 'team-a' });
+        lifecycleMod.retryJob.mockResolvedValue({ kind: 'Job', name: 'import', namespace: 'team-a' });
+        lifecycleMod.triggerCronJob.mockResolvedValue({ kind: 'Job', name: 'nightly-1', namespace: 'team-a' });
+        lifecycleMod.setCronJobSuspended.mockResolvedValue({ kind: 'CronJob', name: 'nightly', namespace: 'team-a' });
+
+        await expect(invoke('pods.evict', pod)).resolves.toMatchObject({ kind: 'Pod' });
+        await expect(invoke('jobs.retry', job)).resolves.toMatchObject({ kind: 'Job' });
+        await expect(invoke('cronJobs.trigger', cron)).resolves.toMatchObject({ name: 'nightly-1' });
+        await expect(invoke('cronJobs.suspend', { ...cron, suspend: true })).resolves.toMatchObject({
+            kind: 'CronJob',
+        });
+        expect(lifecycleMod.evictPod).toHaveBeenCalledWith(pod);
+        expect(lifecycleMod.setCronJobSuspended).toHaveBeenCalledWith({ ...cron, suspend: true });
+    });
+
+    it('answers the ownership reads for the object the screen names', async () => {
+        ownersMod.getPodOwners.mockResolvedValue([
+            { kind: 'Deployment', name: 'web', namespace: 'team-a', path: '/workloads/deployments/team-a/web' },
+        ]);
+        ownersMod.listOwnedPods.mockResolvedValue([]);
+        await expect(invoke('pods.owners', { name: 'web-1', namespace: 'team-a' })).resolves.toHaveLength(1);
+        await expect(
+            invoke('workloads.pods', { kind: 'Deployment', name: 'web', namespace: 'team-a' }),
+        ).resolves.toEqual([]);
+        expect(ownersMod.getPodOwners).toHaveBeenCalledWith('web-1', 'team-a');
+        expect(ownersMod.listOwnedPods).toHaveBeenCalledWith('Deployment', 'web', 'team-a');
     });
 
     it('rejects input that does not match the channel schema', async () => {

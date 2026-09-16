@@ -5,6 +5,7 @@ import { eventsTab, labelsTab, ResourceDetail, type DetailTabGroup } from '@/com
 import { manifestTab } from '@/components/templates/manifest-panel';
 import { EditResourceButton } from '@/components/templates/edit-resource-button';
 import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
+import { EvictButton } from '@/components/pod/evict-button';
 import { LogsTab } from '@/components/pod/logs-tab';
 import { NetworkTab } from '@/components/pod/network-tab';
 import { OverviewTab } from '@/components/pod/overview-tab';
@@ -92,6 +93,7 @@ function PodDetailPage() {
                         ]}
                     />
                     <EditResourceButton />
+                    <EvictButton name={name} namespace={namespace} />
                     <DeleteResourceButton kind="Pod" name={name} namespace={namespace} backTo="/workloads/pods" />
                 </>
             }

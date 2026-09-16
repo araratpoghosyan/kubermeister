@@ -158,6 +158,20 @@ describe('IPC contract', () => {
         expect(cordon.safeParse({ context: 'alpha', name: 'node-1' }).success).toBe(false);
         expect(cordon.safeParse({ name: 'node-1', unschedulable: true }).success).toBe(false);
 
+        const pod = { context: 'alpha', kind: 'Pod', name: 'web-1', namespace: 'team-a' };
+        expect(del.safeParse({ ...pod, gracePeriodSeconds: 0 }).success).toBe(true);
+        expect(del.safeParse({ ...pod, gracePeriodSeconds: -1 }).success).toBe(false);
+
+        const evict = ipcSchemas['pods.evict'].input;
+        expect(evict.safeParse({ context: 'alpha', name: 'web-1', namespace: 'team-a' }).success).toBe(true);
+        expect(evict.safeParse({ context: 'alpha', name: 'web-1' }).success).toBe(false);
+
+        const suspend = ipcSchemas['cronJobs.suspend'].input;
+        expect(suspend.safeParse({ context: 'alpha', name: 'n', namespace: 'team-a', suspend: true }).success).toBe(
+            true,
+        );
+        expect(suspend.safeParse({ context: 'alpha', name: 'n', namespace: 'team-a' }).success).toBe(false);
+
         const manifest = ipcSchemas['resources.replace'].input;
         expect(manifest.safeParse({ context: 'alpha', manifest: 'kind: Pod' }).success).toBe(true);
         expect(manifest.safeParse({ manifest: 'kind: Pod' }).success).toBe(false);

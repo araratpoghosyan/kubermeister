@@ -65,6 +65,10 @@ export const IPC_CHANNELS = [
     'resources.delete',
     'resources.scale',
     'resources.restart',
+    'pods.evict',
+    'jobs.retry',
+    'cronJobs.trigger',
+    'cronJobs.suspend',
 ] as const;
 
 export const SUBSCRIPTION_CHANNELS = ['update.state', 'open-settings'] as const;

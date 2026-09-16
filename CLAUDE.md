@@ -201,6 +201,16 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   one superseded. An uninstall deletes the current revision's objects and either forgets the history
   or marks it uninstalled. Objects annotated `helm.sh/resource-policy: keep` are never deleted by
   either, and are counted back to the caller.
+- **Lifecycle writes** (`src/main/k8s/resources/lifecycle.ts`): `pods.evict` goes through the
+  eviction API so PodDisruptionBudgets still have a say (a delete does not); `resources.delete`
+  carries an optional `gracePeriodSeconds`, and zero is the forced delete the pod dialog offers.
+  `jobs.retry` deletes and resubmits — a job's spec is immutable once it has run — using foreground
+  deletion and then waiting for the name to come free, so the create cannot race a half-deleted job;
+  that whole sequence gets its own `withK8s` ceiling, because the default read timeout would cut it
+  short and report a timeout where the truth is "the old run is still finishing". `cronJobs.trigger`
+  builds a job from the cron job's template owned by nobody, so history limits never sweep a manual
+  run away, and `jobFromTemplate` strips the selector and the uid labels the control plane stamps,
+  which would otherwise bind the new job to the old one's pods.
 - **Ownership** (`src/main/k8s/resources/owners.ts`) is resolved through the API's own owner
   references, never label selectors: a selector says which pods a controller _would_ adopt, the
   references say which it _has_, and two workloads can share labels but never a reference.

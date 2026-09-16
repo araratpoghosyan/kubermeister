@@ -533,6 +533,35 @@ test('links a pod to the workload that runs it, and lists that workload’s pods
     await expect(window.getByTestId('deployment-page')).toContainText('namespace: km-e2e');
 });
 
+test('runs the seeded cron job now, suspends its schedule, and evicts a pod', async () => {
+    const { window } = launched;
+    await window.getByTestId('sidebar').getByRole('link', { name: 'CronJobs' }).click();
+    await window.getByTestId('cronjobs-table').locator('[data-cronjob="nightly"]').getByRole('link').click();
+    const page = window.getByTestId('cronjob-page');
+
+    // The seed suspends this schedule, so the control offers the way back first.
+    await expect(page.getByRole('button', { name: 'Resume' })).toBeVisible();
+    await page.getByRole('button', { name: 'Resume' }).click();
+    await expect(window.getByText(/resumed/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Suspend' })).toBeVisible({ timeout: 30_000 });
+
+    // Running it now creates a job off the schedule, which the jobs list shows.
+    await page.getByRole('button', { name: 'Run now' }).click();
+    await expect(window.getByText(/created/)).toBeVisible();
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Jobs', exact: true }).click();
+    await expect(window.getByTestId('jobs-table').locator('[data-job^="nightly-"]')).toBeVisible({ timeout: 30_000 });
+
+    // Evicting a pod goes through the eviction API, so nothing here can bypass a disruption budget.
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Pods' }).click();
+    const pod = window.getByTestId('pods-table').locator('[data-pod^="web-"]').first();
+    await pod.getByRole('link').click();
+    await window.getByTestId('pod-page').getByRole('button', { name: 'Evict' }).click();
+    const dialog = window.getByRole('alertdialog');
+    await expect(dialog).toContainText('disruption budget may refuse it');
+    await dialog.getByRole('button', { name: 'Evict' }).click();
+    await expect(window.getByText(/evicted/)).toBeVisible();
+});
+
 test('stops at the startup screen when the kubeconfig path names nothing', async () => {
     const missing = join(tmpdir(), `km-e2e-missing-${Date.now()}.yaml`);
     const bad = await launchApp({ kubeconfigPath: missing });

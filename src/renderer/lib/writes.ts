@@ -19,7 +19,11 @@ type WriteChannel =
     | 'deployments.pause'
     | 'nodes.cordon'
     | 'releases.rollback'
-    | 'releases.uninstall';
+    | 'releases.uninstall'
+    | 'pods.evict'
+    | 'jobs.retry'
+    | 'cronJobs.trigger'
+    | 'cronJobs.suspend';
 
 /** What a screen passes to a write: the input minus the context stamp, which is added here. */
 export type WriteVariables<C extends WriteChannel> = Omit<IpcInput<C>, 'context'>;
@@ -159,6 +163,38 @@ export function useUninstallRelease() {
     return useIpcMutation<'releases.uninstall', WriteVariables<'releases.uninstall'>>('releases.uninstall', {
         prepare: (variables, client) => stamp('releases.uninstall', variables, client),
         invalidates: releaseKeys,
+    });
+}
+
+/** Evict one pod: the same screens a delete disturbs, since the pod goes either way. */
+export function useEvictPod() {
+    return useIpcMutation<'pods.evict', WriteVariables<'pods.evict'>>('pods.evict', {
+        prepare: (variables, client) => stamp('pods.evict', variables, client),
+        invalidates: (input) => resourceKeys('Pod', input.name, input.namespace),
+    });
+}
+
+/** Run a job again; its pods are replaced, so the pod screens follow it. */
+export function useRetryJob() {
+    return useIpcMutation<'jobs.retry', WriteVariables<'jobs.retry'>>('jobs.retry', {
+        prepare: (variables, client) => stamp('jobs.retry', variables, client),
+        invalidates: (input) => [...resourceKeys('Job', input.name, input.namespace), ['workloads.pods']],
+    });
+}
+
+/** Run a cron job now: a new job appears, which the job screens and the cron job's own pods show. */
+export function useTriggerCronJob() {
+    return useIpcMutation<'cronJobs.trigger', WriteVariables<'cronJobs.trigger'>>('cronJobs.trigger', {
+        prepare: (variables, client) => stamp('cronJobs.trigger', variables, client),
+        invalidates: (input) => [...resourceKeys('CronJob', input.name, input.namespace), ['workloads.pods']],
+    });
+}
+
+/** Hold or resume a cron job's schedule. */
+export function useSuspendCronJob() {
+    return useIpcMutation<'cronJobs.suspend', WriteVariables<'cronJobs.suspend'>>('cronJobs.suspend', {
+        prepare: (variables, client) => stamp('cronJobs.suspend', variables, client),
+        invalidates: (input) => resourceKeys('CronJob', input.name, input.namespace),
     });
 }
 

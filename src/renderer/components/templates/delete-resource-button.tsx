@@ -16,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { useDeleteResource } from '@/lib/writes';
 
 interface DeleteResourceButtonProps {
@@ -45,6 +46,8 @@ const CASCADE_NOTE: Partial<Record<ManifestKind, string>> = {
 export function DeleteResourceButton({ kind, name, namespace, backTo }: DeleteResourceButtonProps) {
     const [open, setOpen] = useState(false);
     const [typed, setTyped] = useState('');
+    const [force, setForce] = useState(false);
+    const forceId = useId();
     const navigateTo = useNavigateTo();
     const remove = useDeleteResource();
     const inputId = useId();
@@ -52,14 +55,22 @@ export function DeleteResourceButton({ kind, name, namespace, backTo }: DeleteRe
     const dangerous = DANGEROUS_KINDS.has(kind);
     const armed = !dangerous || typed.trim() === name;
 
+    // Only a pod is worth forcing: for anything else the grace period is the controller's business.
+    const forceable = kind === 'Pod';
+
     const setDialog = (next: boolean) => {
         setOpen(next);
-        if (!next) setTyped('');
+        if (!next) {
+            setTyped('');
+            setForce(false);
+        }
     };
 
     const confirm = async () => {
         if (!armed) return;
-        const deleted = await remove.mutateAsync({ kind, name, namespace }).catch(() => null);
+        const deleted = await remove
+            .mutateAsync({ kind, name, namespace, ...(force && forceable ? { gracePeriodSeconds: 0 } : {}) })
+            .catch(() => null);
         setDialog(false);
         if (!deleted) return;
         toast.success(`${deleted.kind} “${deleted.name}” deleted`);
@@ -97,6 +108,22 @@ export function DeleteResourceButton({ kind, name, namespace, backTo }: DeleteRe
                             {dangerous && CASCADE_NOTE[kind] ? ` ${CASCADE_NOTE[kind]}` : null}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
+                    {forceable && (
+                        <div className="flex items-center justify-between gap-3">
+                            <Label htmlFor={forceId} className="font-normal text-text-2">
+                                Delete without waiting
+                                <span className="block text-meta text-text-muted">
+                                    The record goes at once, whatever the container is still doing.
+                                </span>
+                            </Label>
+                            <Switch
+                                id={forceId}
+                                checked={force}
+                                disabled={remove.isPending}
+                                onCheckedChange={setForce}
+                            />
+                        </div>
+                    )}
                     {dangerous && (
                         <div className="flex flex-col gap-1.5">
                             <Label htmlFor={inputId}>

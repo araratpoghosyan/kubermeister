@@ -251,11 +251,28 @@ describe('deleteResource', () => {
         expect(
             await write.deleteResource({ ...ON_ALPHA, kind: 'ConfigMap', name: 'app-config', namespace: 'team-a' }),
         ).toEqual({ kind: 'ConfigMap', name: 'app-config', namespace: 'team-a' });
-        expect(objects.delete).toHaveBeenCalledWith({
-            apiVersion: 'v1',
-            kind: 'ConfigMap',
-            metadata: { name: 'app-config', namespace: 'team-a' },
+        // A delete with no stated grace period leaves the object's own to apply.
+        expect(objects.delete).toHaveBeenCalledWith(
+            {
+                apiVersion: 'v1',
+                kind: 'ConfigMap',
+                metadata: { name: 'app-config', namespace: 'team-a' },
+            },
+            undefined,
+            undefined,
+            undefined,
+        );
+    });
+
+    it('passes a grace period through, which is how a pod is deleted without waiting', async () => {
+        await write.deleteResource({
+            ...ON_ALPHA,
+            kind: 'Pod',
+            name: 'web-1',
+            namespace: 'team-a',
+            gracePeriodSeconds: 0,
         });
+        expect(objects.delete).toHaveBeenCalledWith(expect.anything(), undefined, undefined, 0);
     });
 
     it('refuses a namespaced delete without a namespace, never falling back to the active one', async () => {
@@ -274,11 +291,16 @@ describe('deleteResource', () => {
         expect(await write.deleteResource({ ...ON_ALPHA, kind: 'ClusterRole', name: 'reader' })).toMatchObject({
             namespace: undefined,
         });
-        expect(objects.delete).toHaveBeenCalledWith({
-            apiVersion: 'rbac.authorization.k8s.io/v1',
-            kind: 'ClusterRole',
-            metadata: { name: 'reader', namespace: undefined },
-        });
+        expect(objects.delete).toHaveBeenCalledWith(
+            {
+                apiVersion: 'rbac.authorization.k8s.io/v1',
+                kind: 'ClusterRole',
+                metadata: { name: 'reader', namespace: undefined },
+            },
+            undefined,
+            undefined,
+            undefined,
+        );
     });
 
     it('deletes a node, which is not a registered kind', async () => {
