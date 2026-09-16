@@ -162,7 +162,10 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   cluster aggregate, each node and up to 40 requested pods. Readers start it lazily, a context
   switch resets it and quit stops it. Pod and node rows take their `cpu`/`mem` and `cpuUsed`/
   `memUsed` from the latest sample so listed and watched rows agree; no metrics-server means zero
-  usage and empty series, never an error. Alerts (`alerts.ts`) derive from cluster state, cluster-wide.
+  usage and empty series, never an error. **The sampler is in memory on purpose**: its buffers start
+  empty on every launch and a context switch resets them, so a chart shows what has happened since
+  the app opened and never claims history it does not have. Alerts (`alerts.ts`) derive from cluster
+  state, cluster-wide, with thresholds the app decides rather than the user.
 - **Resource reads** (`src/main/k8s/resources/*`) are pure transforms from Kubernetes objects to
   view models, exported and unit tested on their own, plus thin readers that fetch and delegate.
   Keep it that way: the watch stream feeds the very same transforms.
