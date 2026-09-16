@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderRoutes } from './helpers';
@@ -57,48 +57,6 @@ const data: Record<string, unknown> = {
 beforeEach(() => {
     invoke.mockReset();
     invoke.mockImplementation(async (channel: string) => data[channel]);
-});
-
-describe('the label filter', () => {
-    it('sends the selector to the API server with both the list and the watch', async () => {
-        renderRoutes(routeTree, '/workloads/pods');
-        await screen.findByTestId('pods-table');
-        const box = screen.getByTestId('label-filter');
-
-        // Mid-typing is not a filter, so nothing is sent until the selector is finished.
-        await userEvent.type(box, 'app=');
-        await userEvent.keyboard('{Enter}');
-        expect(invoke).not.toHaveBeenCalledWith('resources.list', expect.objectContaining({ labelSelector: 'app=' }));
-
-        await userEvent.type(box, 'web{Enter}');
-        await waitFor(() =>
-            expect(invoke).toHaveBeenCalledWith('resources.list', {
-                kind: 'Pod',
-                namespace: undefined,
-                labelSelector: 'app=web',
-            }),
-        );
-        // The watch behind the list narrows with it, or a filtered screen would fill back up.
-        expect(stream).toHaveBeenCalledWith(
-            'resources.watch',
-            { kind: 'Pod', namespace: undefined, labelSelector: 'app=web' },
-            expect.any(Function),
-        );
-    });
-
-    it('clears back to the unfiltered list', async () => {
-        renderRoutes(routeTree, '/workloads/pods');
-        await screen.findByTestId('pods-table');
-        await userEvent.type(screen.getByTestId('label-filter'), 'app=web{Enter}');
-        await waitFor(() => expect(screen.getByRole('button', { name: 'Clear label selector' })).toBeInTheDocument());
-        await userEvent.click(screen.getByRole('button', { name: 'Clear label selector' }));
-        await waitFor(() => expect(screen.getByTestId('label-filter')).toHaveValue(''));
-        expect(invoke).toHaveBeenCalledWith('resources.list', {
-            kind: 'Pod',
-            namespace: undefined,
-            labelSelector: undefined,
-        });
-    });
 });
 
 describe('owner and finalizers on every detail', () => {

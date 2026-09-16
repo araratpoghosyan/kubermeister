@@ -4,7 +4,7 @@ import { WaypointsIcon } from 'lucide-react';
 import type { Endpoints } from '../../../../shared/k8s/network';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
-import { useFilteredList } from '@/components/list/use-filtered-list';
+import { useWatchedList } from '@/lib/watch';
 
 export const Route = createFileRoute('/network/endpoints/')({ component: EndpointsPage });
 
@@ -18,14 +18,13 @@ const columns: ColumnDef<Endpoints>[] = [
 ];
 
 function EndpointsPage() {
-    const endpoints = useFilteredList('Endpoints');
+    const endpoints = useWatchedList('Endpoints');
     return (
         <ResourceListPage
             icon={WaypointsIcon}
             title="Endpoints"
             columns={columns}
             query={endpoints}
-            toolbar={endpoints.filter}
             detailPath={detailPath}
             rowProps={(row) => ({ 'data-endpoints': row.name })}
             bulkDelete={{ kind: 'Endpoints' }}

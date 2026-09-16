@@ -36,7 +36,7 @@ export function applyWatchEvent(
  * array. The stream restarts when the kind, the explicit namespace, the active namespace or the
  * context changes. On a stream error the list is refetched and the watch reconnects on its own.
  */
-export function useWatchedList<K extends Kind>(kind: K, namespace?: string, labelSelector?: string) {
+export function useWatchedList<K extends Kind>(kind: K, namespace?: string) {
     const queryClient = useQueryClient();
     const [live, setLive] = useState(false);
     const activeNamespace = useIpcQuery('namespace.active', {});
@@ -48,7 +48,7 @@ export function useWatchedList<K extends Kind>(kind: K, namespace?: string, labe
 
     const query = useIpcQuery(
         'resources.list',
-        { kind, namespace, labelSelector },
+        { kind, namespace },
         {
             select: (output) => output.items as Array<RowOf<K>>,
             refetchInterval: false,
@@ -57,8 +57,8 @@ export function useWatchedList<K extends Kind>(kind: K, namespace?: string, labe
 
     useEffect(() => {
         if (!ready) return;
-        const key = ipcQueryKey('resources.list', { kind, namespace, labelSelector });
-        const handle = stream('resources.watch', { kind, namespace, labelSelector }, (message) => {
+        const key = ipcQueryKey('resources.list', { kind, namespace });
+        const handle = stream('resources.watch', { kind, namespace }, (message) => {
             if (message.type === 'data') {
                 setLive(true);
                 queryClient.setQueryData<ResourceListOutput>(key, (current) => applyWatchEvent(current, message.data));
@@ -71,7 +71,7 @@ export function useWatchedList<K extends Kind>(kind: K, namespace?: string, labe
             setLive(false);
             handle.stop();
         };
-    }, [kind, namespace, labelSelector, scope, ready, queryClient]);
+    }, [kind, namespace, scope, ready, queryClient]);
 
     return { ...query, live };
 }

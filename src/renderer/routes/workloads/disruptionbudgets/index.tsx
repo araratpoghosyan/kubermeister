@@ -5,7 +5,7 @@ import type { PodDisruptionBudget } from '../../../../shared/k8s/policy';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, statusColumn, textColumn } from '@/components/templates/list-columns';
 import { DISRUPTION_TONE } from '@/lib/status';
-import { useFilteredList } from '@/components/list/use-filtered-list';
+import { useWatchedList } from '@/lib/watch';
 
 export const Route = createFileRoute('/workloads/disruptionbudgets/')({ component: DisruptionBudgetsPage });
 
@@ -24,14 +24,13 @@ const columns: ColumnDef<PodDisruptionBudget>[] = [
 ];
 
 function DisruptionBudgetsPage() {
-    const budgets = useFilteredList('PodDisruptionBudget');
+    const budgets = useWatchedList('PodDisruptionBudget');
     return (
         <ResourceListPage
             icon={ShieldCheckIcon}
             title="DisruptionBudgets"
             columns={columns}
             query={budgets}
-            toolbar={budgets.filter}
             detailPath={detailPath}
             rowProps={(pdb) => ({ 'data-disruptionbudget': pdb.name })}
             bulkDelete={{ kind: 'PodDisruptionBudget' }}

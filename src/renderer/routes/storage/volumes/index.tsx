@@ -5,7 +5,7 @@ import type { Volume } from '../../../../shared/k8s/storage';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, statusColumn, textColumn } from '@/components/templates/list-columns';
 import { VOLUME_TONE } from '@/lib/status';
-import { useFilteredList } from '@/components/list/use-filtered-list';
+import { useWatchedList } from '@/lib/watch';
 
 export const Route = createFileRoute('/storage/volumes/')({ component: VolumesPage });
 
@@ -23,14 +23,13 @@ const columns: ColumnDef<Volume>[] = [
 ];
 
 function VolumesPage() {
-    const volumes = useFilteredList('PersistentVolume');
+    const volumes = useWatchedList('PersistentVolume');
     return (
         <ResourceListPage
             icon={DatabaseIcon}
             title="Volumes"
             columns={columns}
             query={volumes}
-            toolbar={volumes.filter}
             detailPath={detailPath}
             rowProps={(volume) => ({ 'data-volume': volume.name })}
             bulkDelete={{ kind: 'PersistentVolume' }}

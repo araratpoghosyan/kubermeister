@@ -13,7 +13,7 @@ describe('parseSettings', () => {
             version: 1,
             session: { lastContext: 'prod', lastNamespace: 'default', restoreOnLaunch: true },
             connection: { kubeconfigPath: '/tmp/kubeconfig' },
-            data: { refreshIntervalSec: 30, logBufferLines: 2000, terminalFontSize: 12, forwards: [], savedViews: [] },
+            data: { refreshIntervalSec: 30, logBufferLines: 2000, terminalFontSize: 12, forwards: [] },
             updates: { mode: 'download' },
             window: { bounds: { x: 0, y: 0, width: 1200, height: 800 } },
         };
@@ -48,7 +48,7 @@ describe('parseSettings', () => {
             version: 1,
             session: { lastContext: 'staging', lastNamespace: null, restoreOnLaunch: true },
             connection: { kubeconfigPath: null },
-            data: { refreshIntervalSec: 12, logBufferLines: 2000, terminalFontSize: 12, forwards: [], savedViews: [] },
+            data: { refreshIntervalSec: 12, logBufferLines: 2000, terminalFontSize: 12, forwards: [] },
             updates: { mode: 'check' },
             window: { bounds: null },
         });
@@ -75,14 +75,12 @@ describe('parseSettings', () => {
             logBufferLines: 2000,
             terminalFontSize: 12,
             forwards: [],
-            savedViews: [],
         };
         const good = {
             refreshIntervalSec: 30,
             logBufferLines: 10_000,
             terminalFontSize: 14,
             forwards: [],
-            savedViews: [],
         };
         expect(parseSettings({ version: 1, data: { refreshIntervalSec: 'soon' } }).data).toEqual(defaults);
         expect(parseSettings({ version: 1, data: { ...good, refreshIntervalSec: 0 } }).data).toEqual(defaults);
@@ -140,7 +138,6 @@ describe('patch schemas', () => {
                     logBufferLines: 2000,
                     terminalFontSize: 12,
                     forwards: [],
-                    savedViews: [],
                 },
             }).success,
         ).toBe(true);
@@ -152,7 +149,6 @@ describe('patch schemas', () => {
                     logBufferLines: 2000,
                     terminalFontSize: 12,
                     forwards: [],
-                    savedViews: [],
                 },
             }).data.refreshIntervalSec,
         ).toBe(60);
@@ -163,7 +159,6 @@ describe('patch schemas', () => {
                     logBufferLines: 2000,
                     terminalFontSize: 12,
                     forwards: [],
-                    savedViews: [],
                 },
             }).session,
         ).toEqual(DEFAULT_SETTINGS.session);

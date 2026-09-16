@@ -860,30 +860,11 @@ test('opens a namespace, reads what is in it, and groups the pod list by node', 
     await window.getByRole('option', { name: 'No grouping' }).click();
 });
 
-test('filters a list by label and reads the owner and finalizers of an object', async () => {
+test('reads the owner and finalizers of an object', async () => {
     const { window } = launched;
     await window.getByTestId('sidebar').getByRole('link', { name: 'Pods' }).click();
     const table = window.getByTestId('pods-table');
     await expect(table.locator('[data-pod^="web-"]').first()).toBeVisible();
-
-    // The selector goes to the API server: a label nothing carries empties the list.
-    await window.getByTestId('label-filter').fill('app=nothing-has-this');
-    await window.getByTestId('label-filter').press('Enter');
-    await expect(window.getByText(/No Pods found/)).toBeVisible({ timeout: 30_000 });
-
-    await window.getByTestId('label-filter').fill('app=web');
-    await window.getByTestId('label-filter').press('Enter');
-    await expect(table.locator('[data-pod^="web-"]').first()).toBeVisible({ timeout: 30_000 });
-    // A filter worth keeping is saved under a name and comes back from the Views menu.
-    await window.getByTestId('views-menu').click();
-    await window.getByLabel('View name').fill('web pods');
-    await window.getByRole('button', { name: 'Save' }).click();
-    await window.getByRole('button', { name: 'Clear label selector' }).click();
-    await window.getByTestId('views-menu').click();
-    // The success toast carries the same words, so the menu entry is addressed by its own hook.
-    await window.locator('[data-view="web pods"]').click();
-    await expect(window.getByTestId('label-filter')).toHaveValue('app=web');
-    await window.getByRole('button', { name: 'Clear label selector' }).click();
 
     // Every detail carries the owner reference and the finalizers, read through one channel.
     await table.locator('[data-pod^="web-"]').first().getByRole('link').click();

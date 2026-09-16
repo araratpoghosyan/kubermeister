@@ -4,7 +4,7 @@ import { TrendingUpIcon } from 'lucide-react';
 import type { Autoscaler } from '../../../../shared/k8s/workloads';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
-import { useFilteredList } from '@/components/list/use-filtered-list';
+import { useWatchedList } from '@/lib/watch';
 
 export const Route = createFileRoute('/workloads/autoscalers/')({ component: AutoscalersPage });
 
@@ -22,14 +22,13 @@ const columns: ColumnDef<Autoscaler>[] = [
 ];
 
 function AutoscalersPage() {
-    const autoscalers = useFilteredList('HorizontalPodAutoscaler');
+    const autoscalers = useWatchedList('HorizontalPodAutoscaler');
     return (
         <ResourceListPage
             icon={TrendingUpIcon}
             title="Autoscalers"
             columns={columns}
             query={autoscalers}
-            toolbar={autoscalers.filter}
             detailPath={detailPath}
             rowProps={(autoscaler) => ({ 'data-autoscaler': autoscaler.name })}
             bulkDelete={{ kind: 'HorizontalPodAutoscaler' }}

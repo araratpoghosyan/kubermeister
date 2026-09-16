@@ -4,7 +4,7 @@ import { CpuIcon } from 'lucide-react';
 import type { RuntimeClass } from '../../../../shared/k8s/classes';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
-import { useFilteredList } from '@/components/list/use-filtered-list';
+import { useWatchedList } from '@/lib/watch';
 
 export const Route = createFileRoute('/overview/runtimeclasses/')({ component: RuntimeClassesPage });
 
@@ -20,14 +20,13 @@ const columns: ColumnDef<RuntimeClass>[] = [
 ];
 
 function RuntimeClassesPage() {
-    const classes = useFilteredList('RuntimeClass');
+    const classes = useWatchedList('RuntimeClass');
     return (
         <ResourceListPage
             icon={CpuIcon}
             title="RuntimeClasses"
             columns={columns}
             query={classes}
-            toolbar={classes.filter}
             detailPath={detailPath}
             rowProps={(runtimeClass) => ({ 'data-runtimeclass': runtimeClass.name })}
             bulkDelete={{ kind: 'RuntimeClass' }}

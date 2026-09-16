@@ -4,7 +4,7 @@ import { UserIcon } from 'lucide-react';
 import type { ServiceAccount } from '../../../../shared/k8s/access';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
-import { useFilteredList } from '@/components/list/use-filtered-list';
+import { useWatchedList } from '@/lib/watch';
 
 export const Route = createFileRoute('/access/serviceaccounts/')({ component: ServiceAccountsPage });
 
@@ -19,14 +19,13 @@ const columns: ColumnDef<ServiceAccount>[] = [
 ];
 
 function ServiceAccountsPage() {
-    const accounts = useFilteredList('ServiceAccount');
+    const accounts = useWatchedList('ServiceAccount');
     return (
         <ResourceListPage
             icon={UserIcon}
             title="ServiceAccounts"
             columns={columns}
             query={accounts}
-            toolbar={accounts.filter}
             detailPath={detailPath}
             rowProps={(account) => ({ 'data-serviceaccount': account.name })}
             bulkDelete={{ kind: 'ServiceAccount' }}

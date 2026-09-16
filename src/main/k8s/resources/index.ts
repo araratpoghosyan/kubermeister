@@ -42,8 +42,6 @@ import {
     listRoles,
     listServiceAccounts,
 } from './access.js';
-import { listFiltered } from '../watch.js';
-import { withK8s } from '../errors.js';
 import { getPod, listPods } from './pods.js';
 import {
     getLease,
@@ -130,14 +128,6 @@ const SOURCES: { [K in Kind]: Source<K> } = {
 };
 
 export async function listResources(input: ResourceListInput): Promise<ResourceListOutput> {
-    // A label selector goes to the API server through the watch source, so one code path serves
-    // every kind and the filtered list matches the rows the watch will push into it.
-    if (input.labelSelector) {
-        const items = await withK8s('resources.list', () =>
-            listFiltered(input.kind, input.namespace, input.labelSelector!),
-        );
-        return { kind: input.kind, items } as ResourceListOutput;
-    }
     switch (input.kind) {
         case 'Pod':
             return { kind: 'Pod', items: await SOURCES.Pod.list(input.namespace) };

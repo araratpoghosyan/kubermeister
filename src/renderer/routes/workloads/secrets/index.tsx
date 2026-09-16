@@ -4,7 +4,7 @@ import { LockIcon } from 'lucide-react';
 import type { Secret } from '../../../../shared/k8s/workloads';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
-import { useFilteredList } from '@/components/list/use-filtered-list';
+import { useWatchedList } from '@/lib/watch';
 
 export const Route = createFileRoute('/workloads/secrets/')({ component: SecretsPage });
 
@@ -19,14 +19,13 @@ const columns: ColumnDef<Secret>[] = [
 ];
 
 function SecretsPage() {
-    const secrets = useFilteredList('Secret');
+    const secrets = useWatchedList('Secret');
     return (
         <ResourceListPage
             icon={LockIcon}
             title="Secrets"
             columns={columns}
             query={secrets}
-            toolbar={secrets.filter}
             detailPath={detailPath}
             rowProps={(secret) => ({ 'data-secret': secret.name })}
             bulkDelete={{ kind: 'Secret' }}

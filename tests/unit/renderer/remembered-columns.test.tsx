@@ -1,5 +1,4 @@
 import { screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderRoutes } from './helpers';
 import { readColumnVisibility, writeColumnVisibility } from '@/lib/persisted-columns';
@@ -25,7 +24,6 @@ const settings = {
         logBufferLines: 2000,
         terminalFontSize: 12,
         forwards: [],
-        savedViews: [{ screen: '/workloads/pods', name: 'web only', labelSelector: 'app=web' }],
     },
     updates: { mode: 'check' },
     window: { bounds: null },
@@ -65,57 +63,6 @@ beforeEach(() => {
     invoke.mockReset();
     invoke.mockImplementation(async (channel: string) => data[channel]);
     localStorage.clear();
-});
-
-describe('saved views', () => {
-    it('applies a saved filter and saves the current one under a name', async () => {
-        renderRoutes(routeTree, '/workloads/pods');
-        await screen.findByTestId('pods-table');
-
-        await userEvent.click(screen.getByTestId('views-menu'));
-        await userEvent.click(await screen.findByText('web only'));
-        await waitFor(() =>
-            expect(invoke).toHaveBeenCalledWith('resources.list', {
-                kind: 'Pod',
-                namespace: undefined,
-                labelSelector: 'app=web',
-            }),
-        );
-        expect(screen.getByTestId('label-filter')).toHaveValue('app=web');
-
-        await userEvent.click(screen.getByTestId('views-menu'));
-        await userEvent.type(await screen.findByLabelText('View name'), 'mine');
-        await userEvent.click(screen.getByRole('button', { name: 'Save' }));
-        await waitFor(() =>
-            expect(invoke).toHaveBeenCalledWith('settings.set', {
-                data: {
-                    savedViews: [
-                        { screen: '/workloads/pods', name: 'web only', labelSelector: 'app=web' },
-                        { screen: '/workloads/pods', name: 'mine', labelSelector: 'app=web' },
-                    ],
-                },
-            }),
-        );
-    });
-
-    it('deletes a view without applying it', async () => {
-        renderRoutes(routeTree, '/workloads/pods');
-        await screen.findByTestId('pods-table');
-        await userEvent.click(screen.getByTestId('views-menu'));
-        await userEvent.click(await screen.findByRole('button', { name: 'Delete view web only' }));
-        await waitFor(() => expect(invoke).toHaveBeenCalledWith('settings.set', { data: { savedViews: [] } }));
-        expect(screen.getByTestId('label-filter')).toHaveValue('');
-    });
-
-    it('offers only the views of the screen that made them', async () => {
-        invoke.mockImplementation(async (channel: string) =>
-            channel === 'resources.list' ? { kind: 'Secret', items: [] } : data[channel],
-        );
-        renderRoutes(routeTree, '/workloads/secrets');
-        await screen.findByTestId('views-menu');
-        await userEvent.click(screen.getByTestId('views-menu'));
-        expect(await screen.findByText('No saved views yet.')).toBeInTheDocument();
-    });
 });
 
 describe('remembered columns', () => {

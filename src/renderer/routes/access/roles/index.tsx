@@ -4,7 +4,7 @@ import { ShieldIcon } from 'lucide-react';
 import type { Role } from '../../../../shared/k8s/access';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
-import { useFilteredList } from '@/components/list/use-filtered-list';
+import { useWatchedList } from '@/lib/watch';
 
 export const Route = createFileRoute('/access/roles/')({ component: RolesPage });
 
@@ -19,14 +19,13 @@ const columns: ColumnDef<Role>[] = [
 ];
 
 function RolesPage() {
-    const roles = useFilteredList('Role');
+    const roles = useWatchedList('Role');
     return (
         <ResourceListPage
             icon={ShieldIcon}
             title="Roles"
             columns={columns}
             query={roles}
-            toolbar={roles.filter}
             detailPath={detailPath}
             rowProps={(role) => ({ 'data-role': role.name })}
             bulkDelete={{ kind: 'Role' }}

@@ -5,7 +5,7 @@ import type { Claim } from '../../../../shared/k8s/storage';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, statusColumn, textColumn } from '@/components/templates/list-columns';
 import { CLAIM_TONE } from '@/lib/status';
-import { useFilteredList } from '@/components/list/use-filtered-list';
+import { useWatchedList } from '@/lib/watch';
 
 export const Route = createFileRoute('/storage/claims/')({ component: ClaimsPage });
 
@@ -23,14 +23,13 @@ const columns: ColumnDef<Claim>[] = [
 ];
 
 function ClaimsPage() {
-    const claims = useFilteredList('PersistentVolumeClaim');
+    const claims = useWatchedList('PersistentVolumeClaim');
     return (
         <ResourceListPage
             icon={HardDriveIcon}
             title="Claims"
             columns={columns}
             query={claims}
-            toolbar={claims.filter}
             detailPath={detailPath}
             rowProps={(claim) => ({ 'data-claim': claim.name })}
             bulkDelete={{ kind: 'PersistentVolumeClaim' }}
