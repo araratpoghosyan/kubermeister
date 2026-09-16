@@ -12,10 +12,8 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { useNavigateTo } from '@/components/layout/nav-link';
 import { useIpcQuery } from '@/lib/query';
-import { openShell } from '@/lib/shell-sessions';
-import { useTerminalFontSize } from '@/lib/settings';
-import { readTerminalLook } from '@/lib/terminal-look';
 import { useStartNodeShell } from '@/lib/writes';
 
 /**
@@ -26,7 +24,7 @@ import { useStartNodeShell } from '@/lib/writes';
 export function NodeShellButton({ name }: { name: string }) {
     const [open, setOpen] = useState(false);
     const start = useStartNodeShell();
-    const fontSize = useTerminalFontSize();
+    const navigateTo = useNavigateTo();
     // The pod lands in the namespace the app is scoped to; with none selected there is nowhere
     // obvious to put it, and guessing at kube-system would be the app choosing for the user.
     const namespace = useIpcQuery('namespace.active', {}).data?.name ?? null;
@@ -36,12 +34,10 @@ export function NodeShellButton({ name }: { name: string }) {
         const session = await start.mutateAsync({ name, namespace }).catch(() => null);
         setOpen(false);
         if (!session) return;
-        openShell(
-            { namespace: session.namespace, pod: session.pod, container: session.container },
-            readTerminalLook(document.documentElement, fontSize),
-        );
+        // The shell is that pod's shell, so this lands on the pod: one place where shells live.
+        navigateTo(`/workloads/pods/${encodeURIComponent(session.namespace)}/${encodeURIComponent(session.pod)}`);
         toast.success(`Node shell running as “${session.pod}”`, {
-            description: 'Delete that pod when you are done with it.',
+            description: 'Open its Shell tab, and delete the pod when you are done with it.',
         });
     };
 

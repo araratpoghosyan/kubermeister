@@ -25,6 +25,32 @@ vi.mock('@/lib/pod-streams', async () => ({
 const download = vi.fn();
 vi.mock('@/lib/download', () => ({ downloadTextFile: download }));
 
+// xterm needs a real layout engine and matchMedia; the shell tab is tested through this boundary.
+const terminal = {
+    open: vi.fn(),
+    write: vi.fn(),
+    dispose: vi.fn(),
+    loadAddon: vi.fn(),
+    onData: vi.fn(() => ({ dispose: vi.fn() })),
+    options: {} as Record<string, unknown>,
+};
+let terminalOptions: Record<string, unknown> | undefined;
+vi.mock('@xterm/xterm', () => ({
+    Terminal: class {
+        constructor(options: Record<string, unknown>) {
+            terminalOptions = options;
+            return terminal;
+        }
+    },
+}));
+const fit = vi.fn();
+vi.mock('@xterm/addon-fit', () => ({
+    FitAddon: class {
+        fit = fit;
+    },
+}));
+vi.mock('@xterm/xterm/css/xterm.css', () => ({}));
+
 const toasts = { success: vi.fn(), error: vi.fn() };
 vi.mock('sonner', async () => ({
     ...(await vi.importActual<typeof import('sonner')>('sonner')),
@@ -39,6 +65,8 @@ const { LogsTab } = await import('@/components/pod/logs-tab');
 const { NetworkTab } = await import('@/components/pod/network-tab');
 const { OverviewTab } = await import('@/components/pod/overview-tab');
 const { declaredPorts, parseLocalPort, PortForwardControl } = await import('@/components/pod/port-forward-control');
+const { ShellTab } = await import('@/components/pod/shell-tab');
+const { DARK_ANSI, LIGHT_ANSI, readTerminalTheme } = await import('@/lib/terminal-look');
 
 const container = (
     name: string,
@@ -505,6 +533,83 @@ describe('OverviewTab', () => {
         renderWithQuery(<OverviewTab name="web-1" namespace="team-a" pod={null} />);
         expect(screen.getByText('No conditions reported.')).toBeInTheDocument();
         expect(screen.getByTestId('containers')).toHaveTextContent('0');
+    });
+});
+
+describe('ShellTab', () => {
+    beforeEach(() => {
+        for (const fn of [terminal.open, terminal.write, terminal.dispose, terminal.onData]) fn.mockClear();
+        terminal.options = {};
+        terminal.onData.mockReturnValue({ dispose: vi.fn() });
+        invoke.mockResolvedValue({ version: 1, data: { terminalFontSize: 12 } });
+    });
+
+    it('opens one session into a themed terminal in the tab, and ends it when the tab goes', async () => {
+        const session = { stop: vi.fn(), send: vi.fn() };
+        streams.openPodExec.mockReturnValue(session);
+        document.documentElement.classList.add('dark');
+        const { unmount } = renderWithQuery(<ShellTab name="web-1" namespace="team-a" pod={pod} />);
+
+        expect(streams.openPodExec).toHaveBeenCalledTimes(1);
+        expect(streams.openPodExec).toHaveBeenCalledWith(
+            { name: 'web-1', namespace: 'team-a', container: 'web' },
+            expect.any(Object),
+        );
+        expect(terminal.open).toHaveBeenCalledWith(screen.getByTestId('terminal-host'));
+        expect(terminalOptions?.theme).toMatchObject({ black: DARK_ANSI.black, background: '#0b0e14' });
+        expect(screen.getByText('/bin/sh')).toBeInTheDocument();
+
+        // The app flipping light or dark restyles the terminal without restarting the session.
+        document.documentElement.classList.replace('dark', 'light');
+        await waitFor(() => expect(terminal.options.theme).toMatchObject({ black: LIGHT_ANSI.black }));
+        expect(streams.openPodExec).toHaveBeenCalledTimes(1);
+
+        const callbacks = streams.openPodExec.mock.calls[0]![1] as {
+            onData: (chunk: string) => void;
+            onError: (message: string) => void;
+            onEnd: () => void;
+        };
+        callbacks.onData('$ ');
+        callbacks.onError('lost');
+        callbacks.onEnd();
+        expect(terminal.write).toHaveBeenNthCalledWith(1, '$ ');
+        expect(terminal.write.mock.calls[1]![0]).toContain('lost');
+        expect(terminal.write.mock.calls[2]![0]).toContain('session ended');
+        const typed = terminal.onData.mock.calls.at(-1)![0] as (data: string) => void;
+        typed('ls\n');
+        expect(session.send).toHaveBeenCalledWith('ls\n');
+
+        // Leaving the pod is how a shell is closed: nothing keeps it attached afterwards.
+        unmount();
+        expect(session.stop).toHaveBeenCalledOnce();
+        expect(terminal.dispose).toHaveBeenCalledOnce();
+        document.documentElement.classList.replace('light', 'dark');
+    });
+
+    it('waits for the pod before opening, then reopens against the container chosen', async () => {
+        const session = { stop: vi.fn(), send: vi.fn() };
+        streams.openPodExec.mockReturnValue(session);
+        const { rerender } = renderWithQuery(<ShellTab name="web-1" namespace="team-a" pod={null} />);
+        // Opening against a default container first would be a second session a moment later.
+        expect(streams.openPodExec).not.toHaveBeenCalled();
+
+        rerender(<ShellTab name="web-1" namespace="team-a" pod={pod} />);
+        expect(streams.openPodExec).toHaveBeenCalledTimes(1);
+        await userEvent.click(screen.getByRole('button', { name: 'Container' }));
+        await userEvent.click(await screen.findByRole('menuitem', { name: 'sidecar' }));
+        expect(session.stop).toHaveBeenCalledOnce();
+        expect(streams.openPodExec).toHaveBeenLastCalledWith(
+            expect.objectContaining({ container: 'sidecar' }),
+            expect.any(Object),
+        );
+    });
+
+    it('reads token colours with fallbacks and the palette for the root class', () => {
+        const host = document.createElement('div');
+        expect(readTerminalTheme(host)).toMatchObject({ background: '#0b0e14', ...DARK_ANSI });
+        document.documentElement.classList.add('light');
+        expect(readTerminalTheme(host)).toMatchObject(LIGHT_ANSI);
+        document.documentElement.classList.remove('light');
     });
 });
 

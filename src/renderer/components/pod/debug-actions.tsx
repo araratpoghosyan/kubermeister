@@ -15,27 +15,26 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAddDebugContainer, useCopyFromPod, useCopyToPod } from '@/lib/writes';
-import { openShell } from '@/lib/shell-sessions';
-import { readTerminalLook } from '@/lib/terminal-look';
-import { useTerminalFontSize } from '@/lib/settings';
 
 interface PodDebugProps {
     name: string;
     namespace: string;
     /** The container the debugger joins and the copies address. */
     container?: string;
+    /** Told which container was attached, so the shell beside this button can switch into it. */
+    onAttached?: (container: string) => void;
 }
 
 /**
- * Attach a debug container to a running pod, then open a shell into it. A pod built from a small
- * image has no shell to exec into, which is the case this exists for; the debugger brings its own.
- * It cannot be removed afterwards — the API has no call for that — so the dialog says so first.
+ * Attach a debug container to a running pod. A pod built from a small image has no shell to exec
+ * into, which is the case this exists for; the debugger brings its own, and the Shell tab switches
+ * to it once it is there. It cannot be removed afterwards — the API has no call for that — so the
+ * dialog says so first.
  */
-export function DebugContainerButton({ name, namespace, container }: PodDebugProps) {
+export function DebugContainerButton({ name, namespace, container, onAttached }: PodDebugProps) {
     const [open, setOpen] = useState(false);
     const [image, setImage] = useState('');
     const debug = useAddDebugContainer();
-    const fontSize = useTerminalFontSize();
 
     const confirm = async () => {
         const session = await debug
@@ -48,11 +47,10 @@ export function DebugContainerButton({ name, namespace, container }: PodDebugPro
             .catch(() => null);
         setOpen(false);
         if (!session) return;
-        openShell(
-            { namespace: session.namespace, pod: session.pod, container: session.container },
-            readTerminalLook(document.documentElement, fontSize),
-        );
-        toast.success(`Debug container “${session.container}” attached`, { description: 'Its shell is open below.' });
+        onAttached?.(session.container);
+        toast.success(`Debug container “${session.container}” attached`, {
+            description: 'The shell above is now in it.',
+        });
     };
 
     return (

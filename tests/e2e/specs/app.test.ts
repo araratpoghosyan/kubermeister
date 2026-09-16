@@ -157,25 +157,13 @@ test('follows pod logs, runs a command in the pod shell, and starts a port-forwa
     await window.getByRole('button', { name: 'Timestamps' }).click();
     await expect(rows).toContainText('km-e2e-marker');
 
-    // Shells live in the drawer at the bottom, so they survive leaving the pod's page.
+    // The shell is the pod's own, in its Shell tab.
     await window.getByRole('tab', { name: 'Shell' }).click();
-    const drawer = window.getByTestId('shell-drawer');
-    const terminal = drawer.getByTestId('shell-host');
+    const terminal = window.getByTestId('terminal-host');
     await expect(terminal.locator('.xterm')).toBeVisible({ timeout: 30_000 });
     await terminal.click();
     await window.keyboard.type('echo km-shell-$((6*7))\n');
     await expect(terminal).toContainText('km-shell-42', { timeout: 30_000 });
-
-    // Going elsewhere leaves the session open, with its scrollback intact, and coming back finds it.
-    await window.getByTestId('sidebar').getByRole('link', { name: 'Nodes', exact: true }).click();
-    await expect(window.getByTestId('nodes-table')).toBeVisible();
-    await expect(drawer.getByTestId('shell-host')).toContainText('km-shell-42');
-    await window.getByTestId('sidebar').getByRole('link', { name: 'Pods' }).click();
-    await window.getByTestId('pods-table').locator('[data-pod^="web-"]').getByRole('link').click();
-    await expect(drawer.getByTestId('shell-host')).toContainText('km-shell-42');
-
-    await drawer.getByRole('button', { name: /^Close shell/ }).click();
-    await expect(window.getByTestId('shell-drawer')).toHaveCount(0);
 
     await window.getByRole('tab', { name: 'Network' }).click();
     await window.getByRole('textbox', { name: 'Local port' }).fill('38080');
@@ -658,7 +646,7 @@ test('follows every pod of the seeded deployment in one view', async () => {
     await expect(viewer.getByRole('list', { name: 'Log lines' }).locator('[title^="web-"]').first()).toBeVisible();
 });
 
-test('attaches a debug container to the seeded pod and opens its shell', async () => {
+test('attaches a debug container to the seeded pod and shells into it', async () => {
     const { window } = launched;
     await window.getByTestId('sidebar').getByRole('link', { name: 'Pods' }).click();
     await window.getByTestId('pods-table').locator('[data-pod^="web-"]').first().getByRole('link').click();
@@ -670,10 +658,8 @@ test('attaches a debug container to the seeded pod and opens its shell', async (
     await dialog.getByRole('button', { name: 'Attach' }).click();
     await expect(window.getByText(/attached/)).toBeVisible({ timeout: 30_000 });
 
-    // Two sessions now: the pod's own shell and the debugger's, both in the drawer.
-    const drawer = window.getByTestId('shell-drawer');
-    await expect(drawer.getByRole('tab')).toHaveCount(2, { timeout: 30_000 });
-    await expect(drawer.getByRole('tab', { name: /debugger-/ })).toBeVisible();
+    // The shell in the tab switches into the container that was just attached.
+    await expect(window.getByRole('button', { name: 'Container' })).toContainText(/debugger-/, { timeout: 30_000 });
 
     // The pod's containers card lists it as a debug container once the kubelet starts it.
     await window.getByRole('tab', { name: 'Overview' }).click();
