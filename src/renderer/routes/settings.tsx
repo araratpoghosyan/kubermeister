@@ -2,7 +2,13 @@ import { useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { MonitorIcon, MoonIcon, SunIcon, type LucideIcon } from 'lucide-react';
-import { LOG_BUFFER_OPTIONS, REFRESH_INTERVAL_OPTIONS, UPDATE_MODES, type UpdateMode } from '../../shared/settings';
+import {
+    LOG_BUFFER_OPTIONS,
+    REFRESH_INTERVAL_OPTIONS,
+    TERMINAL_FONT_SIZES,
+    UPDATE_MODES,
+    type UpdateMode,
+} from '../../shared/settings';
 import { SettingsPage } from '@/components/templates/settings-page';
 import { Field, FormCard, FormSelect, Toggle } from '@/components/templates/settings-form';
 import { Badge } from '@/components/ui/badge';
@@ -54,6 +60,7 @@ function SettingsScreen() {
     const updateMode = settings?.updates.mode ?? 'check';
     const refreshSec = settings?.data.refreshIntervalSec ?? 12;
     const logBuffer = settings?.data.logBufferLines ?? 2_000;
+    const terminalFont = settings?.data.terminalFontSize ?? 12;
     // Fold the current value in so a non-preset interval (the 12 s default) still renders as selected.
     const intervalOptions = Array.from(new Set<number>([...REFRESH_INTERVAL_OPTIONS, refreshSec]))
         .sort((a, b) => a - b)
@@ -96,6 +103,18 @@ function SettingsScreen() {
                             options={intervalOptions}
                             onValueChange={(label) =>
                                 void updateSettings(client, { data: { refreshIntervalSec: parseInt(label, 10) } })
+                            }
+                        />
+                    </Field>
+                </FormCard>
+
+                <FormCard title="Terminal" desc="Font size of the shell terminals in the drawer.">
+                    <Field label="Font size">
+                        <FormSelect
+                            value={`${terminalFont} pt`}
+                            options={TERMINAL_FONT_SIZES.map((size) => `${size} pt`)}
+                            onValueChange={(label) =>
+                                void updateSettings(client, { data: { terminalFontSize: parseInt(label, 10) } })
                             }
                         />
                     </Field>

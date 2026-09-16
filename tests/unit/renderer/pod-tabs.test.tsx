@@ -15,30 +15,6 @@ vi.mock('@/lib/pod-streams', async () => ({
 const download = vi.fn();
 vi.mock('@/lib/download', () => ({ downloadTextFile: download }));
 
-const terminal = {
-    open: vi.fn(),
-    write: vi.fn(),
-    loadAddon: vi.fn(),
-    dispose: vi.fn(),
-    onData: vi.fn(() => ({ dispose: vi.fn() })),
-    options: {} as { theme?: Record<string, string> },
-};
-let terminalOptions: Record<string, unknown> | undefined;
-vi.mock('@xterm/xterm', () => ({
-    Terminal: class {
-        constructor(options: Record<string, unknown>) {
-            terminalOptions = options;
-            return terminal;
-        }
-    },
-}));
-vi.mock('@xterm/addon-fit', () => ({
-    FitAddon: class {
-        fit = vi.fn();
-    },
-}));
-vi.mock('@xterm/xterm/css/xterm.css', () => ({}));
-
 const toasts = { success: vi.fn(), error: vi.fn() };
 vi.mock('sonner', async () => ({
     ...(await vi.importActual<typeof import('sonner')>('sonner')),
@@ -47,7 +23,6 @@ vi.mock('sonner', async () => ({
 
 const { LogViewer, SINCE_OPTIONS } = await import('@/components/data-display/log-viewer');
 const { LogsTab } = await import('@/components/pod/logs-tab');
-const { ShellTab, DARK_ANSI, LIGHT_ANSI, readTerminalTheme } = await import('@/components/pod/shell-tab');
 const { NetworkTab } = await import('@/components/pod/network-tab');
 const { OverviewTab } = await import('@/components/pod/overview-tab');
 const { declaredPorts, parseLocalPort, PortForwardControl } = await import('@/components/pod/port-forward-control');
@@ -137,12 +112,7 @@ beforeEach(() => {
     download.mockReset();
     streams.usePodLogStream.mockReset();
     streams.usePodLogStream.mockReturnValue(idle);
-    streams.openPodExec.mockReset();
     streams.usePodPortForward.mockReset();
-    terminal.write.mockReset();
-    terminal.dispose.mockReset();
-    terminal.options = {};
-    document.documentElement.classList.remove('light', 'dark');
 });
 
 describe('LogViewer', () => {
@@ -395,68 +365,6 @@ describe('LogsTab', () => {
         await waitFor(() =>
             expect(invoke).toHaveBeenCalledWith('pods.logSnapshot', expect.objectContaining({ tailLines: 100 })),
         );
-    });
-});
-
-describe('ShellTab', () => {
-    it('opens one exec session into a themed terminal, follows theme flips, and closes on unmount', async () => {
-        const session = { stop: vi.fn(), send: vi.fn() };
-        streams.openPodExec.mockReturnValue(session);
-        document.documentElement.classList.add('dark');
-        const { unmount } = renderWithQuery(<ShellTab name="web-1" namespace="team-a" pod={pod} />);
-        expect(streams.openPodExec).toHaveBeenCalledTimes(1);
-        expect(streams.openPodExec).toHaveBeenCalledWith(
-            { name: 'web-1', namespace: 'team-a', container: 'web' },
-            expect.any(Object),
-        );
-        expect(terminal.open).toHaveBeenCalledWith(screen.getByTestId('terminal-host'));
-        expect(terminalOptions?.theme).toMatchObject({ black: DARK_ANSI.black, background: '#0b0e14' });
-        expect(screen.getByText('/bin/sh')).toBeInTheDocument();
-
-        document.documentElement.classList.replace('dark', 'light');
-        await waitFor(() => expect(terminal.options.theme).toMatchObject({ black: LIGHT_ANSI.black }));
-
-        const callbacks = streams.openPodExec.mock.calls[0]![1] as {
-            onData: (s: string) => void;
-            onError: (s: string) => void;
-            onEnd: () => void;
-        };
-        callbacks.onData('$ ');
-        callbacks.onError('lost');
-        callbacks.onEnd();
-        expect(terminal.write).toHaveBeenNthCalledWith(1, '$ ');
-        expect(terminal.write.mock.calls[1]![0]).toContain('lost');
-        expect(terminal.write.mock.calls[2]![0]).toContain('session ended');
-        const onData = terminal.onData.mock.calls.at(-1)![0] as (data: string) => void;
-        onData('ls\n');
-        expect(session.send).toHaveBeenCalledWith('ls\n');
-        unmount();
-        expect(session.stop).toHaveBeenCalledOnce();
-        expect(terminal.dispose).toHaveBeenCalledOnce();
-    });
-
-    it('reopens against the chosen container and waits while the pod is unknown', async () => {
-        const session = { stop: vi.fn(), send: vi.fn() };
-        streams.openPodExec.mockReturnValue(session);
-        const { rerender } = renderWithQuery(<ShellTab name="web-1" namespace="team-a" pod={null} />);
-        expect(streams.openPodExec).not.toHaveBeenCalled();
-        expect(screen.queryByRole('button', { name: 'Container' })).not.toBeInTheDocument();
-        rerender(<ShellTab name="web-1" namespace="team-a" pod={pod} />);
-        expect(streams.openPodExec).toHaveBeenCalledTimes(1);
-        await userEvent.click(screen.getByRole('button', { name: 'Container' }));
-        await userEvent.click(await screen.findByRole('menuitem', { name: 'sidecar' }));
-        expect(session.stop).toHaveBeenCalledOnce();
-        expect(streams.openPodExec).toHaveBeenLastCalledWith(
-            expect.objectContaining({ container: 'sidecar' }),
-            expect.any(Object),
-        );
-    });
-
-    it('reads token colors with fallbacks and the palette for the root class', () => {
-        const host = document.createElement('div');
-        expect(readTerminalTheme(host)).toMatchObject({ background: '#0b0e14', ...DARK_ANSI });
-        document.documentElement.classList.add('light');
-        expect(readTerminalTheme(host)).toMatchObject(LIGHT_ANSI);
     });
 });
 

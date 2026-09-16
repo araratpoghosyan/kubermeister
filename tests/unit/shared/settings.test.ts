@@ -13,7 +13,7 @@ describe('parseSettings', () => {
             version: 1,
             session: { lastContext: 'prod', lastNamespace: 'default', restoreOnLaunch: true },
             connection: { kubeconfigPath: '/tmp/kubeconfig' },
-            data: { refreshIntervalSec: 30, logBufferLines: 2000 },
+            data: { refreshIntervalSec: 30, logBufferLines: 2000, terminalFontSize: 12 },
             updates: { mode: 'download' },
             window: { bounds: { x: 0, y: 0, width: 1200, height: 800 } },
         };
@@ -48,7 +48,7 @@ describe('parseSettings', () => {
             version: 1,
             session: { lastContext: 'staging', lastNamespace: null, restoreOnLaunch: true },
             connection: { kubeconfigPath: null },
-            data: { refreshIntervalSec: 12, logBufferLines: 2000 },
+            data: { refreshIntervalSec: 12, logBufferLines: 2000, terminalFontSize: 12 },
             updates: { mode: 'check' },
             window: { bounds: null },
         });
@@ -70,18 +70,13 @@ describe('parseSettings', () => {
 
     it('resets a data section that is not usable, keeping one that is', () => {
         // The section is parsed as a whole, so one bad field takes the section's defaults with it.
-        const defaults = { refreshIntervalSec: 12, logBufferLines: 2000 };
+        const defaults = { refreshIntervalSec: 12, logBufferLines: 2000, terminalFontSize: 12 };
+        const good = { refreshIntervalSec: 30, logBufferLines: 10_000, terminalFontSize: 14 };
         expect(parseSettings({ version: 1, data: { refreshIntervalSec: 'soon' } }).data).toEqual(defaults);
-        expect(parseSettings({ version: 1, data: { refreshIntervalSec: 0, logBufferLines: 2000 } }).data).toEqual(
-            defaults,
-        );
-        expect(parseSettings({ version: 1, data: { refreshIntervalSec: 30, logBufferLines: 0 } }).data).toEqual(
-            defaults,
-        );
-        expect(parseSettings({ version: 1, data: { refreshIntervalSec: 30, logBufferLines: 10_000 } }).data).toEqual({
-            refreshIntervalSec: 30,
-            logBufferLines: 10_000,
-        });
+        expect(parseSettings({ version: 1, data: { ...good, refreshIntervalSec: 0 } }).data).toEqual(defaults);
+        expect(parseSettings({ version: 1, data: { ...good, logBufferLines: 0 } }).data).toEqual(defaults);
+        expect(parseSettings({ version: 1, data: { ...good, terminalFontSize: 99 } }).data).toEqual(defaults);
+        expect(parseSettings({ version: 1, data: good }).data).toEqual(good);
     });
 });
 
@@ -126,16 +121,21 @@ describe('patch schemas', () => {
     });
 
     it('lets the renderer change the refresh interval', () => {
-        expect(settingsInputSchema.safeParse({ data: { refreshIntervalSec: 30, logBufferLines: 2000 } }).success).toBe(
-            true,
-        );
+        expect(
+            settingsInputSchema.safeParse({
+                data: { refreshIntervalSec: 30, logBufferLines: 2000, terminalFontSize: 12 },
+            }).success,
+        ).toBe(true);
         expect(settingsInputSchema.safeParse({ data: { refreshIntervalSec: -1 } }).success).toBe(false);
         expect(
-            mergeSettings(DEFAULT_SETTINGS, { data: { refreshIntervalSec: 60, logBufferLines: 2000 } }).data
-                .refreshIntervalSec,
+            mergeSettings(DEFAULT_SETTINGS, {
+                data: { refreshIntervalSec: 60, logBufferLines: 2000, terminalFontSize: 12 },
+            }).data.refreshIntervalSec,
         ).toBe(60);
         expect(
-            mergeSettings(DEFAULT_SETTINGS, { data: { refreshIntervalSec: 60, logBufferLines: 2000 } }).session,
+            mergeSettings(DEFAULT_SETTINGS, {
+                data: { refreshIntervalSec: 60, logBufferLines: 2000, terminalFontSize: 12 },
+            }).session,
         ).toEqual(DEFAULT_SETTINGS.session);
     });
 });

@@ -142,6 +142,23 @@ describe('add-on details', () => {
         expect(toasts.success).toHaveBeenCalledWith('Rolled “traefik” back to revision 1', expect.anything());
     });
 
+    it('leaves the release alone when either dialog is dismissed', async () => {
+        renderRoutes(routeTree, '/addons/releases/kube-system/traefik');
+        const page = await screen.findByTestId('release-page');
+        const history = await within(page).findByTestId('release-revisions');
+        await waitFor(() => expect(history).toHaveTextContent('#1'));
+        const older = history.querySelector('[data-revision="1"]') as HTMLElement;
+        await userEvent.click(within(older).getByRole('button', { name: 'Roll back' }));
+        await userEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Cancel' }));
+        await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+
+        await userEvent.click(within(page).getByRole('button', { name: 'Uninstall' }));
+        await userEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Cancel' }));
+        await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+        expect(invoke).not.toHaveBeenCalledWith('releases.rollback', expect.anything());
+        expect(invoke).not.toHaveBeenCalledWith('releases.uninstall', expect.anything());
+    });
+
     it('uninstalls a release, with the choice of keeping its history', async () => {
         renderRoutes(routeTree, '/addons/releases/kube-system/traefik');
         const page = await screen.findByTestId('release-page');

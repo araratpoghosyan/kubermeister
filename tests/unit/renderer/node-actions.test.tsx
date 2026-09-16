@@ -96,6 +96,20 @@ describe('cordon action', () => {
     });
 });
 
+describe('a refused cordon', () => {
+    it('says nothing succeeded', async () => {
+        const { IpcError } = await import('@/lib/ipc');
+        invoke.mockImplementation(async (channel: string) => {
+            if (channel === 'nodes.cordon') throw new IpcError({ kind: 'forbidden', detail: 'no', op: channel });
+            return data[channel];
+        });
+        renderInRouter(<CordonButton name="node-1" cordoned={false} />);
+        await userEvent.click(await screen.findByRole('button', { name: 'Cordon' }));
+        await waitFor(() => expect(invoke).toHaveBeenCalledWith('nodes.cordon', expect.anything()));
+        expect(toasts.success).not.toHaveBeenCalled();
+    });
+});
+
 describe('drain dialog', () => {
     it('shows what will and will not move before anything happens', async () => {
         renderInRouter(<DrainDialog name="node-1" context="alpha" />);

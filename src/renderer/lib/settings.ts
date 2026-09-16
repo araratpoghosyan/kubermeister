@@ -21,6 +21,12 @@ export function useLogBufferLines(fallback = 2_000): number {
     return data ? data.data.logBufferLines : fallback;
 }
 
+/** Terminal font size from settings, falling back while they load. */
+export function useTerminalFontSize(fallback = 12): number {
+    const { data } = useSettings();
+    return data ? data.data.terminalFontSize : fallback;
+}
+
 /** Persist a patch; the merged result lands in the cache so controls reflect it at once. */
 export async function updateSettings(client: QueryClient, patch: SettingsInput): Promise<Settings> {
     const settings = await invoke('settings.set', patch);
