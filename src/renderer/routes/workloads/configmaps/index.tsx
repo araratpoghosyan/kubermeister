@@ -4,7 +4,7 @@ import { FileTextIcon } from 'lucide-react';
 import type { ConfigMap } from '../../../../shared/k8s/workloads';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
-import { useWatchedList } from '@/lib/watch';
+import { useFilteredList } from '@/components/list/use-filtered-list';
 
 export const Route = createFileRoute('/workloads/configmaps/')({ component: ConfigMapsPage });
 
@@ -19,13 +19,14 @@ const columns: ColumnDef<ConfigMap>[] = [
 ];
 
 function ConfigMapsPage() {
-    const configMaps = useWatchedList('ConfigMap');
+    const configMaps = useFilteredList('ConfigMap');
     return (
         <ResourceListPage
             icon={FileTextIcon}
             title="ConfigMaps"
             columns={columns}
             query={configMaps}
+            toolbar={configMaps.filter}
             detailPath={detailPath}
             rowProps={(configMap) => ({ 'data-configmap': configMap.name })}
             bulkDelete={{ kind: 'ConfigMap' }}

@@ -5,7 +5,7 @@ import type { Service } from '../../../../shared/k8s/network';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
 import { Badge } from '@/components/ui/badge';
-import { useWatchedList } from '@/lib/watch';
+import { useFilteredList } from '@/components/list/use-filtered-list';
 
 export const Route = createFileRoute('/network/services/')({ component: ServicesPage });
 
@@ -38,13 +38,14 @@ const columns: ColumnDef<Service>[] = [
 ];
 
 function ServicesPage() {
-    const services = useWatchedList('Service');
+    const services = useFilteredList('Service');
     return (
         <ResourceListPage
             icon={GlobeIcon}
             title="Services"
             columns={columns}
             query={services}
+            toolbar={services.filter}
             detailPath={detailPath}
             rowProps={(service) => ({ 'data-service': service.name })}
             bulkDelete={{ kind: 'Service' }}

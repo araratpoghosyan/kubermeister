@@ -4,7 +4,7 @@ import { CopyIcon } from 'lucide-react';
 import type { ReplicaSetRow } from '../../../../shared/k8s/workloads';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
-import { useWatchedList } from '@/lib/watch';
+import { useFilteredList } from '@/components/list/use-filtered-list';
 
 export const Route = createFileRoute('/workloads/replicasets/')({ component: ReplicaSetsPage });
 
@@ -22,13 +22,14 @@ const columns: ColumnDef<ReplicaSetRow>[] = [
 ];
 
 function ReplicaSetsPage() {
-    const sets = useWatchedList('ReplicaSet');
+    const sets = useFilteredList('ReplicaSet');
     return (
         <ResourceListPage
             icon={CopyIcon}
             title="ReplicaSets"
             columns={columns}
             query={sets}
+            toolbar={sets.filter}
             detailPath={detailPath}
             rowProps={(rs) => ({ 'data-replicaset': rs.name })}
             bulkDelete={{ kind: 'ReplicaSet' }}

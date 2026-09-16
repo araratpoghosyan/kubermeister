@@ -5,7 +5,7 @@ import type { ClusterRole } from '../../../../shared/k8s/access';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
 import { Badge } from '@/components/ui/badge';
-import { useWatchedList } from '@/lib/watch';
+import { useFilteredList } from '@/components/list/use-filtered-list';
 
 export const Route = createFileRoute('/access/clusterroles/')({ component: ClusterRolesPage });
 
@@ -31,13 +31,14 @@ const columns: ColumnDef<ClusterRole>[] = [
 ];
 
 function ClusterRolesPage() {
-    const roles = useWatchedList('ClusterRole');
+    const roles = useFilteredList('ClusterRole');
     return (
         <ResourceListPage
             icon={ShieldIcon}
             title="ClusterRoles"
             columns={columns}
             query={roles}
+            toolbar={roles.filter}
             detailPath={detailPath}
             rowProps={(role) => ({ 'data-clusterrole': role.name })}
             bulkDelete={{ kind: 'ClusterRole' }}

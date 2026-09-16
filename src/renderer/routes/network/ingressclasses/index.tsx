@@ -5,7 +5,7 @@ import type { IngressClass } from '../../../../shared/k8s/classes';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
 import { Badge } from '@/components/ui/badge';
-import { useWatchedList } from '@/lib/watch';
+import { useFilteredList } from '@/components/list/use-filtered-list';
 
 export const Route = createFileRoute('/network/ingressclasses/')({ component: IngressClassesPage });
 
@@ -34,13 +34,14 @@ const columns: ColumnDef<IngressClass>[] = [
 ];
 
 function IngressClassesPage() {
-    const classes = useWatchedList('IngressClass');
+    const classes = useFilteredList('IngressClass');
     return (
         <ResourceListPage
             icon={LayersIcon}
             title="IngressClasses"
             columns={columns}
             query={classes}
+            toolbar={classes.filter}
             detailPath={detailPath}
             rowProps={(ingressClass) => ({ 'data-ingressclass': ingressClass.name })}
             bulkDelete={{ kind: 'IngressClass' }}

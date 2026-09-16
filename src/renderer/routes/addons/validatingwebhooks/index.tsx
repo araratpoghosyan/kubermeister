@@ -5,7 +5,7 @@ import type { WebhookConfig } from '../../../../shared/k8s/admission';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, statusColumn, textColumn } from '@/components/templates/list-columns';
 import { WEBHOOK_TONE } from '@/lib/status';
-import { useWatchedList } from '@/lib/watch';
+import { useFilteredList } from '@/components/list/use-filtered-list';
 
 export const Route = createFileRoute('/addons/validatingwebhooks/')({ component: ValidatingWebhooksPage });
 
@@ -22,13 +22,14 @@ const columns: ColumnDef<WebhookConfig>[] = [
 ];
 
 function ValidatingWebhooksPage() {
-    const configurations = useWatchedList('ValidatingWebhookConfiguration');
+    const configurations = useFilteredList('ValidatingWebhookConfiguration');
     return (
         <ResourceListPage
             icon={ShieldIcon}
             title="ValidatingWebhooks"
             columns={columns}
             query={configurations}
+            toolbar={configurations.filter}
             detailPath={detailPath}
             rowProps={(configuration) => ({ 'data-validatingwebhook': configuration.name })}
             bulkDelete={{ kind: 'ValidatingWebhookConfiguration' }}

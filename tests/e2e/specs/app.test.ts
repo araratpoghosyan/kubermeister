@@ -874,6 +874,31 @@ test('opens a namespace, reads what is in it, and groups the pod list by node', 
     await window.getByRole('option', { name: 'No grouping' }).click();
 });
 
+test('filters a list by label and reads the owner and finalizers of an object', async () => {
+    const { window } = launched;
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Pods' }).click();
+    const table = window.getByTestId('pods-table');
+    await expect(table.locator('[data-pod^="web-"]').first()).toBeVisible();
+
+    // The selector goes to the API server: a label nothing carries empties the list.
+    await window.getByTestId('label-filter').fill('app=nothing-has-this');
+    await window.getByTestId('label-filter').press('Enter');
+    await expect(window.getByText(/No Pods found/)).toBeVisible({ timeout: 30_000 });
+
+    await window.getByTestId('label-filter').fill('app=web');
+    await window.getByTestId('label-filter').press('Enter');
+    await expect(table.locator('[data-pod^="web-"]').first()).toBeVisible({ timeout: 30_000 });
+    await window.getByRole('button', { name: 'Clear label selector' }).click();
+
+    // Every detail carries the owner reference and the finalizers, read through one channel.
+    await table.locator('[data-pod^="web-"]').first().getByRole('link').click();
+    const page = window.getByTestId('pod-page');
+    await page.getByRole('tab', { name: /Labels/ }).click();
+    const card = page.getByTestId('object-meta');
+    await expect(card).toContainText('ReplicaSet/web-');
+    await expect(card).toContainText('T');
+});
+
 test('stops at the startup screen when the kubeconfig path names nothing', async () => {
     const missing = join(tmpdir(), `km-e2e-missing-${Date.now()}.yaml`);
     const bad = await launchApp({ kubeconfigPath: missing });

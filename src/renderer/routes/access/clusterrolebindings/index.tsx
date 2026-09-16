@@ -4,7 +4,7 @@ import { ShieldCheckIcon } from 'lucide-react';
 import type { ClusterRoleBinding } from '../../../../shared/k8s/access';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
-import { useWatchedList } from '@/lib/watch';
+import { useFilteredList } from '@/components/list/use-filtered-list';
 
 export const Route = createFileRoute('/access/clusterrolebindings/')({ component: ClusterRoleBindingsPage });
 
@@ -19,13 +19,14 @@ const columns: ColumnDef<ClusterRoleBinding>[] = [
 ];
 
 function ClusterRoleBindingsPage() {
-    const bindings = useWatchedList('ClusterRoleBinding');
+    const bindings = useFilteredList('ClusterRoleBinding');
     return (
         <ResourceListPage
             icon={ShieldCheckIcon}
             title="ClusterRoleBindings"
             columns={columns}
             query={bindings}
+            toolbar={bindings.filter}
             detailPath={detailPath}
             rowProps={(binding) => ({ 'data-clusterrolebinding': binding.name })}
             bulkDelete={{ kind: 'ClusterRoleBinding' }}

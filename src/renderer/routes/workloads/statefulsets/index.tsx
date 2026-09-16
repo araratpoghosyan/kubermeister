@@ -4,7 +4,7 @@ import { BoxesIcon } from 'lucide-react';
 import type { StatefulSet } from '../../../../shared/k8s/workloads';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, readyRatioColumn, scaleColumn, textColumn } from '@/components/templates/list-columns';
-import { useWatchedList } from '@/lib/watch';
+import { useFilteredList } from '@/components/list/use-filtered-list';
 
 export const Route = createFileRoute('/workloads/statefulsets/')({ component: StatefulSetsPage });
 
@@ -21,13 +21,14 @@ const columns: ColumnDef<StatefulSet>[] = [
 ];
 
 function StatefulSetsPage() {
-    const sets = useWatchedList('StatefulSet');
+    const sets = useFilteredList('StatefulSet');
     return (
         <ResourceListPage
             icon={BoxesIcon}
             title="StatefulSets"
             columns={columns}
             query={sets}
+            toolbar={sets.filter}
             detailPath={detailPath}
             rowProps={(s) => ({ 'data-statefulset': s.name })}
             bulkDelete={{ kind: 'StatefulSet' }}

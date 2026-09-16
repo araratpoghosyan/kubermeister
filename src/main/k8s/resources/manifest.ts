@@ -1,3 +1,4 @@
+import type { V1ObjectMeta } from '@kubernetes/client-node';
 import { isClusterScopedManifestKind, type Manifest, type ManifestKind } from '../../../shared/k8s/manifest.js';
 import { KIND_REGISTRY } from '../../../shared/k8s/registry.js';
 import { apis, resolveObjectNamespace } from '../client.js';
@@ -13,7 +14,7 @@ import { listSnapshotObjects } from './storage.js';
  */
 
 interface RawItem {
-    metadata?: { name?: string; namespace?: string };
+    metadata?: V1ObjectMeta;
 }
 
 /**
@@ -83,6 +84,8 @@ function typeMeta(kind: ManifestKind): { apiVersion: string; kind: string } {
  * rather than settled by whichever same-named object across the cluster lists first, because what
  * comes back here is what the editor writes back later.
  */
+export type { RawItem };
+
 export async function findRawObject(
     kind: ManifestKind,
     name: string,

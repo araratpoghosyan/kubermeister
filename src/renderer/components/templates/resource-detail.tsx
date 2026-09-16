@@ -11,6 +11,8 @@ import { DetailCard, PropertyGrid } from '@/components/templates/detail-cards';
 import { DetailHeader, type DetailHeaderProps } from '@/components/templates/detail-header';
 import { ObjectEvents } from '@/components/templates/object-events';
 import { ManifestEditContext, useManifestEditBridge } from '@/components/templates/manifest-edit';
+import { ObjectMetaCard } from '@/components/templates/object-meta-card';
+import { isManifestKind } from '../../../shared/k8s/manifest';
 import { cn } from '@/lib/utils';
 
 export interface DetailTab {
@@ -307,7 +309,20 @@ export function ResourceDetail({
                                         {tab.fill ? (
                                             tab.content
                                         ) : (
-                                            <div className="flex flex-col gap-3">{tab.content}</div>
+                                            <div className="flex flex-col gap-3">
+                                                {/* Owner and finalizers belong to every kind, so
+                                                    the Labels tab grows them here rather than in
+                                                    thirty screens that each pass the same three
+                                                    values to the same card. */}
+                                                {tab.id === 'labels' && isManifestKind(kind) && (
+                                                    <ObjectMetaCard
+                                                        kind={kind}
+                                                        name={header.title}
+                                                        namespace={namespace}
+                                                    />
+                                                )}
+                                                {tab.content}
+                                            </div>
                                         )}
                                     </div>
                                 );

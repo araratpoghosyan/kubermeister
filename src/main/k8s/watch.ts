@@ -48,7 +48,11 @@ export const WATCH_RETRY_MS = 5_000;
 
 interface WatchSource<K extends Kind> {
     path: (namespace: string | undefined) => string;
-    list: (namespace: string | undefined) => () => Promise<{ items: KubernetesObject[] }>;
+    /**
+     * The list call behind both the one-shot read and the informer. A label selector is handed to
+     * the API server here rather than filtered afterwards, so the watch narrows with the list.
+     */
+    list: (namespace: string | undefined, labelSelector?: string) => () => Promise<{ items: KubernetesObject[] }>;
     toRow: (object: KubernetesObject) => RowOf<K>;
 }
 
@@ -59,44 +63,46 @@ interface WatchSource<K extends Kind> {
 const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
     Pod: {
         path: (ns) => (ns ? `/api/v1/namespaces/${encodeURIComponent(ns)}/pods` : '/api/v1/pods'),
-        list: (ns) =>
-            ns ? () => apis().core.listNamespacedPod({ namespace: ns }) : () => apis().core.listPodForAllNamespaces(),
+        list: (ns, labelSelector) =>
+            ns
+                ? () => apis().core.listNamespacedPod({ namespace: ns, labelSelector })
+                : () => apis().core.listPodForAllNamespaces({ labelSelector }),
         toRow: (pod) => toPod(pod, Date.now(), usageFor(pod)),
     },
     Deployment: {
         path: (ns) =>
             ns ? `/apis/apps/v1/namespaces/${encodeURIComponent(ns)}/deployments` : '/apis/apps/v1/deployments',
-        list: (ns) =>
+        list: (ns, labelSelector) =>
             ns
-                ? () => apis().apps.listNamespacedDeployment({ namespace: ns })
-                : () => apis().apps.listDeploymentForAllNamespaces(),
+                ? () => apis().apps.listNamespacedDeployment({ namespace: ns, labelSelector })
+                : () => apis().apps.listDeploymentForAllNamespaces({ labelSelector }),
         toRow: (d) => toDeployment(d),
     },
     StatefulSet: {
         path: (ns) =>
             ns ? `/apis/apps/v1/namespaces/${encodeURIComponent(ns)}/statefulsets` : '/apis/apps/v1/statefulsets',
-        list: (ns) =>
+        list: (ns, labelSelector) =>
             ns
-                ? () => apis().apps.listNamespacedStatefulSet({ namespace: ns })
-                : () => apis().apps.listStatefulSetForAllNamespaces(),
+                ? () => apis().apps.listNamespacedStatefulSet({ namespace: ns, labelSelector })
+                : () => apis().apps.listStatefulSetForAllNamespaces({ labelSelector }),
         toRow: (s) => toStatefulSet(s),
     },
     DaemonSet: {
         path: (ns) =>
             ns ? `/apis/apps/v1/namespaces/${encodeURIComponent(ns)}/daemonsets` : '/apis/apps/v1/daemonsets',
-        list: (ns) =>
+        list: (ns, labelSelector) =>
             ns
-                ? () => apis().apps.listNamespacedDaemonSet({ namespace: ns })
-                : () => apis().apps.listDaemonSetForAllNamespaces(),
+                ? () => apis().apps.listNamespacedDaemonSet({ namespace: ns, labelSelector })
+                : () => apis().apps.listDaemonSetForAllNamespaces({ labelSelector }),
         toRow: (d) => toDaemonSet(d),
     },
     ReplicaSet: {
         path: (ns) =>
             ns ? `/apis/apps/v1/namespaces/${encodeURIComponent(ns)}/replicasets` : '/apis/apps/v1/replicasets',
-        list: (ns) =>
+        list: (ns, labelSelector) =>
             ns
-                ? () => apis().apps.listNamespacedReplicaSet({ namespace: ns })
-                : () => apis().apps.listReplicaSetForAllNamespaces(),
+                ? () => apis().apps.listNamespacedReplicaSet({ namespace: ns, labelSelector })
+                : () => apis().apps.listReplicaSetForAllNamespaces({ labelSelector }),
         toRow: (rs) => toReplicaSetRow(rs),
     },
     ReplicationController: {
@@ -104,24 +110,26 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
             ns
                 ? `/api/v1/namespaces/${encodeURIComponent(ns)}/replicationcontrollers`
                 : '/api/v1/replicationcontrollers',
-        list: (ns) =>
+        list: (ns, labelSelector) =>
             ns
-                ? () => apis().core.listNamespacedReplicationController({ namespace: ns })
-                : () => apis().core.listReplicationControllerForAllNamespaces(),
+                ? () => apis().core.listNamespacedReplicationController({ namespace: ns, labelSelector })
+                : () => apis().core.listReplicationControllerForAllNamespaces({ labelSelector }),
         toRow: (rc) => toReplicationController(rc),
     },
     Job: {
         path: (ns) => (ns ? `/apis/batch/v1/namespaces/${encodeURIComponent(ns)}/jobs` : '/apis/batch/v1/jobs'),
-        list: (ns) =>
-            ns ? () => apis().batch.listNamespacedJob({ namespace: ns }) : () => apis().batch.listJobForAllNamespaces(),
+        list: (ns, labelSelector) =>
+            ns
+                ? () => apis().batch.listNamespacedJob({ namespace: ns, labelSelector })
+                : () => apis().batch.listJobForAllNamespaces({ labelSelector }),
         toRow: (job) => toJob(job),
     },
     CronJob: {
         path: (ns) => (ns ? `/apis/batch/v1/namespaces/${encodeURIComponent(ns)}/cronjobs` : '/apis/batch/v1/cronjobs'),
-        list: (ns) =>
+        list: (ns, labelSelector) =>
             ns
-                ? () => apis().batch.listNamespacedCronJob({ namespace: ns })
-                : () => apis().batch.listCronJobForAllNamespaces(),
+                ? () => apis().batch.listNamespacedCronJob({ namespace: ns, labelSelector })
+                : () => apis().batch.listCronJobForAllNamespaces({ labelSelector }),
         // The client's own types require `spec` on these two; the informer hands over the generic
         // object type, and the transforms read every field defensively.
         toRow: (cronJob) => toCronJob(cronJob as V1CronJob),
@@ -131,10 +139,10 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
             ns
                 ? `/apis/autoscaling/v2/namespaces/${encodeURIComponent(ns)}/horizontalpodautoscalers`
                 : '/apis/autoscaling/v2/horizontalpodautoscalers',
-        list: (ns) =>
+        list: (ns, labelSelector) =>
             ns
-                ? () => apis().hpa.listNamespacedHorizontalPodAutoscaler({ namespace: ns })
-                : () => apis().hpa.listHorizontalPodAutoscalerForAllNamespaces(),
+                ? () => apis().hpa.listNamespacedHorizontalPodAutoscaler({ namespace: ns, labelSelector })
+                : () => apis().hpa.listHorizontalPodAutoscalerForAllNamespaces({ labelSelector }),
         toRow: (autoscaler) => toAutoscaler(autoscaler as V2HorizontalPodAutoscaler),
     },
     PodDisruptionBudget: {
@@ -142,15 +150,15 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
             ns
                 ? `/apis/policy/v1/namespaces/${encodeURIComponent(ns)}/poddisruptionbudgets`
                 : '/apis/policy/v1/poddisruptionbudgets',
-        list: (ns) =>
+        list: (ns, labelSelector) =>
             ns
-                ? () => apis().policy.listNamespacedPodDisruptionBudget({ namespace: ns })
-                : () => apis().policy.listPodDisruptionBudgetForAllNamespaces(),
+                ? () => apis().policy.listNamespacedPodDisruptionBudget({ namespace: ns, labelSelector })
+                : () => apis().policy.listPodDisruptionBudgetForAllNamespaces({ labelSelector }),
         toRow: (pdb) => toPodDisruptionBudget(pdb),
     },
     PriorityClass: {
         path: () => '/apis/scheduling.k8s.io/v1/priorityclasses',
-        list: () => () => apis().scheduling.listPriorityClass(),
+        list: (_ns, labelSelector) => () => apis().scheduling.listPriorityClass({ labelSelector }),
         // A PriorityClass keeps `value` at the top level, which the generic object type omits.
         toRow: (priorityClass) => toPriorityClass(priorityClass as V1PriorityClass),
     },
@@ -159,40 +167,40 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
             ns
                 ? `/apis/coordination.k8s.io/v1/namespaces/${encodeURIComponent(ns)}/leases`
                 : '/apis/coordination.k8s.io/v1/leases',
-        list: (ns) =>
+        list: (ns, labelSelector) =>
             ns
-                ? () => apis().coordination.listNamespacedLease({ namespace: ns })
-                : () => apis().coordination.listLeaseForAllNamespaces(),
+                ? () => apis().coordination.listNamespacedLease({ namespace: ns, labelSelector })
+                : () => apis().coordination.listLeaseForAllNamespaces({ labelSelector }),
         toRow: (lease) => toLease(lease),
     },
     RuntimeClass: {
         path: () => '/apis/node.k8s.io/v1/runtimeclasses',
-        list: () => () => apis().runtime.listRuntimeClass(),
+        list: (_ns, labelSelector) => () => apis().runtime.listRuntimeClass({ labelSelector }),
         // A RuntimeClass carries `handler` at the top level, which the generic object type omits.
         toRow: (runtimeClass) => toRuntimeClass(runtimeClass as V1RuntimeClass),
     },
     ConfigMap: {
         path: (ns) => (ns ? `/api/v1/namespaces/${encodeURIComponent(ns)}/configmaps` : '/api/v1/configmaps'),
-        list: (ns) =>
+        list: (ns, labelSelector) =>
             ns
-                ? () => apis().core.listNamespacedConfigMap({ namespace: ns })
-                : () => apis().core.listConfigMapForAllNamespaces(),
+                ? () => apis().core.listNamespacedConfigMap({ namespace: ns, labelSelector })
+                : () => apis().core.listConfigMapForAllNamespaces({ labelSelector }),
         toRow: (configMap) => toConfigMap(configMap),
     },
     Secret: {
         path: (ns) => (ns ? `/api/v1/namespaces/${encodeURIComponent(ns)}/secrets` : '/api/v1/secrets'),
-        list: (ns) =>
+        list: (ns, labelSelector) =>
             ns
-                ? () => apis().core.listNamespacedSecret({ namespace: ns })
-                : () => apis().core.listSecretForAllNamespaces(),
+                ? () => apis().core.listNamespacedSecret({ namespace: ns, labelSelector })
+                : () => apis().core.listSecretForAllNamespaces({ labelSelector }),
         toRow: (secret) => toSecret(secret),
     },
     Service: {
         path: (ns) => (ns ? `/api/v1/namespaces/${encodeURIComponent(ns)}/services` : '/api/v1/services'),
-        list: (ns) =>
+        list: (ns, labelSelector) =>
             ns
-                ? () => apis().core.listNamespacedService({ namespace: ns })
-                : () => apis().core.listServiceForAllNamespaces(),
+                ? () => apis().core.listNamespacedService({ namespace: ns, labelSelector })
+                : () => apis().core.listServiceForAllNamespaces({ labelSelector }),
         toRow: (service) => toService(service),
     },
     Ingress: {
@@ -200,18 +208,18 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
             ns
                 ? `/apis/networking.k8s.io/v1/namespaces/${encodeURIComponent(ns)}/ingresses`
                 : '/apis/networking.k8s.io/v1/ingresses',
-        list: (ns) =>
+        list: (ns, labelSelector) =>
             ns
-                ? () => apis().net.listNamespacedIngress({ namespace: ns })
-                : () => apis().net.listIngressForAllNamespaces(),
+                ? () => apis().net.listNamespacedIngress({ namespace: ns, labelSelector })
+                : () => apis().net.listIngressForAllNamespaces({ labelSelector }),
         toRow: (ingress) => toIngress(ingress),
     },
     Endpoints: {
         path: (ns) => (ns ? `/api/v1/namespaces/${encodeURIComponent(ns)}/endpoints` : '/api/v1/endpoints'),
-        list: (ns) =>
+        list: (ns, labelSelector) =>
             ns
-                ? () => apis().core.listNamespacedEndpoints({ namespace: ns })
-                : () => apis().core.listEndpointsForAllNamespaces(),
+                ? () => apis().core.listNamespacedEndpoints({ namespace: ns, labelSelector })
+                : () => apis().core.listEndpointsForAllNamespaces({ labelSelector }),
         toRow: (endpoints) => toEndpoints(endpoints),
     },
     NetworkPolicy: {
@@ -219,27 +227,27 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
             ns
                 ? `/apis/networking.k8s.io/v1/namespaces/${encodeURIComponent(ns)}/networkpolicies`
                 : '/apis/networking.k8s.io/v1/networkpolicies',
-        list: (ns) =>
+        list: (ns, labelSelector) =>
             ns
-                ? () => apis().net.listNamespacedNetworkPolicy({ namespace: ns })
-                : () => apis().net.listNetworkPolicyForAllNamespaces(),
+                ? () => apis().net.listNamespacedNetworkPolicy({ namespace: ns, labelSelector })
+                : () => apis().net.listNetworkPolicyForAllNamespaces({ labelSelector }),
         toRow: (policy) => toNetworkPolicy(policy),
     },
     IngressClass: {
         path: () => '/apis/networking.k8s.io/v1/ingressclasses',
-        list: () => () => apis().net.listIngressClass(),
+        list: (_ns, labelSelector) => () => apis().net.listIngressClass({ labelSelector }),
         toRow: (ingressClass) => toIngressClass(ingressClass as V1IngressClass),
     },
     CSIDriver: {
         path: () => '/apis/storage.k8s.io/v1/csidrivers',
-        list: () => () => apis().storage.listCSIDriver(),
+        list: (_ns, labelSelector) => () => apis().storage.listCSIDriver({ labelSelector }),
         // The client's types require `spec` here; the informer hands over the generic object type
         // and the transforms read every field defensively.
         toRow: (driver) => toCsiDriver(driver as V1CSIDriver),
     },
     CSINode: {
         path: () => '/apis/storage.k8s.io/v1/csinodes',
-        list: () => () => apis().storage.listCSINode(),
+        list: (_ns, labelSelector) => () => apis().storage.listCSINode({ labelSelector }),
         toRow: (node) => toCsiNode(node as V1CSINode),
     },
     CSIStorageCapacity: {
@@ -247,15 +255,15 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
             ns
                 ? `/apis/storage.k8s.io/v1/namespaces/${encodeURIComponent(ns)}/csistoragecapacities`
                 : '/apis/storage.k8s.io/v1/csistoragecapacities',
-        list: (ns) =>
+        list: (ns, labelSelector) =>
             ns
-                ? () => apis().storage.listNamespacedCSIStorageCapacity({ namespace: ns })
-                : () => apis().storage.listCSIStorageCapacityForAllNamespaces(),
+                ? () => apis().storage.listNamespacedCSIStorageCapacity({ namespace: ns, labelSelector })
+                : () => apis().storage.listCSIStorageCapacityForAllNamespaces({ labelSelector }),
         toRow: (capacity) => toCsiCapacity(capacity as V1CSIStorageCapacity),
     },
     PersistentVolume: {
         path: () => '/api/v1/persistentvolumes',
-        list: () => () => apis().core.listPersistentVolume(),
+        list: (_ns, labelSelector) => () => apis().core.listPersistentVolume({ labelSelector }),
         toRow: (volume) => toVolume(volume),
     },
     PersistentVolumeClaim: {
@@ -263,18 +271,18 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
             ns
                 ? `/api/v1/namespaces/${encodeURIComponent(ns)}/persistentvolumeclaims`
                 : '/api/v1/persistentvolumeclaims',
-        list: (ns) =>
+        list: (ns, labelSelector) =>
             ns
-                ? () => apis().core.listNamespacedPersistentVolumeClaim({ namespace: ns })
-                : () => apis().core.listPersistentVolumeClaimForAllNamespaces(),
+                ? () => apis().core.listNamespacedPersistentVolumeClaim({ namespace: ns, labelSelector })
+                : () => apis().core.listPersistentVolumeClaimForAllNamespaces({ labelSelector }),
         toRow: (claim) => toClaim(claim),
     },
     ServiceAccount: {
         path: (ns) => (ns ? `/api/v1/namespaces/${encodeURIComponent(ns)}/serviceaccounts` : '/api/v1/serviceaccounts'),
-        list: (ns) =>
+        list: (ns, labelSelector) =>
             ns
-                ? () => apis().core.listNamespacedServiceAccount({ namespace: ns })
-                : () => apis().core.listServiceAccountForAllNamespaces(),
+                ? () => apis().core.listNamespacedServiceAccount({ namespace: ns, labelSelector })
+                : () => apis().core.listServiceAccountForAllNamespaces({ labelSelector }),
         toRow: (account) => toServiceAccount(account),
     },
     Role: {
@@ -282,8 +290,10 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
             ns
                 ? `/apis/rbac.authorization.k8s.io/v1/namespaces/${encodeURIComponent(ns)}/roles`
                 : `/apis/rbac.authorization.k8s.io/v1/roles`,
-        list: (ns) =>
-            ns ? () => apis().rbac.listNamespacedRole({ namespace: ns }) : () => apis().rbac.listRoleForAllNamespaces(),
+        list: (ns, labelSelector) =>
+            ns
+                ? () => apis().rbac.listNamespacedRole({ namespace: ns, labelSelector })
+                : () => apis().rbac.listRoleForAllNamespaces({ labelSelector }),
         toRow: (role) => toRole(role),
     },
     RoleBinding: {
@@ -291,59 +301,75 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
             ns
                 ? `/apis/rbac.authorization.k8s.io/v1/namespaces/${encodeURIComponent(ns)}/rolebindings`
                 : `/apis/rbac.authorization.k8s.io/v1/rolebindings`,
-        list: (ns) =>
+        list: (ns, labelSelector) =>
             ns
-                ? () => apis().rbac.listNamespacedRoleBinding({ namespace: ns })
-                : () => apis().rbac.listRoleBindingForAllNamespaces(),
+                ? () => apis().rbac.listNamespacedRoleBinding({ namespace: ns, labelSelector })
+                : () => apis().rbac.listRoleBindingForAllNamespaces({ labelSelector }),
         toRow: (binding) => toRoleBinding(binding as V1RoleBinding),
     },
     ClusterRole: {
         path: () => `/apis/rbac.authorization.k8s.io/v1/clusterroles`,
-        list: () => () => apis().rbac.listClusterRole(),
+        list: (_ns, labelSelector) => () => apis().rbac.listClusterRole({ labelSelector }),
         toRow: (role) => toClusterRole(role),
     },
     ClusterRoleBinding: {
         path: () => `/apis/rbac.authorization.k8s.io/v1/clusterrolebindings`,
-        list: () => () => apis().rbac.listClusterRoleBinding(),
+        list: (_ns, labelSelector) => () => apis().rbac.listClusterRoleBinding({ labelSelector }),
         toRow: (binding) => toClusterRoleBinding(binding as V1ClusterRoleBinding),
     },
     MutatingWebhookConfiguration: {
         path: () => '/apis/admissionregistration.k8s.io/v1/mutatingwebhookconfigurations',
-        list: () => () => apis().admission.listMutatingWebhookConfiguration(),
+        list: (_ns, labelSelector) => () => apis().admission.listMutatingWebhookConfiguration({ labelSelector }),
         toRow: (configuration) => toWebhookConfig(configuration as V1MutatingWebhookConfiguration),
     },
     ValidatingWebhookConfiguration: {
         path: () => '/apis/admissionregistration.k8s.io/v1/validatingwebhookconfigurations',
-        list: () => () => apis().admission.listValidatingWebhookConfiguration(),
+        list: (_ns, labelSelector) => () => apis().admission.listValidatingWebhookConfiguration({ labelSelector }),
         toRow: (configuration) => toWebhookConfig(configuration as V1ValidatingWebhookConfiguration),
     },
     ValidatingAdmissionPolicy: {
         path: () => '/apis/admissionregistration.k8s.io/v1/validatingadmissionpolicies',
-        list: () => () => apis().admission.listValidatingAdmissionPolicy(),
+        list: (_ns, labelSelector) => () => apis().admission.listValidatingAdmissionPolicy({ labelSelector }),
         toRow: (policy) => toAdmissionPolicy(policy),
     },
     APIService: {
         path: () => '/apis/apiregistration.k8s.io/v1/apiservices',
-        list: () => () => apis().apiregistration.listAPIService(),
+        list: (_ns, labelSelector) => () => apis().apiregistration.listAPIService({ labelSelector }),
         toRow: (service) => toApiService(service),
     },
     FlowSchema: {
         path: () => '/apis/flowcontrol.apiserver.k8s.io/v1/flowschemas',
-        list: () => () => apis().flowcontrol.listFlowSchema(),
+        list: (_ns, labelSelector) => () => apis().flowcontrol.listFlowSchema({ labelSelector }),
         toRow: (schema) => toFlowSchema(schema),
     },
     CustomResourceDefinition: {
         path: () => '/apis/apiextensions.k8s.io/v1/customresourcedefinitions',
-        list: () => () => apis().apiextensions.listCustomResourceDefinition(),
+        list: (_ns, labelSelector) => () => apis().apiextensions.listCustomResourceDefinition({ labelSelector }),
         toRow: (crd) => toCustomResource(crd as V1CustomResourceDefinition),
     },
     StorageClass: {
         path: () => '/apis/storage.k8s.io/v1/storageclasses',
-        list: () => () => apis().storage.listStorageClass(),
+        list: (_ns, labelSelector) => () => apis().storage.listStorageClass({ labelSelector }),
         // A StorageClass carries `provisioner` at the top level, which the generic object type omits.
         toRow: (storageClass) => toStorageClass(storageClass as V1StorageClass),
     },
 };
+
+/**
+ * A filtered list of one kind, through the very same call the informer lists with. Filtering is the
+ * API server's job — the app never fetches rows only to drop them — and reusing the watch source
+ * means a filtered list and the watch behind it cannot disagree about what a row looks like.
+ */
+export async function listFiltered(
+    kind: Kind,
+    namespace: string | undefined,
+    labelSelector: string,
+): Promise<RowOf<Kind>[]> {
+    const source = WATCH_SOURCES[kind] as WatchSource<Kind> | undefined;
+    if (!source) throw new K8sError('invalid', `${kind} cannot be filtered by label`, 'resources.list');
+    const { items } = await source.list(resolveNamespace(namespace), labelSelector)();
+    return items.map((object) => source.toRow(object));
+}
 
 /**
  * Watch one kind in the explicit, active or all namespaces through the client's informer, which
@@ -364,19 +390,31 @@ interface Shared {
 
 const shared = new Map<string, Shared>();
 
-const watchKey = (kind: Kind, namespace: string | undefined): string => `${kind}/${namespace ?? '*'}`;
+// Two screens filtering differently are watching different things, so the selector is part of the key.
+const watchKey = (kind: Kind, namespace: string | undefined, labelSelector: string | undefined): string =>
+    `${kind}/${namespace ?? '*'}/${labelSelector ?? ''}`;
 
 /**
  * The informer for one kind and namespace, started once however many screens are watching. Two
  * screens on the same list used to mean two watch connections and two full lists of the same
  * objects; now the second one replays what the first already has and the API server sees one watch.
  */
-function acquire(kind: Kind, namespace: string | undefined, source: WatchSource<Kind>): Shared {
-    const key = watchKey(kind, namespace);
+function acquire(
+    kind: Kind,
+    namespace: string | undefined,
+    source: WatchSource<Kind>,
+    labelSelector: string | undefined,
+): Shared {
+    const key = watchKey(kind, namespace, labelSelector);
     const existing = shared.get(key);
     if (existing) return existing;
 
-    const informer = makeInformer(kubeConfig(), source.path(namespace), source.list(namespace));
+    const informer = makeInformer(
+        kubeConfig(),
+        source.path(namespace),
+        source.list(namespace, labelSelector),
+        labelSelector,
+    );
     const entry: Shared = {
         informer,
         subscribers: new Set(),
@@ -405,8 +443,13 @@ function acquire(kind: Kind, namespace: string | undefined, source: WatchSource<
 }
 
 /** Drop one subscriber, and the informer itself once nobody is left watching. */
-function release(kind: Kind, namespace: string | undefined, subscriber: (event: WatchEvent) => void): void {
-    const key = watchKey(kind, namespace);
+function release(
+    kind: Kind,
+    namespace: string | undefined,
+    labelSelector: string | undefined,
+    subscriber: (event: WatchEvent) => void,
+): void {
+    const key = watchKey(kind, namespace, labelSelector);
     const entry = shared.get(key);
     if (!entry) return;
     entry.subscribers.delete(subscriber);
@@ -434,7 +477,7 @@ export async function startResourceWatch(rawInput: unknown, send: StreamSend): P
     const source = WATCH_SOURCES[input.kind] as WatchSource<Kind> | undefined;
     if (!source) throw new K8sError('invalid', `${input.kind} is not watchable`, 'resources.watch');
 
-    const entry = acquire(input.kind, namespace, source);
+    const entry = acquire(input.kind, namespace, source, input.labelSelector);
     let active = true;
     const subscriber = (event: WatchEvent) => {
         if (!active) return;
@@ -461,7 +504,7 @@ export async function startResourceWatch(rawInput: unknown, send: StreamSend): P
     return {
         stop: () => {
             active = false;
-            release(input.kind, namespace, subscriber);
+            release(input.kind, namespace, input.labelSelector, subscriber);
         },
     };
 }

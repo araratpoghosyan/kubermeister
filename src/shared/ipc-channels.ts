@@ -64,6 +64,7 @@ export const IPC_CHANNELS = [
     'customResources.list',
     'customResources.get',
     'customResources.getYaml',
+    'resources.meta',
     'resources.getYaml',
     'resources.describe',
     'resources.create',
