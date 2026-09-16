@@ -11,6 +11,13 @@ import {
 } from './k8s/addons.js';
 import { kubeContextSchema } from './k8s/contexts.js';
 import { manifestInputSchema, manifestSchema } from './k8s/manifest.js';
+import {
+    debugContainerInputSchema,
+    debugSessionSchema,
+    nodeShellInputSchema,
+    podCopyOutcomeSchema,
+    podFileInputSchema,
+} from './k8s/debug.js';
 import { describeDocumentSchema, describeInputSchema } from './k8s/describe.js';
 import { drainPlanInputSchema, drainPlanSchema } from './k8s/drain.js';
 import { ownedPodsInputSchema, ownerChainSchema } from './k8s/owners.js';
@@ -205,6 +212,10 @@ export const ipcSchemas = {
     'resources.scale': { input: scaleInputSchema, output: writeResultSchema },
     'resources.restart': { input: restartInputSchema, output: writeResultSchema },
     'pods.evict': { input: evictInputSchema, output: writeResultSchema },
+    'pods.debug': { input: debugContainerInputSchema, output: debugSessionSchema },
+    'pods.copyFrom': { input: podFileInputSchema, output: podCopyOutcomeSchema },
+    'pods.copyTo': { input: podFileInputSchema, output: podCopyOutcomeSchema },
+    'nodes.debug': { input: nodeShellInputSchema, output: debugSessionSchema },
     'jobs.retry': { input: jobRetryInputSchema, output: writeResultSchema },
     'cronJobs.trigger': { input: cronJobTriggerInputSchema, output: writeResultSchema },
     'cronJobs.suspend': { input: cronJobSuspendInputSchema, output: writeResultSchema },

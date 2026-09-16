@@ -648,6 +648,28 @@ test('follows every pod of the seeded deployment in one view', async () => {
     await expect(viewer.getByRole('list', { name: 'Log lines' }).locator('[title^="web-"]').first()).toBeVisible();
 });
 
+test('attaches a debug container to the seeded pod and opens its shell', async () => {
+    const { window } = launched;
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Pods' }).click();
+    await window.getByTestId('pods-table').locator('[data-pod^="web-"]').first().getByRole('link').click();
+    await window.getByRole('tab', { name: 'Shell' }).click();
+
+    await window.getByTestId('pod-page').getByRole('button', { name: 'Debug' }).click();
+    const dialog = window.getByRole('alertdialog');
+    await expect(dialog).toContainText('cannot remove an ephemeral container');
+    await dialog.getByRole('button', { name: 'Attach' }).click();
+    await expect(window.getByText(/attached/)).toBeVisible({ timeout: 30_000 });
+
+    // Two sessions now: the pod's own shell and the debugger's, both in the drawer.
+    const drawer = window.getByTestId('shell-drawer');
+    await expect(drawer.getByRole('tab')).toHaveCount(2, { timeout: 30_000 });
+    await expect(drawer.getByRole('tab', { name: /debugger-/ })).toBeVisible();
+
+    // The pod's containers card lists it as a debug container once the kubelet starts it.
+    await window.getByRole('tab', { name: 'Overview' }).click();
+    await expect(window.getByTestId('containers')).toContainText('debug', { timeout: 60_000 });
+});
+
 test('stops at the startup screen when the kubeconfig path names nothing', async () => {
     const missing = join(tmpdir(), `km-e2e-missing-${Date.now()}.yaml`);
     const bad = await launchApp({ kubeconfigPath: missing });
