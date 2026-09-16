@@ -12,7 +12,6 @@ import {
     type OnChangeFn,
     type RowSelectionState,
     type SortingState,
-    type VisibilityState,
 } from '@tanstack/react-table';
 import type { UseQueryResult } from '@tanstack/react-query';
 import type { LucideIcon } from 'lucide-react';
@@ -33,6 +32,7 @@ import { RefreshButton } from '@/components/refresh-button';
 import { useNavigateTo } from '@/components/layout/nav-link';
 import { ageToSeconds, namespaceColumn, selectColumn } from '@/components/templates/list-columns';
 import { describeError } from '@/lib/k8s-error';
+import { usePersistedColumns } from '@/lib/persisted-columns';
 import type { K8sErrorKind } from '../../../shared/k8s/errors';
 
 /** The slice of a TanStack Query result the list page consumes: data, load/error flags, error, and retry. */
@@ -198,7 +198,9 @@ export function ResourceListPage<T>({
     // the input updates immediately, React reconciles the filtered rows at a lower priority.
     const queryText = useDeferredValue(search).trim().toLowerCase();
     const [sorting, setSorting] = useState<SortingState>([]);
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+    // Which columns this screen shows is a preference about one window, like the theme, so it is
+    // remembered per screen rather than synced: the test id already names the screen uniquely.
+    const [columnVisibility, setColumnVisibility] = usePersistedColumns(testId ?? title);
 
     // Selection is kept per scope: after a context or namespace switch the page reads a different,
     // empty bucket, so a stale selection can never delete same-named objects in the new scope.

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { labelSelectorSchema } from './k8s/selectors.js';
 
 /**
  * Persisted application settings: the app's own durable state, written to a JSON file the main
@@ -38,6 +39,17 @@ export const rememberedForwardSchema = z.object({
     localPort: z.number().int().min(1).max(65535),
 });
 
+/**
+ * A filter somebody keeps coming back to, under a name. Scoped to the screen that made it, since
+ * "failing pods" means nothing on the storage classes list.
+ */
+const savedViewSchema = z.object({
+    /** The list screen's route path, which is what scopes a view to where it makes sense. */
+    screen: z.string().min(1).max(200),
+    name: z.string().min(1).max(60),
+    labelSelector: labelSelectorSchema,
+});
+
 const dataSchema = z.object({
     /** Poll cadence for the live lists, metrics and dashboard queries. */
     refreshIntervalSec: z.number().int().positive(),
@@ -47,6 +59,8 @@ const dataSchema = z.object({
     terminalFontSize: z.number().int().min(8).max(32),
     /** Forwards this app has opened, offered again on the context they belong to. */
     forwards: z.array(rememberedForwardSchema).max(50),
+    /** Named label filters, per list screen. */
+    savedViews: z.array(savedViewSchema).max(50),
 });
 
 /**
@@ -98,6 +112,7 @@ export const settingsPatchSchema = z.object({
 export const settingsInputSchema = settingsPatchSchema.omit({ connection: true, window: true });
 
 export type RememberedForward = z.infer<typeof rememberedForwardSchema>;
+export type SavedView = z.infer<typeof savedViewSchema>;
 export type Settings = z.infer<typeof settingsSchema>;
 export type SettingsPatch = z.infer<typeof settingsPatchSchema>;
 export type SettingsInput = z.infer<typeof settingsInputSchema>;
@@ -108,7 +123,7 @@ export const DEFAULT_SETTINGS: Settings = {
     version: 1,
     session: { lastContext: null, lastNamespace: null, restoreOnLaunch: true },
     connection: { kubeconfigPath: null },
-    data: { refreshIntervalSec: 12, logBufferLines: 2_000, terminalFontSize: 12, forwards: [] },
+    data: { refreshIntervalSec: 12, logBufferLines: 2_000, terminalFontSize: 12, forwards: [], savedViews: [] },
     updates: { mode: 'check' },
     window: { bounds: null },
 };
