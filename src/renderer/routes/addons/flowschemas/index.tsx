@@ -4,7 +4,7 @@ import { WavesIcon } from 'lucide-react';
 import type { FlowSchema } from '../../../../shared/k8s/apiserver';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
-import { useWatchedList } from '@/lib/watch';
+import { useFilteredList } from '@/components/list/use-filtered-list';
 
 export const Route = createFileRoute('/addons/flowschemas/')({ component: FlowSchemasPage });
 
@@ -19,13 +19,14 @@ const columns: ColumnDef<FlowSchema>[] = [
 ];
 
 function FlowSchemasPage() {
-    const schemas = useWatchedList('FlowSchema');
+    const schemas = useFilteredList('FlowSchema');
     return (
         <ResourceListPage
             icon={WavesIcon}
             title="FlowSchemas"
             columns={columns}
             query={schemas}
+            toolbar={schemas.filter}
             detailPath={detailPath}
             rowProps={(schema) => ({ 'data-flowschema': schema.name })}
             bulkDelete={{ kind: 'FlowSchema' }}

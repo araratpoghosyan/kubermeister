@@ -1,5 +1,6 @@
 import {
     ApiException,
+    type V1ObjectMeta,
     type V1PersistentVolume,
     type V1PersistentVolumeClaim,
     type V1StorageClass,
@@ -118,13 +119,9 @@ export function toStorageClassDetail(storageClass: V1StorageClass, now = Date.no
 }
 
 export interface VolumeSnapshotObject {
-    metadata?: {
-        name?: string;
-        namespace?: string;
-        creationTimestamp?: string;
-        labels?: Record<string, string>;
-        annotations?: Record<string, string>;
-    };
+    // The CRD's objects arrive untyped, so the fields the transforms read are stated here. It is
+    // the client's own metadata shape, so a snapshot can be read wherever a typed object can.
+    metadata?: V1ObjectMeta;
     spec?: { source?: { persistentVolumeClaimName?: string } };
     status?: { readyToUse?: boolean; restoreSize?: string };
 }

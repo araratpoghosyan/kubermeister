@@ -234,6 +234,14 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   it. Pod rows carry the controller that owns them, which is what lets the cluster-wide list group
   by node or by workload (`groupBy` on `DataTable`, which interleaves heading rows into the
   virtualised list rather than nesting tables).
+  **Filtering is the API server's job.** A list screen's label selector rides on `resources.list`
+  and `resources.watch` alike (`listFiltered` in `watch.ts` reuses the watch source's own list call
+  and row transform), so a filtered screen stays live and means the same thing whether a namespace
+  holds ten objects or ten thousand; the shared informer is keyed by selector as well as kind and
+  namespace. A selector is only sent once it is finished — a half-typed one matches nothing.
+  `resources.meta` answers the two parts of `metadata` no view model carries, the controlling owner
+  reference and the finalizers holding a deletion open, for any kind at all; `ResourceDetail` adds
+  that card to the Labels tab itself rather than thirty screens passing the same three values.
   Deployments also have `deployments.replicaSets`, `deployments.rollouts`,
   `deployments.rolloutStatus` and `metrics.deploymentSeries` (the sum of the selected pods' tracked
   series), plus the two writes that belong to a rollout rather than to a kind in general:

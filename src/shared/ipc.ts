@@ -12,6 +12,7 @@ import {
 import { kubeContextSchema } from './k8s/contexts.js';
 import { manifestInputSchema, manifestSchema } from './k8s/manifest.js';
 import { namespaceDetailInputSchema, namespaceDetailSchema } from './k8s/namespaces.js';
+import { objectMetaInputSchema, objectMetaSchema } from './k8s/meta.js';
 import {
     customResourceGetInputSchema,
     customResourceGetOutputSchema,
@@ -215,6 +216,7 @@ export const ipcSchemas = {
     'customResources.list': { input: customResourceListInputSchema, output: customResourceListOutputSchema },
     'customResources.get': { input: customResourceGetInputSchema, output: customResourceGetOutputSchema },
     'customResources.getYaml': { input: customResourceGetInputSchema, output: manifestSchema },
+    'resources.meta': { input: objectMetaInputSchema, output: objectMetaSchema },
     'resources.getYaml': { input: manifestInputSchema, output: manifestSchema },
     'resources.describe': { input: describeInputSchema, output: describeDocumentSchema },
     'resources.create': { input: manifestWriteSchema, output: writeResultSchema },

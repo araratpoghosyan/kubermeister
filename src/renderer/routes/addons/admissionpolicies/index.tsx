@@ -4,7 +4,7 @@ import { ScaleIcon } from 'lucide-react';
 import type { AdmissionPolicy } from '../../../../shared/k8s/admission';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
-import { useWatchedList } from '@/lib/watch';
+import { useFilteredList } from '@/components/list/use-filtered-list';
 
 export const Route = createFileRoute('/addons/admissionpolicies/')({ component: AdmissionPoliciesPage });
 
@@ -20,7 +20,7 @@ const columns: ColumnDef<AdmissionPolicy>[] = [
 ];
 
 function AdmissionPoliciesPage() {
-    const policies = useWatchedList('ValidatingAdmissionPolicy');
+    const policies = useFilteredList('ValidatingAdmissionPolicy');
     return (
         <ResourceListPage
             icon={ScaleIcon}
@@ -28,6 +28,7 @@ function AdmissionPoliciesPage() {
             nounPlural="ValidatingAdmissionPolicies"
             columns={columns}
             query={policies}
+            toolbar={policies.filter}
             detailPath={detailPath}
             rowProps={(policy) => ({ 'data-admissionpolicy': policy.name })}
             bulkDelete={{ kind: 'ValidatingAdmissionPolicy' }}

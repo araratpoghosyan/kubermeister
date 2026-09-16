@@ -4,7 +4,7 @@ import { PlugIcon } from 'lucide-react';
 import type { CsiDriver } from '../../../../shared/k8s/csi';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, flagColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
-import { useWatchedList } from '@/lib/watch';
+import { useFilteredList } from '@/components/list/use-filtered-list';
 
 export const Route = createFileRoute('/storage/csidrivers/')({ component: CsiDriversPage });
 
@@ -21,13 +21,14 @@ const columns: ColumnDef<CsiDriver>[] = [
 ];
 
 function CsiDriversPage() {
-    const drivers = useWatchedList('CSIDriver');
+    const drivers = useFilteredList('CSIDriver');
     return (
         <ResourceListPage
             icon={PlugIcon}
             title="CSIDrivers"
             columns={columns}
             query={drivers}
+            toolbar={drivers.filter}
             detailPath={detailPath}
             rowProps={(driver) => ({ 'data-csidriver': driver.name })}
             bulkDelete={{ kind: 'CSIDriver' }}

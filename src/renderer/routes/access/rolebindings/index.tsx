@@ -4,7 +4,7 @@ import { ShieldCheckIcon } from 'lucide-react';
 import type { RoleBinding } from '../../../../shared/k8s/access';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
-import { useWatchedList } from '@/lib/watch';
+import { useFilteredList } from '@/components/list/use-filtered-list';
 
 export const Route = createFileRoute('/access/rolebindings/')({ component: RoleBindingsPage });
 
@@ -20,13 +20,14 @@ const columns: ColumnDef<RoleBinding>[] = [
 ];
 
 function RoleBindingsPage() {
-    const bindings = useWatchedList('RoleBinding');
+    const bindings = useFilteredList('RoleBinding');
     return (
         <ResourceListPage
             icon={ShieldCheckIcon}
             title="RoleBindings"
             columns={columns}
             query={bindings}
+            toolbar={bindings.filter}
             detailPath={detailPath}
             rowProps={(binding) => ({ 'data-rolebinding': binding.name })}
             bulkDelete={{ kind: 'RoleBinding' }}

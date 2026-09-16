@@ -12,6 +12,11 @@ export const manifestKindSchema = z.enum([...KINDS, 'Node', 'Namespace']);
 
 export type ManifestKind = z.infer<typeof manifestKindSchema>;
 
+/** Whether a kind string names a kind whose object can be read through the manifest channels. */
+export function isManifestKind(kind: string | undefined): kind is ManifestKind {
+    return !!kind && manifestKindSchema.safeParse(kind).success;
+}
+
 export function isClusterScopedManifestKind(kind: ManifestKind): boolean {
     return kind === 'Node' || kind === 'Namespace' || KIND_REGISTRY[kind].clusterScoped;
 }

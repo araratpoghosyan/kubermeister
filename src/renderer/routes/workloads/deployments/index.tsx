@@ -12,7 +12,7 @@ import {
     textColumn,
 } from '@/components/templates/list-columns';
 import { DEPLOYMENT_TONE } from '@/lib/status';
-import { useWatchedList } from '@/lib/watch';
+import { useFilteredList } from '@/components/list/use-filtered-list';
 
 export const Route = createFileRoute('/workloads/deployments/')({ component: DeploymentsPage });
 
@@ -32,13 +32,14 @@ const columns: ColumnDef<Deployment>[] = [
 ];
 
 function DeploymentsPage() {
-    const deployments = useWatchedList('Deployment');
+    const deployments = useFilteredList('Deployment');
     return (
         <ResourceListPage
             icon={BoxesIcon}
             title="Deployments"
             columns={columns}
             query={deployments}
+            toolbar={deployments.filter}
             detailPath={detailPath}
             rowProps={(d) => ({ 'data-deployment': d.name })}
             bulkDelete={{ kind: 'Deployment' }}

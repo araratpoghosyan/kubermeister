@@ -4,7 +4,7 @@ import { BoxesIcon } from 'lucide-react';
 import type { DaemonSet } from '../../../../shared/k8s/workloads';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ageColumn, nameColumn, textColumn } from '@/components/templates/list-columns';
-import { useWatchedList } from '@/lib/watch';
+import { useFilteredList } from '@/components/list/use-filtered-list';
 
 export const Route = createFileRoute('/workloads/daemonsets/')({ component: DaemonSetsPage });
 
@@ -22,13 +22,14 @@ const columns: ColumnDef<DaemonSet>[] = [
 ];
 
 function DaemonSetsPage() {
-    const sets = useWatchedList('DaemonSet');
+    const sets = useFilteredList('DaemonSet');
     return (
         <ResourceListPage
             icon={BoxesIcon}
             title="DaemonSets"
             columns={columns}
             query={sets}
+            toolbar={sets.filter}
             detailPath={detailPath}
             rowProps={(d) => ({ 'data-daemonset': d.name })}
             bulkDelete={{ kind: 'DaemonSet' }}
