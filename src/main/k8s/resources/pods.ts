@@ -1,5 +1,6 @@
 import type { V1Container, V1ContainerStatus, V1Pod, V1Probe } from '@kubernetes/client-node';
 import type {
+    ContainerRole,
     ContainerState,
     Pod,
     PodCondition,
@@ -14,7 +15,7 @@ import { withK8s } from '../errors.js';
 import { age, ago, cpuToMillicores, dash, memToMi, toPairs } from '../format.js';
 
 export { toPairs };
-import { ensureSampler, podUsage } from '../sampler.js';
+import { containerUsage, ensureSampler, podUsage } from '../sampler.js';
 
 /*
  * Pure transforms first, exported for tests and for the watch stream; thin readers at the end.
@@ -89,11 +90,18 @@ export function containerState(cs?: V1ContainerStatus): ContainerState {
     return 'Unknown';
 }
 
-export function toContainer(c: V1Container, cs: V1ContainerStatus | undefined, now = Date.now()): PodContainer {
+export function toContainer(
+    c: V1Container,
+    cs: V1ContainerStatus | undefined,
+    now = Date.now(),
+    role: ContainerRole = 'app',
+    usage?: Usage,
+): PodContainer {
     const requests = c.resources?.requests ?? {};
     const limits = c.resources?.limits ?? {};
     return {
         name: c.name,
+        role,
         image: dash(c.image),
         imageId: dash(cs?.imageID?.split('@').pop()),
         pullPolicy: c.imagePullPolicy ?? 'IfNotPresent',
@@ -106,6 +114,11 @@ export function toContainer(c: V1Container, cs: V1ContainerStatus | undefined, n
         memLimit: dash(limits.memory),
         ports: (c.ports ?? []).map((p) => `${p.containerPort}/${p.protocol ?? 'TCP'}`),
         probes: containerProbes(c),
+        cpuUsed: usage?.cpu ?? null,
+        memUsed: usage?.mem ?? null,
+        // The request as a number, so a row can compare it with usage without parsing quantities.
+        cpuRequested: requests.cpu ? cpuToMillicores(requests.cpu) : null,
+        memRequested: requests.memory ? memToMi(requests.memory) : null,
     };
 }
 
@@ -117,8 +130,35 @@ export function toConditions(pod: V1Pod, now = Date.now()): PodCondition[] {
     }));
 }
 
-export function toPodDetail(pod: V1Pod, now = Date.now(), usage?: Usage): PodDetail {
-    const statuses = new Map((pod.status?.containerStatuses ?? []).map((cs) => [cs.name, cs]));
+/**
+ * Every container of a pod in the order they matter: init steps first, since they ran first and a
+ * pod stuck on one is stuck there; then the app's own; then anything attached for debugging. Each
+ * carries its role, so the screen can say which is which rather than showing one flat list.
+ */
+export function toContainers(
+    pod: V1Pod,
+    now = Date.now(),
+    usageOf: (container: string) => Usage | undefined = () => undefined,
+): PodContainer[] {
+    const statusesOf = (list?: V1ContainerStatus[]) => new Map((list ?? []).map((cs) => [cs.name, cs]));
+    const init = statusesOf(pod.status?.initContainerStatuses);
+    const app = statusesOf(pod.status?.containerStatuses);
+    const ephemeral = statusesOf(pod.status?.ephemeralContainerStatuses);
+    return [
+        ...(pod.spec?.initContainers ?? []).map((c) => toContainer(c, init.get(c.name), now, 'init', usageOf(c.name))),
+        ...(pod.spec?.containers ?? []).map((c) => toContainer(c, app.get(c.name), now, 'app', usageOf(c.name))),
+        ...(pod.spec?.ephemeralContainers ?? []).map((c) =>
+            toContainer(c as V1Container, ephemeral.get(c.name), now, 'ephemeral', usageOf(c.name)),
+        ),
+    ];
+}
+
+export function toPodDetail(
+    pod: V1Pod,
+    now = Date.now(),
+    usage?: Usage,
+    usageOf?: (container: string) => Usage | undefined,
+): PodDetail {
     return {
         ...toPod(pod, now, usage),
         podIP: dash(pod.status?.podIP),
@@ -127,7 +167,7 @@ export function toPodDetail(pod: V1Pod, now = Date.now(), usage?: Usage): PodDet
         dnsPolicy: dash(pod.spec?.dnsPolicy),
         serviceAccount: dash(pod.spec?.serviceAccountName),
         conditions: toConditions(pod, now),
-        containers: (pod.spec?.containers ?? []).map((c) => toContainer(c, statuses.get(c.name), now)),
+        containers: toContainers(pod, now, usageOf),
         labels: toPairs(pod.metadata?.labels),
         annotations: toPairs(pod.metadata?.annotations),
     };
@@ -160,6 +200,8 @@ export function getPod(name: string, namespace?: string): Promise<PodDetail | nu
         const ns = resolveObjectNamespace(namespace);
         if (!ns) return null;
         const pod = await readOrNull(() => apis().core.readNamespacedPod({ name, namespace: ns }));
-        return pod ? toPodDetail(pod, Date.now(), usageFor(pod)) : null;
+        if (!pod) return null;
+        // Each container's own usage, so a row can put it beside the request it asked for.
+        return toPodDetail(pod, Date.now(), usageFor(pod), (container) => containerUsage(ns, name, container));
     });
 }

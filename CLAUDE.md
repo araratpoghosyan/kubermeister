@@ -201,6 +201,13 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   one superseded. An uninstall deletes the current revision's objects and either forgets the history
   or marks it uninstalled. Objects annotated `helm.sh/resource-policy: keep` are never deleted by
   either, and are counted back to the caller.
+- **Container detail:** a pod's containers come back as one ordered list carrying a `role` (init,
+  app, ephemeral) rather than three lists, so the screen labels each without knowing the shape of
+  the pod spec. Usage is per container: `readUsage` keeps both the pod totals lists show and the
+  per-container figures the rows put beside their requests, read once so the two cannot disagree,
+  and the request travels as a number as well as a string so the renderer never parses quantities.
+  `autoscalers.update` adjusts an HPA's bounds, and its CPU target only when the caller asked, so an
+  autoscaler watching other metrics keeps watching them.
 - **Lifecycle writes** (`src/main/k8s/resources/lifecycle.ts`): `pods.evict` goes through the
   eviction API so PodDisruptionBudgets still have a say (a delete does not); `resources.delete`
   carries an optional `gracePeriodSeconds`, and zero is the forced delete the pod dialog offers.

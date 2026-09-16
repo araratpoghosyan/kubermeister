@@ -54,6 +54,11 @@ const container = (
     image: `${name}:1.0`,
     imageId: 'sha256:abc',
     pullPolicy: 'Always',
+    role: 'app',
+    cpuUsed: null,
+    memUsed: null,
+    cpuRequested: null,
+    memRequested: null,
     state: 'Running' as const,
     started: '2h ago',
     restarts: 0,
@@ -311,7 +316,8 @@ describe('ShellTab', () => {
 describe('OverviewTab', () => {
     it('renders metric placeholders, conditions, and every container with facts and probes', () => {
         renderWithQuery(<OverviewTab name="web-1" namespace="team-a" pod={pod} />);
-        expect(screen.getByText('CPU')).toBeInTheDocument();
+        // "CPU" now names both the pod metric card and each container's usage row.
+        expect(screen.getAllByText('CPU').length).toBeGreaterThan(0);
         expect(screen.getAllByText('no metrics yet')).toHaveLength(2);
         const conditions = screen.getByTestId('conditions');
         expect(conditions.querySelector('[data-condition="Ready"]')).toHaveAttribute('data-ok', 'true');
@@ -383,6 +389,35 @@ describe('OverviewTab', () => {
                 namespace: 'team-a',
             }),
         );
+    });
+
+    it('shows each container’s usage against what it asked for', () => {
+        const withUsage = {
+            ...pod,
+            containers: [
+                {
+                    ...pod.containers[0],
+                    name: 'web',
+                    role: 'app' as const,
+                    cpuUsed: 60,
+                    memUsed: 96,
+                    cpuRequested: 200,
+                    memRequested: 128,
+                },
+                { ...pod.containers[0], name: 'migrate', role: 'init' as const, cpuUsed: null, memUsed: null },
+            ],
+        };
+        renderWithQuery(<OverviewTab name="web-1" namespace="team-a" pod={withUsage} />);
+        const web = screen.getByTestId('containers').querySelector('[data-container="web"]') as HTMLElement;
+        expect(within(web).getByText('60m of 200m')).toBeInTheDocument();
+        expect(within(web).getByRole('progressbar', { name: 'CPU against request' })).toHaveAttribute(
+            'aria-valuenow',
+            '30',
+        );
+        // An init container is labelled as one, and shows a dash until metrics-server reports it.
+        const migrate = screen.getByTestId('containers').querySelector('[data-container="migrate"]') as HTMLElement;
+        expect(within(migrate).getByText('init')).toBeInTheDocument();
+        expect(within(migrate).queryByRole('progressbar')).not.toBeInTheDocument();
     });
 
     it('shows the latest sampled usage with sparklines once series arrive', async () => {

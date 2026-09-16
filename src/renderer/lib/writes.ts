@@ -23,7 +23,8 @@ type WriteChannel =
     | 'pods.evict'
     | 'jobs.retry'
     | 'cronJobs.trigger'
-    | 'cronJobs.suspend';
+    | 'cronJobs.suspend'
+    | 'autoscalers.update';
 
 /** What a screen passes to a write: the input minus the context stamp, which is added here. */
 export type WriteVariables<C extends WriteChannel> = Omit<IpcInput<C>, 'context'>;
@@ -195,6 +196,14 @@ export function useSuspendCronJob() {
     return useIpcMutation<'cronJobs.suspend', WriteVariables<'cronJobs.suspend'>>('cronJobs.suspend', {
         prepare: (variables, client) => stamp('cronJobs.suspend', variables, client),
         invalidates: (input) => resourceKeys('CronJob', input.name, input.namespace),
+    });
+}
+
+/** Adjust an autoscaler's bounds; its own screens and the workload it scales both follow. */
+export function useUpdateAutoscaler() {
+    return useIpcMutation<'autoscalers.update', WriteVariables<'autoscalers.update'>>('autoscalers.update', {
+        prepare: (variables, client) => stamp('autoscalers.update', variables, client),
+        invalidates: (input) => resourceKeys('HorizontalPodAutoscaler', input.name, input.namespace),
     });
 }
 

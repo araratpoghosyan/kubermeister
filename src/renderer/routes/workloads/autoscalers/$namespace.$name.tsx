@@ -10,6 +10,7 @@ import {
 } from '@/components/templates/resource-detail';
 import { manifestTab } from '@/components/templates/manifest-panel';
 import { EditResourceButton } from '@/components/templates/edit-resource-button';
+import { AutoscalerBounds } from '@/components/workload/autoscaler-bounds';
 import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
 import { ipcQueryKey } from '@/lib/query';
 import { useResource } from '@/lib/resources';
@@ -62,6 +63,15 @@ function AutoscalerDetailPage() {
                     <RefreshButton
                         queryKeys={[ipcQueryKey('resources.get', { kind: 'HorizontalPodAutoscaler', name, namespace })]}
                     />
+                    {row && (
+                        <AutoscalerBounds
+                            name={name}
+                            namespace={namespace}
+                            min={row.min}
+                            max={row.max}
+                            targetCpuPercent={row.targetCpuPercent ?? undefined}
+                        />
+                    )}
                     <EditResourceButton />
                     <DeleteResourceButton
                         kind="HorizontalPodAutoscaler"

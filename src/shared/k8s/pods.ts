@@ -43,8 +43,12 @@ export const podProbeSchema = z.object({
     spec: z.string(),
 });
 
+/** Where a container sits in the pod's life: the app itself, an init step, or a debug attachment. */
+export const containerRoleSchema = z.enum(['app', 'init', 'ephemeral']);
+
 export const podContainerSchema = z.object({
     name: z.string(),
+    role: containerRoleSchema,
     image: z.string(),
     imageId: z.string(),
     pullPolicy: z.string(),
@@ -57,6 +61,14 @@ export const podContainerSchema = z.object({
     memLimit: z.string(),
     ports: z.array(z.string()),
     probes: z.array(podProbeSchema),
+    /** Current CPU usage in millicores; null until metrics-server has reported this container. */
+    cpuUsed: z.number().nullable(),
+    /** Current memory usage in MiB; null until metrics-server has reported this container. */
+    memUsed: z.number().nullable(),
+    /** The CPU request in millicores, null when the container asks for none. */
+    cpuRequested: z.number().nullable(),
+    /** The memory request in MiB, null when the container asks for none. */
+    memRequested: z.number().nullable(),
 });
 
 /** The detail view: the list row plus placement, networking, conditions, containers and metadata. */
@@ -77,5 +89,6 @@ export type ContainerState = z.infer<typeof containerStateSchema>;
 export type Pod = z.infer<typeof podSchema>;
 export type PodCondition = z.infer<typeof podConditionSchema>;
 export type PodProbe = z.infer<typeof podProbeSchema>;
+export type ContainerRole = z.infer<typeof containerRoleSchema>;
 export type PodContainer = z.infer<typeof podContainerSchema>;
 export type PodDetail = z.infer<typeof podDetailSchema>;

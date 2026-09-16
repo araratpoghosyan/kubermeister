@@ -30,6 +30,7 @@ const data: Record<string, unknown> = {
     'cronJobs.trigger': { kind: 'Job', name: 'nightly-2609161030', namespace: 'team-a' },
     'cronJobs.suspend': { kind: 'CronJob', name: 'nightly', namespace: 'team-a' },
     'resources.delete': { kind: 'Pod', name: 'web-1', namespace: 'team-a' },
+    'autoscalers.update': { kind: 'HorizontalPodAutoscaler', name: 'web', namespace: 'team-a' },
 };
 
 beforeEach(() => {
@@ -207,5 +208,59 @@ describe('job and cron job actions', () => {
         await userEvent.click(await screen.findByRole('button', { name: 'Run now' }));
         await waitFor(() => expect(invoke).toHaveBeenCalledWith('cronJobs.trigger', expect.anything()));
         expect(toasts.success).not.toHaveBeenCalled();
+    });
+});
+
+describe('autoscaler bounds', () => {
+    it('edits the range and the CPU target where they are read', async () => {
+        const { AutoscalerBounds } = await import('@/components/workload/autoscaler-bounds');
+        renderInRouter(<AutoscalerBounds name="web" namespace="team-a" min={2} max={5} targetCpuPercent={80} />);
+        await userEvent.click(await screen.findByRole('button', { name: 'Edit bounds' }));
+        const panel = await screen.findByTestId('autoscaler-bounds');
+        const max = within(panel).getByLabelText('Maximum replicas');
+        await userEvent.clear(max);
+        await userEvent.type(max, '9');
+        await userEvent.click(within(panel).getByRole('button', { name: 'Save' }));
+        await waitFor(() =>
+            expect(invoke).toHaveBeenCalledWith('autoscalers.update', {
+                context: 'alpha',
+                name: 'web',
+                namespace: 'team-a',
+                minReplicas: 2,
+                maxReplicas: 9,
+                targetCpuPercent: 80,
+            }),
+        );
+    });
+
+    it('refuses a maximum below the minimum rather than sending it', async () => {
+        const { AutoscalerBounds } = await import('@/components/workload/autoscaler-bounds');
+        renderInRouter(<AutoscalerBounds name="web" namespace="team-a" min={3} max={5} />);
+        await userEvent.click(await screen.findByRole('button', { name: 'Edit bounds' }));
+        const panel = await screen.findByTestId('autoscaler-bounds');
+        const max = within(panel).getByLabelText('Maximum replicas');
+        await userEvent.clear(max);
+        await userEvent.type(max, '1');
+        expect(panel).toHaveTextContent('must be at least the minimum');
+        expect(within(panel).getByRole('button', { name: 'Save' })).toBeDisabled();
+        expect(invoke).not.toHaveBeenCalledWith('autoscalers.update', expect.anything());
+    });
+
+    it('leaves the CPU target alone when the autoscaler watches something else', async () => {
+        const { AutoscalerBounds } = await import('@/components/workload/autoscaler-bounds');
+        renderInRouter(<AutoscalerBounds name="web" namespace="team-a" min={1} max={4} />);
+        await userEvent.click(await screen.findByRole('button', { name: 'Edit bounds' }));
+        await userEvent.click(
+            within(await screen.findByTestId('autoscaler-bounds')).getByRole('button', { name: 'Save' }),
+        );
+        await waitFor(() =>
+            expect(invoke).toHaveBeenCalledWith('autoscalers.update', {
+                context: 'alpha',
+                name: 'web',
+                namespace: 'team-a',
+                minReplicas: 1,
+                maxReplicas: 4,
+            }),
+        );
     });
 });

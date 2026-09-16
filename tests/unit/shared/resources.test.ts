@@ -132,6 +132,7 @@ describe('generic resource channels', () => {
             max: 3,
             replicas: 1,
             targets: '—',
+            targetCpuPercent: null,
             age: '1h',
         };
         expect(resourceListOutputSchema.safeParse({ kind: 'HorizontalPodAutoscaler', items: [hpaRow] }).success).toBe(

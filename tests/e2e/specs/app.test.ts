@@ -562,6 +562,26 @@ test('runs the seeded cron job now, suspends its schedule, and evicts a pod', as
     await expect(window.getByText(/evicted/)).toBeVisible();
 });
 
+test('shows a container’s usage against its request and edits the autoscaler bounds', async () => {
+    const { window } = launched;
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Pods' }).click();
+    await window.getByTestId('pods-table').locator('[data-pod^="web-"]').first().getByRole('link').click();
+    const containers = window.getByTestId('pod-page').getByTestId('containers');
+    // The seeded container asks for CPU, so its row states usage against that request.
+    await expect(containers.locator('[data-usage="CPU"]').first()).toBeVisible();
+
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Autoscalers' }).click();
+    await window.getByTestId('autoscalers-table').locator('[data-autoscaler="web"]').getByRole('link').click();
+    const page = window.getByTestId('autoscaler-page');
+    await page.getByRole('button', { name: 'Edit bounds' }).click();
+    const bounds = window.getByTestId('autoscaler-bounds');
+    await bounds.getByLabel('Maximum replicas').fill('4');
+    await bounds.getByRole('button', { name: 'Save' }).click();
+    await expect(window.getByText(/updated/)).toBeVisible();
+    // The details grid puts the label and its value in adjacent cells, so the text reads "Max4".
+    await expect(page).toContainText('Max4', { timeout: 30_000 });
+});
+
 test('stops at the startup screen when the kubeconfig path names nothing', async () => {
     const missing = join(tmpdir(), `km-e2e-missing-${Date.now()}.yaml`);
     const bad = await launchApp({ kubeconfigPath: missing });
