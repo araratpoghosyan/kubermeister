@@ -49,6 +49,7 @@ export const IPC_CHANNELS = [
     'deployments.rolloutStatus',
     'deployments.rollback',
     'deployments.pause',
+    'deployments.compare',
     'configMaps.entries',
     'secrets.entries',
     'services.ports',

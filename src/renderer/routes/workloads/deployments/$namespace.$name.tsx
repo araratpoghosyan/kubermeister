@@ -11,6 +11,7 @@ import { EditResourceButton } from '@/components/templates/edit-resource-button'
 import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
 import { RestartButton } from '@/components/templates/restart-button';
 import { PauseButton } from '@/components/deployment/pause-button';
+import { RevisionCompare } from '@/components/workload/revision-compare';
 import { RollbackButton } from '@/components/deployment/rollback-button';
 import { RolloutStatusTab } from '@/components/deployment/rollout-status-tab';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -91,52 +92,55 @@ function DeploymentDetailPage() {
                     icon: HistoryIcon,
                     count: rollouts.length || undefined,
                     content: (
-                        <DetailCard
-                            title="Rollout history"
-                            desc={`${rollouts.length} ${rollouts.length === 1 ? 'revision' : 'revisions'}`}
-                        >
-                            <Table data-testid="rollout-history">
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="w-[60px]">Rev</TableHead>
-                                        <TableHead className="w-[120px]">State</TableHead>
-                                        <TableHead>Image</TableHead>
-                                        <TableHead className="w-[150px]">Deployed by</TableHead>
-                                        <TableHead className="w-[110px]">When</TableHead>
-                                        <TableHead className="w-[90px]">Duration</TableHead>
-                                        <TableHead className="w-[110px]" />
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {rollouts.map((r, i) => (
-                                        <TableRow key={r.rev} data-revision={r.rev}>
-                                            <TableCell className="font-mono text-primary tabular-nums">
-                                                #{r.rev}
-                                            </TableCell>
-                                            <TableCell>
-                                                <StatusBadge tone={ROLLOUT_TONE[r.state]}>{r.state}</StatusBadge>
-                                            </TableCell>
-                                            <TableCell className="font-mono text-text-2">{r.image}</TableCell>
-                                            <TableCell className="font-mono text-text-muted">{r.by}</TableCell>
-                                            <TableCell className="font-mono text-text-muted tabular-nums">
-                                                {r.when}
-                                            </TableCell>
-                                            <TableCell className="font-mono tabular-nums">{r.duration}</TableCell>
-                                            <TableCell>
-                                                {i > 0 && (
-                                                    <RollbackButton
-                                                        name={name}
-                                                        namespace={namespace}
-                                                        revision={r.rev}
-                                                        image={r.image}
-                                                    />
-                                                )}
-                                            </TableCell>
+                        <>
+                            <DetailCard
+                                title="Rollout history"
+                                desc={`${rollouts.length} ${rollouts.length === 1 ? 'revision' : 'revisions'}`}
+                            >
+                                <Table data-testid="rollout-history">
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-[60px]">Rev</TableHead>
+                                            <TableHead className="w-[120px]">State</TableHead>
+                                            <TableHead>Image</TableHead>
+                                            <TableHead className="w-[150px]">Deployed by</TableHead>
+                                            <TableHead className="w-[110px]">When</TableHead>
+                                            <TableHead className="w-[90px]">Duration</TableHead>
+                                            <TableHead className="w-[110px]" />
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </DetailCard>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {rollouts.map((r, i) => (
+                                            <TableRow key={r.rev} data-revision={r.rev}>
+                                                <TableCell className="font-mono text-primary tabular-nums">
+                                                    #{r.rev}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <StatusBadge tone={ROLLOUT_TONE[r.state]}>{r.state}</StatusBadge>
+                                                </TableCell>
+                                                <TableCell className="font-mono text-text-2">{r.image}</TableCell>
+                                                <TableCell className="font-mono text-text-muted">{r.by}</TableCell>
+                                                <TableCell className="font-mono text-text-muted tabular-nums">
+                                                    {r.when}
+                                                </TableCell>
+                                                <TableCell className="font-mono tabular-nums">{r.duration}</TableCell>
+                                                <TableCell>
+                                                    {i > 0 && (
+                                                        <RollbackButton
+                                                            name={name}
+                                                            namespace={namespace}
+                                                            revision={r.rev}
+                                                            image={r.image}
+                                                        />
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </DetailCard>
+                            <RevisionCompare name={name} namespace={namespace} rollouts={rollouts} />
+                        </>
                     ),
                 },
                 {

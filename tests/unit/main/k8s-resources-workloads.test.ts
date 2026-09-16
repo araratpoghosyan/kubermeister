@@ -627,6 +627,42 @@ describe('readers', () => {
         expect(apps.listNamespacedReplicaSet).not.toHaveBeenCalled();
     });
 
+    it('compares two revisions as identically formatted templates', async () => {
+        const { compareDeploymentRevisions } = workloads;
+        apps.listNamespacedReplicaSet.mockResolvedValue({
+            items: [
+                replicaSet('1', {
+                    spec: { template: { spec: { containers: [{ name: 'web', image: 'nginx:1.0' }] } } },
+                }),
+                replicaSet('2', {
+                    spec: { template: { spec: { containers: [{ name: 'web', image: 'nginx:2.0' }] } } },
+                }),
+            ],
+        });
+        const comparison = await compareDeploymentRevisions({
+            name: 'web',
+            namespace: 'team-a',
+            from: '1',
+            to: '2',
+        });
+        expect(comparison.from.rev).toBe('1');
+        expect(comparison.from.yaml).toContain('nginx:1.0');
+        expect(comparison.to.yaml).toContain('nginx:2.0');
+        // Both sides go through the same canonicalisation, so the only textual difference is real.
+        expect(comparison.from.yaml.split('\n').length).toBe(comparison.to.yaml.split('\n').length);
+    });
+
+    it('says which revision is gone rather than showing an empty pane', async () => {
+        const { compareDeploymentRevisions } = workloads;
+        await expect(
+            compareDeploymentRevisions({ name: 'web', namespace: 'team-a', from: '1', to: '9' }),
+        ).rejects.toMatchObject({ kind: 'notFound', op: 'deployments.compare' });
+        apps.readNamespacedDeployment.mockResolvedValue(undefined);
+        await expect(
+            compareDeploymentRevisions({ name: 'gone', namespace: 'team-a', from: '1', to: '2' }),
+        ).rejects.toMatchObject({ kind: 'notFound' });
+    });
+
     it('classifies failures under the channel ops', async () => {
         apps.listNamespacedDeployment.mockRejectedValue(new ApiException(403, 'x', { message: 'denied' }, {}));
         await expect(workloads.listDeployments()).rejects.toMatchObject({ kind: 'forbidden', op: 'resources.list' });

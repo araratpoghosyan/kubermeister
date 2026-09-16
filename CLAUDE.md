@@ -251,6 +251,10 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   these pods", "runs as". A relation that cannot be explained is a guess, so everything comes from
   the object's own spec or from a selector that actually covers its labels — never from names that
   merely look alike. Pods first, since a pod is where every relation is concrete.
+  `deployments.compare` puts two revisions' pod templates side by side, both through the same
+  `canonical()` the rollback skip check uses, so a difference on screen is one somebody made rather
+  than one the API server filled in; the diff itself is a plain LCS over lines in
+  `src/renderer/lib/line-diff.ts`, which keeps it testable without a browser and adds no dependency.
   Deployments also have `deployments.replicaSets`, `deployments.rollouts`,
   `deployments.rolloutStatus` and `metrics.deploymentSeries` (the sum of the selected pods' tracked
   series), plus the two writes that belong to a rollout rather than to a kind in general:

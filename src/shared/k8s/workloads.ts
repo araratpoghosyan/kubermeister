@@ -53,6 +53,19 @@ export const daemonSetDetailSchema = daemonSetSchema.extend({ labels: pairs, ann
 
 export const rolloutStateSchema = z.enum(['Current', 'Superseded']);
 
+/** Two revisions' pod templates, formatted identically so a textual difference is a real one. */
+export const rolloutComparisonSchema = z.object({
+    from: z.object({ rev: z.string(), yaml: z.string() }),
+    to: z.object({ rev: z.string(), yaml: z.string() }),
+});
+
+export const rolloutCompareInputSchema = z.object({
+    name: z.string().min(1),
+    namespace: namespaceNameSchema,
+    from: z.string().min(1),
+    to: z.string().min(1),
+});
+
 /** One revision of a Deployment, synthesised from an owned ReplicaSet. */
 export const rolloutSchema = z.object({
     /** Revision number, e.g. "3". */
@@ -209,6 +222,8 @@ export type DaemonSet = z.infer<typeof daemonSetSchema>;
 export type DaemonSetDetail = z.infer<typeof daemonSetDetailSchema>;
 export type RolloutState = z.infer<typeof rolloutStateSchema>;
 export type Rollout = z.infer<typeof rolloutSchema>;
+export type RolloutComparison = z.infer<typeof rolloutComparisonSchema>;
+export type RolloutCompareInput = z.infer<typeof rolloutCompareInputSchema>;
 export type ReplicaSet = z.infer<typeof replicaSetSchema>;
 export type ReplicaSetRow = z.infer<typeof replicaSetRowSchema>;
 export type ReplicaSetDetail = z.infer<typeof replicaSetDetailSchema>;
