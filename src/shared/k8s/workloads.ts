@@ -107,6 +107,22 @@ export const rolloutStatusSchema = z.object({
     sets: z.array(rolloutReplicaSetSchema),
 });
 
+/**
+ * A ReplicaSet as its own object rather than as a line in a Deployment's rollout: the same counts,
+ * plus where it lives and what owns it, which is the question asked of a replica set on its own.
+ */
+export const replicaSetRowSchema = replicaSetSchema.extend({
+    namespace: z.string(),
+    /** `Kind/name` of the controller above it, or a dash for one nobody owns. */
+    owner: z.string(),
+    image: z.string(),
+});
+export const replicaSetDetailSchema = replicaSetRowSchema.extend({ labels: pairs, annotations: pairs });
+
+/** A ReplicationController: the same shape, since it is what ReplicaSets replaced. */
+export const replicationControllerSchema = replicaSetRowSchema;
+export const replicationControllerDetailSchema = replicaSetDetailSchema;
+
 /** A Job is Running until a terminal condition appears; Complete outranks nothing, Failed outranks Complete. */
 export const jobStatusSchema = z.enum(['Complete', 'Running', 'Failed']);
 
@@ -194,6 +210,8 @@ export type DaemonSetDetail = z.infer<typeof daemonSetDetailSchema>;
 export type RolloutState = z.infer<typeof rolloutStateSchema>;
 export type Rollout = z.infer<typeof rolloutSchema>;
 export type ReplicaSet = z.infer<typeof replicaSetSchema>;
+export type ReplicaSetRow = z.infer<typeof replicaSetRowSchema>;
+export type ReplicaSetDetail = z.infer<typeof replicaSetDetailSchema>;
 export type RolloutCondition = z.infer<typeof rolloutConditionSchema>;
 export type RolloutReplicaSet = z.infer<typeof rolloutReplicaSetSchema>;
 export type RolloutStatus = z.infer<typeof rolloutStatusSchema>;

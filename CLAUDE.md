@@ -201,6 +201,11 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   entry in `resources/manifest.ts` (typed over every kind, so a new one fails to compile until its
   manifest is readable too), a
   `list/index.tsx` plus `list/$namespace.$name.tsx` route pair, a navigation item and a tone map.
+  ReplicaSets and ReplicationControllers list as their own kinds too, each row naming the
+  controller above it from its owner reference (`ownerLabel`), which is the only way to tell two
+  rollouts of one deployment apart. PodDisruptionBudgets, PriorityClasses and Leases read through
+  `apis().policy`, `apis().scheduling` and `apis().coordination`; a budget allowing no disruption
+  reads Blocked, since a drain stops on it and no count says so on its own.
   Deployments also have `deployments.replicaSets`, `deployments.rollouts`,
   `deployments.rolloutStatus` and `metrics.deploymentSeries` (the sum of the selected pods' tracked
   series), plus the two writes that belong to a rollout rather than to a kind in general:

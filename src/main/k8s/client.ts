@@ -11,6 +11,9 @@ import {
     NetworkingV1Api,
     RbacAuthorizationV1Api,
     StorageV1Api,
+    PolicyV1Api,
+    SchedulingV1Api,
+    CoordinationV1Api,
     VersionApi,
 } from '@kubernetes/client-node';
 import { existsSync } from 'node:fs';
@@ -34,6 +37,9 @@ export interface ApiBundle {
     net: NetworkingV1Api;
     rbac: RbacAuthorizationV1Api;
     storage: StorageV1Api;
+    policy: PolicyV1Api;
+    scheduling: SchedulingV1Api;
+    coordination: CoordinationV1Api;
     hpa: AutoscalingV2Api;
     version: VersionApi;
     apiextensions: ApiextensionsV1Api;
@@ -122,6 +128,9 @@ export function apis(): ApiBundle {
             net: c.makeApiClient(NetworkingV1Api),
             rbac: c.makeApiClient(RbacAuthorizationV1Api),
             storage: c.makeApiClient(StorageV1Api),
+            policy: c.makeApiClient(PolicyV1Api),
+            scheduling: c.makeApiClient(SchedulingV1Api),
+            coordination: c.makeApiClient(CoordinationV1Api),
             hpa: c.makeApiClient(AutoscalingV2Api),
             version: c.makeApiClient(VersionApi),
             apiextensions: c.makeApiClient(ApiextensionsV1Api),

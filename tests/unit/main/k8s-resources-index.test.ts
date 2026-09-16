@@ -39,6 +39,10 @@ const workloadsMod = {
     getCronJob: vi.fn(),
     listAutoscalers: vi.fn(),
     getAutoscaler: vi.fn(),
+    listReplicaSets: vi.fn(),
+    getReplicaSet: vi.fn(),
+    listReplicationControllers: vi.fn(),
+    getReplicationController: vi.fn(),
 };
 vi.mock('../../../src/main/k8s/resources/workloads.js', () => workloadsMod);
 const accessMod = {
@@ -54,14 +58,23 @@ const accessMod = {
     getClusterRoleBinding: vi.fn(),
 };
 vi.mock('../../../src/main/k8s/resources/access.js', () => accessMod);
+const policyMod = {
+    listPodDisruptionBudgets: vi.fn(),
+    getPodDisruptionBudget: vi.fn(),
+    listPriorityClasses: vi.fn(),
+    getPriorityClass: vi.fn(),
+    listLeases: vi.fn(),
+    getLease: vi.fn(),
+};
+vi.mock('../../../src/main/k8s/resources/policy.js', () => policyMod);
 const crdsMod = { listCustomResources: vi.fn(), getCustomResource: vi.fn() };
 vi.mock('../../../src/main/k8s/resources/crds.js', () => crdsMod);
 
 const { listResources, getResource } = await import('../../../src/main/k8s/resources/index.js');
 
 /** Every mocked reader, so the table-driven test below can reset and satisfy all of them. */
-const readers = [podsMod, configMod, networkMod, storageMod, workloadsMod, accessMod, crdsMod].flatMap((mod) =>
-    Object.entries(mod),
+const readers = [podsMod, configMod, networkMod, storageMod, workloadsMod, policyMod, accessMod, crdsMod].flatMap(
+    (mod) => Object.entries(mod),
 );
 
 describe('generic resource dispatch', () => {

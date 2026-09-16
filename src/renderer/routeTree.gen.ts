@@ -33,7 +33,10 @@ import { Route as NetworkEndpointsIndexRouteImport } from './routes/network/endp
 import { Route as NetworkIngressesIndexRouteImport } from './routes/network/ingresses/index';
 import { Route as NetworkNetworkpoliciesIndexRouteImport } from './routes/network/networkpolicies/index';
 import { Route as NetworkServicesIndexRouteImport } from './routes/network/services/index';
+import { Route as OverviewLeasesIndexRouteImport } from './routes/overview/leases/index';
 import { Route as OverviewNodesNameRouteImport } from './routes/overview/nodes_.$name';
+import { Route as OverviewPriorityclassesIndexRouteImport } from './routes/overview/priorityclasses/index';
+import { Route as OverviewPriorityclassesNameRouteImport } from './routes/overview/priorityclasses_.$name';
 import { Route as StorageClaimsIndexRouteImport } from './routes/storage/claims/index';
 import { Route as StorageSnapshotsIndexRouteImport } from './routes/storage/snapshots/index';
 import { Route as StorageStorageclassesIndexRouteImport } from './routes/storage/storageclasses/index';
@@ -45,8 +48,11 @@ import { Route as WorkloadsConfigmapsIndexRouteImport } from './routes/workloads
 import { Route as WorkloadsCronjobsIndexRouteImport } from './routes/workloads/cronjobs/index';
 import { Route as WorkloadsDaemonsetsIndexRouteImport } from './routes/workloads/daemonsets/index';
 import { Route as WorkloadsDeploymentsIndexRouteImport } from './routes/workloads/deployments/index';
+import { Route as WorkloadsDisruptionbudgetsIndexRouteImport } from './routes/workloads/disruptionbudgets/index';
 import { Route as WorkloadsJobsIndexRouteImport } from './routes/workloads/jobs/index';
 import { Route as WorkloadsPodsIndexRouteImport } from './routes/workloads/pods/index';
+import { Route as WorkloadsReplicasetsIndexRouteImport } from './routes/workloads/replicasets/index';
+import { Route as WorkloadsReplicationcontrollersIndexRouteImport } from './routes/workloads/replicationcontrollers/index';
 import { Route as WorkloadsSecretsIndexRouteImport } from './routes/workloads/secrets/index';
 import { Route as WorkloadsStatefulsetsIndexRouteImport } from './routes/workloads/statefulsets/index';
 import { Route as AccessRolebindingsNamespaceNameRouteImport } from './routes/access/rolebindings/$namespace.$name';
@@ -57,6 +63,7 @@ import { Route as NetworkEndpointsNamespaceNameRouteImport } from './routes/netw
 import { Route as NetworkIngressesNamespaceNameRouteImport } from './routes/network/ingresses/$namespace.$name';
 import { Route as NetworkNetworkpoliciesNamespaceNameRouteImport } from './routes/network/networkpolicies/$namespace.$name';
 import { Route as NetworkServicesNamespaceNameRouteImport } from './routes/network/services/$namespace.$name';
+import { Route as OverviewLeasesNamespaceNameRouteImport } from './routes/overview/leases/$namespace.$name';
 import { Route as StorageClaimsNamespaceNameRouteImport } from './routes/storage/claims/$namespace.$name';
 import { Route as StorageSnapshotsNamespaceNameRouteImport } from './routes/storage/snapshots/$namespace.$name';
 import { Route as WorkloadsAutoscalersNamespaceNameRouteImport } from './routes/workloads/autoscalers/$namespace.$name';
@@ -64,8 +71,11 @@ import { Route as WorkloadsConfigmapsNamespaceNameRouteImport } from './routes/w
 import { Route as WorkloadsCronjobsNamespaceNameRouteImport } from './routes/workloads/cronjobs/$namespace.$name';
 import { Route as WorkloadsDaemonsetsNamespaceNameRouteImport } from './routes/workloads/daemonsets/$namespace.$name';
 import { Route as WorkloadsDeploymentsNamespaceNameRouteImport } from './routes/workloads/deployments/$namespace.$name';
+import { Route as WorkloadsDisruptionbudgetsNamespaceNameRouteImport } from './routes/workloads/disruptionbudgets/$namespace.$name';
 import { Route as WorkloadsJobsNamespaceNameRouteImport } from './routes/workloads/jobs/$namespace.$name';
 import { Route as WorkloadsPodsNamespaceNameRouteImport } from './routes/workloads/pods/$namespace.$name';
+import { Route as WorkloadsReplicasetsNamespaceNameRouteImport } from './routes/workloads/replicasets/$namespace.$name';
+import { Route as WorkloadsReplicationcontrollersNamespaceNameRouteImport } from './routes/workloads/replicationcontrollers/$namespace.$name';
 import { Route as WorkloadsSecretsNamespaceNameRouteImport } from './routes/workloads/secrets/$namespace.$name';
 import { Route as WorkloadsStatefulsetsNamespaceNameRouteImport } from './routes/workloads/statefulsets/$namespace.$name';
 
@@ -193,11 +203,28 @@ const NetworkServicesIndexRoute = NetworkServicesIndexRouteImport.update({
   path: '/network/services/',
   getParentRoute: () => rootRouteImport,
 } as any);
+const OverviewLeasesIndexRoute = OverviewLeasesIndexRouteImport.update({
+  id: '/overview/leases/',
+  path: '/overview/leases/',
+  getParentRoute: () => rootRouteImport,
+} as any);
 const OverviewNodesNameRoute = OverviewNodesNameRouteImport.update({
   id: '/overview/nodes_/$name',
   path: '/overview/nodes/$name',
   getParentRoute: () => rootRouteImport,
 } as any);
+const OverviewPriorityclassesIndexRoute =
+  OverviewPriorityclassesIndexRouteImport.update({
+    id: '/overview/priorityclasses/',
+    path: '/overview/priorityclasses/',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const OverviewPriorityclassesNameRoute =
+  OverviewPriorityclassesNameRouteImport.update({
+    id: '/overview/priorityclasses_/$name',
+    path: '/overview/priorityclasses/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
 const StorageClaimsIndexRoute = StorageClaimsIndexRouteImport.update({
   id: '/storage/claims/',
   path: '/storage/claims/',
@@ -259,6 +286,12 @@ const WorkloadsDeploymentsIndexRoute =
     path: '/workloads/deployments/',
     getParentRoute: () => rootRouteImport,
   } as any);
+const WorkloadsDisruptionbudgetsIndexRoute =
+  WorkloadsDisruptionbudgetsIndexRouteImport.update({
+    id: '/workloads/disruptionbudgets/',
+    path: '/workloads/disruptionbudgets/',
+    getParentRoute: () => rootRouteImport,
+  } as any);
 const WorkloadsJobsIndexRoute = WorkloadsJobsIndexRouteImport.update({
   id: '/workloads/jobs/',
   path: '/workloads/jobs/',
@@ -269,6 +302,18 @@ const WorkloadsPodsIndexRoute = WorkloadsPodsIndexRouteImport.update({
   path: '/workloads/pods/',
   getParentRoute: () => rootRouteImport,
 } as any);
+const WorkloadsReplicasetsIndexRoute =
+  WorkloadsReplicasetsIndexRouteImport.update({
+    id: '/workloads/replicasets/',
+    path: '/workloads/replicasets/',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const WorkloadsReplicationcontrollersIndexRoute =
+  WorkloadsReplicationcontrollersIndexRouteImport.update({
+    id: '/workloads/replicationcontrollers/',
+    path: '/workloads/replicationcontrollers/',
+    getParentRoute: () => rootRouteImport,
+  } as any);
 const WorkloadsSecretsIndexRoute = WorkloadsSecretsIndexRouteImport.update({
   id: '/workloads/secrets/',
   path: '/workloads/secrets/',
@@ -328,6 +373,12 @@ const NetworkServicesNamespaceNameRoute =
     path: '/network/services/$namespace/$name',
     getParentRoute: () => rootRouteImport,
   } as any);
+const OverviewLeasesNamespaceNameRoute =
+  OverviewLeasesNamespaceNameRouteImport.update({
+    id: '/overview/leases/$namespace/$name',
+    path: '/overview/leases/$namespace/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
 const StorageClaimsNamespaceNameRoute =
   StorageClaimsNamespaceNameRouteImport.update({
     id: '/storage/claims/$namespace/$name',
@@ -370,6 +421,12 @@ const WorkloadsDeploymentsNamespaceNameRoute =
     path: '/workloads/deployments/$namespace/$name',
     getParentRoute: () => rootRouteImport,
   } as any);
+const WorkloadsDisruptionbudgetsNamespaceNameRoute =
+  WorkloadsDisruptionbudgetsNamespaceNameRouteImport.update({
+    id: '/workloads/disruptionbudgets/$namespace/$name',
+    path: '/workloads/disruptionbudgets/$namespace/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
 const WorkloadsJobsNamespaceNameRoute =
   WorkloadsJobsNamespaceNameRouteImport.update({
     id: '/workloads/jobs/$namespace/$name',
@@ -380,6 +437,18 @@ const WorkloadsPodsNamespaceNameRoute =
   WorkloadsPodsNamespaceNameRouteImport.update({
     id: '/workloads/pods/$namespace/$name',
     path: '/workloads/pods/$namespace/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const WorkloadsReplicasetsNamespaceNameRoute =
+  WorkloadsReplicasetsNamespaceNameRouteImport.update({
+    id: '/workloads/replicasets/$namespace/$name',
+    path: '/workloads/replicasets/$namespace/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const WorkloadsReplicationcontrollersNamespaceNameRoute =
+  WorkloadsReplicationcontrollersNamespaceNameRouteImport.update({
+    id: '/workloads/replicationcontrollers/$namespace/$name',
+    path: '/workloads/replicationcontrollers/$namespace/$name',
     getParentRoute: () => rootRouteImport,
   } as any);
 const WorkloadsSecretsNamespaceNameRoute =
@@ -410,6 +479,7 @@ export interface FileRoutesByFullPath {
   '/access/clusterroles/$name': typeof AccessClusterrolesNameRoute;
   '/addons/crds/$name': typeof AddonsCrdsNameRoute;
   '/overview/nodes/$name': typeof OverviewNodesNameRoute;
+  '/overview/priorityclasses/$name': typeof OverviewPriorityclassesNameRoute;
   '/storage/storageclasses/$name': typeof StorageStorageclassesNameRoute;
   '/storage/volumes/$name': typeof StorageVolumesNameRoute;
   '/access/clusterrolebindings/': typeof AccessClusterrolebindingsIndexRoute;
@@ -423,6 +493,8 @@ export interface FileRoutesByFullPath {
   '/network/ingresses/': typeof NetworkIngressesIndexRoute;
   '/network/networkpolicies/': typeof NetworkNetworkpoliciesIndexRoute;
   '/network/services/': typeof NetworkServicesIndexRoute;
+  '/overview/leases/': typeof OverviewLeasesIndexRoute;
+  '/overview/priorityclasses/': typeof OverviewPriorityclassesIndexRoute;
   '/storage/claims/': typeof StorageClaimsIndexRoute;
   '/storage/snapshots/': typeof StorageSnapshotsIndexRoute;
   '/storage/storageclasses/': typeof StorageStorageclassesIndexRoute;
@@ -432,8 +504,11 @@ export interface FileRoutesByFullPath {
   '/workloads/cronjobs/': typeof WorkloadsCronjobsIndexRoute;
   '/workloads/daemonsets/': typeof WorkloadsDaemonsetsIndexRoute;
   '/workloads/deployments/': typeof WorkloadsDeploymentsIndexRoute;
+  '/workloads/disruptionbudgets/': typeof WorkloadsDisruptionbudgetsIndexRoute;
   '/workloads/jobs/': typeof WorkloadsJobsIndexRoute;
   '/workloads/pods/': typeof WorkloadsPodsIndexRoute;
+  '/workloads/replicasets/': typeof WorkloadsReplicasetsIndexRoute;
+  '/workloads/replicationcontrollers/': typeof WorkloadsReplicationcontrollersIndexRoute;
   '/workloads/secrets/': typeof WorkloadsSecretsIndexRoute;
   '/workloads/statefulsets/': typeof WorkloadsStatefulsetsIndexRoute;
   '/access/rolebindings/$namespace/$name': typeof AccessRolebindingsNamespaceNameRoute;
@@ -444,6 +519,7 @@ export interface FileRoutesByFullPath {
   '/network/ingresses/$namespace/$name': typeof NetworkIngressesNamespaceNameRoute;
   '/network/networkpolicies/$namespace/$name': typeof NetworkNetworkpoliciesNamespaceNameRoute;
   '/network/services/$namespace/$name': typeof NetworkServicesNamespaceNameRoute;
+  '/overview/leases/$namespace/$name': typeof OverviewLeasesNamespaceNameRoute;
   '/storage/claims/$namespace/$name': typeof StorageClaimsNamespaceNameRoute;
   '/storage/snapshots/$namespace/$name': typeof StorageSnapshotsNamespaceNameRoute;
   '/workloads/autoscalers/$namespace/$name': typeof WorkloadsAutoscalersNamespaceNameRoute;
@@ -451,8 +527,11 @@ export interface FileRoutesByFullPath {
   '/workloads/cronjobs/$namespace/$name': typeof WorkloadsCronjobsNamespaceNameRoute;
   '/workloads/daemonsets/$namespace/$name': typeof WorkloadsDaemonsetsNamespaceNameRoute;
   '/workloads/deployments/$namespace/$name': typeof WorkloadsDeploymentsNamespaceNameRoute;
+  '/workloads/disruptionbudgets/$namespace/$name': typeof WorkloadsDisruptionbudgetsNamespaceNameRoute;
   '/workloads/jobs/$namespace/$name': typeof WorkloadsJobsNamespaceNameRoute;
   '/workloads/pods/$namespace/$name': typeof WorkloadsPodsNamespaceNameRoute;
+  '/workloads/replicasets/$namespace/$name': typeof WorkloadsReplicasetsNamespaceNameRoute;
+  '/workloads/replicationcontrollers/$namespace/$name': typeof WorkloadsReplicationcontrollersNamespaceNameRoute;
   '/workloads/secrets/$namespace/$name': typeof WorkloadsSecretsNamespaceNameRoute;
   '/workloads/statefulsets/$namespace/$name': typeof WorkloadsStatefulsetsNamespaceNameRoute;
 }
@@ -471,6 +550,7 @@ export interface FileRoutesByTo {
   '/access/clusterroles/$name': typeof AccessClusterrolesNameRoute;
   '/addons/crds/$name': typeof AddonsCrdsNameRoute;
   '/overview/nodes/$name': typeof OverviewNodesNameRoute;
+  '/overview/priorityclasses/$name': typeof OverviewPriorityclassesNameRoute;
   '/storage/storageclasses/$name': typeof StorageStorageclassesNameRoute;
   '/storage/volumes/$name': typeof StorageVolumesNameRoute;
   '/access/clusterrolebindings': typeof AccessClusterrolebindingsIndexRoute;
@@ -484,6 +564,8 @@ export interface FileRoutesByTo {
   '/network/ingresses': typeof NetworkIngressesIndexRoute;
   '/network/networkpolicies': typeof NetworkNetworkpoliciesIndexRoute;
   '/network/services': typeof NetworkServicesIndexRoute;
+  '/overview/leases': typeof OverviewLeasesIndexRoute;
+  '/overview/priorityclasses': typeof OverviewPriorityclassesIndexRoute;
   '/storage/claims': typeof StorageClaimsIndexRoute;
   '/storage/snapshots': typeof StorageSnapshotsIndexRoute;
   '/storage/storageclasses': typeof StorageStorageclassesIndexRoute;
@@ -493,8 +575,11 @@ export interface FileRoutesByTo {
   '/workloads/cronjobs': typeof WorkloadsCronjobsIndexRoute;
   '/workloads/daemonsets': typeof WorkloadsDaemonsetsIndexRoute;
   '/workloads/deployments': typeof WorkloadsDeploymentsIndexRoute;
+  '/workloads/disruptionbudgets': typeof WorkloadsDisruptionbudgetsIndexRoute;
   '/workloads/jobs': typeof WorkloadsJobsIndexRoute;
   '/workloads/pods': typeof WorkloadsPodsIndexRoute;
+  '/workloads/replicasets': typeof WorkloadsReplicasetsIndexRoute;
+  '/workloads/replicationcontrollers': typeof WorkloadsReplicationcontrollersIndexRoute;
   '/workloads/secrets': typeof WorkloadsSecretsIndexRoute;
   '/workloads/statefulsets': typeof WorkloadsStatefulsetsIndexRoute;
   '/access/rolebindings/$namespace/$name': typeof AccessRolebindingsNamespaceNameRoute;
@@ -505,6 +590,7 @@ export interface FileRoutesByTo {
   '/network/ingresses/$namespace/$name': typeof NetworkIngressesNamespaceNameRoute;
   '/network/networkpolicies/$namespace/$name': typeof NetworkNetworkpoliciesNamespaceNameRoute;
   '/network/services/$namespace/$name': typeof NetworkServicesNamespaceNameRoute;
+  '/overview/leases/$namespace/$name': typeof OverviewLeasesNamespaceNameRoute;
   '/storage/claims/$namespace/$name': typeof StorageClaimsNamespaceNameRoute;
   '/storage/snapshots/$namespace/$name': typeof StorageSnapshotsNamespaceNameRoute;
   '/workloads/autoscalers/$namespace/$name': typeof WorkloadsAutoscalersNamespaceNameRoute;
@@ -512,8 +598,11 @@ export interface FileRoutesByTo {
   '/workloads/cronjobs/$namespace/$name': typeof WorkloadsCronjobsNamespaceNameRoute;
   '/workloads/daemonsets/$namespace/$name': typeof WorkloadsDaemonsetsNamespaceNameRoute;
   '/workloads/deployments/$namespace/$name': typeof WorkloadsDeploymentsNamespaceNameRoute;
+  '/workloads/disruptionbudgets/$namespace/$name': typeof WorkloadsDisruptionbudgetsNamespaceNameRoute;
   '/workloads/jobs/$namespace/$name': typeof WorkloadsJobsNamespaceNameRoute;
   '/workloads/pods/$namespace/$name': typeof WorkloadsPodsNamespaceNameRoute;
+  '/workloads/replicasets/$namespace/$name': typeof WorkloadsReplicasetsNamespaceNameRoute;
+  '/workloads/replicationcontrollers/$namespace/$name': typeof WorkloadsReplicationcontrollersNamespaceNameRoute;
   '/workloads/secrets/$namespace/$name': typeof WorkloadsSecretsNamespaceNameRoute;
   '/workloads/statefulsets/$namespace/$name': typeof WorkloadsStatefulsetsNamespaceNameRoute;
 }
@@ -533,6 +622,7 @@ export interface FileRoutesById {
   '/access/clusterroles_/$name': typeof AccessClusterrolesNameRoute;
   '/addons/crds_/$name': typeof AddonsCrdsNameRoute;
   '/overview/nodes_/$name': typeof OverviewNodesNameRoute;
+  '/overview/priorityclasses_/$name': typeof OverviewPriorityclassesNameRoute;
   '/storage/storageclasses_/$name': typeof StorageStorageclassesNameRoute;
   '/storage/volumes_/$name': typeof StorageVolumesNameRoute;
   '/access/clusterrolebindings/': typeof AccessClusterrolebindingsIndexRoute;
@@ -546,6 +636,8 @@ export interface FileRoutesById {
   '/network/ingresses/': typeof NetworkIngressesIndexRoute;
   '/network/networkpolicies/': typeof NetworkNetworkpoliciesIndexRoute;
   '/network/services/': typeof NetworkServicesIndexRoute;
+  '/overview/leases/': typeof OverviewLeasesIndexRoute;
+  '/overview/priorityclasses/': typeof OverviewPriorityclassesIndexRoute;
   '/storage/claims/': typeof StorageClaimsIndexRoute;
   '/storage/snapshots/': typeof StorageSnapshotsIndexRoute;
   '/storage/storageclasses/': typeof StorageStorageclassesIndexRoute;
@@ -555,8 +647,11 @@ export interface FileRoutesById {
   '/workloads/cronjobs/': typeof WorkloadsCronjobsIndexRoute;
   '/workloads/daemonsets/': typeof WorkloadsDaemonsetsIndexRoute;
   '/workloads/deployments/': typeof WorkloadsDeploymentsIndexRoute;
+  '/workloads/disruptionbudgets/': typeof WorkloadsDisruptionbudgetsIndexRoute;
   '/workloads/jobs/': typeof WorkloadsJobsIndexRoute;
   '/workloads/pods/': typeof WorkloadsPodsIndexRoute;
+  '/workloads/replicasets/': typeof WorkloadsReplicasetsIndexRoute;
+  '/workloads/replicationcontrollers/': typeof WorkloadsReplicationcontrollersIndexRoute;
   '/workloads/secrets/': typeof WorkloadsSecretsIndexRoute;
   '/workloads/statefulsets/': typeof WorkloadsStatefulsetsIndexRoute;
   '/access/rolebindings/$namespace/$name': typeof AccessRolebindingsNamespaceNameRoute;
@@ -567,6 +662,7 @@ export interface FileRoutesById {
   '/network/ingresses/$namespace/$name': typeof NetworkIngressesNamespaceNameRoute;
   '/network/networkpolicies/$namespace/$name': typeof NetworkNetworkpoliciesNamespaceNameRoute;
   '/network/services/$namespace/$name': typeof NetworkServicesNamespaceNameRoute;
+  '/overview/leases/$namespace/$name': typeof OverviewLeasesNamespaceNameRoute;
   '/storage/claims/$namespace/$name': typeof StorageClaimsNamespaceNameRoute;
   '/storage/snapshots/$namespace/$name': typeof StorageSnapshotsNamespaceNameRoute;
   '/workloads/autoscalers/$namespace/$name': typeof WorkloadsAutoscalersNamespaceNameRoute;
@@ -574,8 +670,11 @@ export interface FileRoutesById {
   '/workloads/cronjobs/$namespace/$name': typeof WorkloadsCronjobsNamespaceNameRoute;
   '/workloads/daemonsets/$namespace/$name': typeof WorkloadsDaemonsetsNamespaceNameRoute;
   '/workloads/deployments/$namespace/$name': typeof WorkloadsDeploymentsNamespaceNameRoute;
+  '/workloads/disruptionbudgets/$namespace/$name': typeof WorkloadsDisruptionbudgetsNamespaceNameRoute;
   '/workloads/jobs/$namespace/$name': typeof WorkloadsJobsNamespaceNameRoute;
   '/workloads/pods/$namespace/$name': typeof WorkloadsPodsNamespaceNameRoute;
+  '/workloads/replicasets/$namespace/$name': typeof WorkloadsReplicasetsNamespaceNameRoute;
+  '/workloads/replicationcontrollers/$namespace/$name': typeof WorkloadsReplicationcontrollersNamespaceNameRoute;
   '/workloads/secrets/$namespace/$name': typeof WorkloadsSecretsNamespaceNameRoute;
   '/workloads/statefulsets/$namespace/$name': typeof WorkloadsStatefulsetsNamespaceNameRoute;
 }
@@ -596,6 +695,7 @@ export interface FileRouteTypes {
     | '/access/clusterroles/$name'
     | '/addons/crds/$name'
     | '/overview/nodes/$name'
+    | '/overview/priorityclasses/$name'
     | '/storage/storageclasses/$name'
     | '/storage/volumes/$name'
     | '/access/clusterrolebindings/'
@@ -609,6 +709,8 @@ export interface FileRouteTypes {
     | '/network/ingresses/'
     | '/network/networkpolicies/'
     | '/network/services/'
+    | '/overview/leases/'
+    | '/overview/priorityclasses/'
     | '/storage/claims/'
     | '/storage/snapshots/'
     | '/storage/storageclasses/'
@@ -618,8 +720,11 @@ export interface FileRouteTypes {
     | '/workloads/cronjobs/'
     | '/workloads/daemonsets/'
     | '/workloads/deployments/'
+    | '/workloads/disruptionbudgets/'
     | '/workloads/jobs/'
     | '/workloads/pods/'
+    | '/workloads/replicasets/'
+    | '/workloads/replicationcontrollers/'
     | '/workloads/secrets/'
     | '/workloads/statefulsets/'
     | '/access/rolebindings/$namespace/$name'
@@ -630,6 +735,7 @@ export interface FileRouteTypes {
     | '/network/ingresses/$namespace/$name'
     | '/network/networkpolicies/$namespace/$name'
     | '/network/services/$namespace/$name'
+    | '/overview/leases/$namespace/$name'
     | '/storage/claims/$namespace/$name'
     | '/storage/snapshots/$namespace/$name'
     | '/workloads/autoscalers/$namespace/$name'
@@ -637,8 +743,11 @@ export interface FileRouteTypes {
     | '/workloads/cronjobs/$namespace/$name'
     | '/workloads/daemonsets/$namespace/$name'
     | '/workloads/deployments/$namespace/$name'
+    | '/workloads/disruptionbudgets/$namespace/$name'
     | '/workloads/jobs/$namespace/$name'
     | '/workloads/pods/$namespace/$name'
+    | '/workloads/replicasets/$namespace/$name'
+    | '/workloads/replicationcontrollers/$namespace/$name'
     | '/workloads/secrets/$namespace/$name'
     | '/workloads/statefulsets/$namespace/$name';
   fileRoutesByTo: FileRoutesByTo;
@@ -657,6 +766,7 @@ export interface FileRouteTypes {
     | '/access/clusterroles/$name'
     | '/addons/crds/$name'
     | '/overview/nodes/$name'
+    | '/overview/priorityclasses/$name'
     | '/storage/storageclasses/$name'
     | '/storage/volumes/$name'
     | '/access/clusterrolebindings'
@@ -670,6 +780,8 @@ export interface FileRouteTypes {
     | '/network/ingresses'
     | '/network/networkpolicies'
     | '/network/services'
+    | '/overview/leases'
+    | '/overview/priorityclasses'
     | '/storage/claims'
     | '/storage/snapshots'
     | '/storage/storageclasses'
@@ -679,8 +791,11 @@ export interface FileRouteTypes {
     | '/workloads/cronjobs'
     | '/workloads/daemonsets'
     | '/workloads/deployments'
+    | '/workloads/disruptionbudgets'
     | '/workloads/jobs'
     | '/workloads/pods'
+    | '/workloads/replicasets'
+    | '/workloads/replicationcontrollers'
     | '/workloads/secrets'
     | '/workloads/statefulsets'
     | '/access/rolebindings/$namespace/$name'
@@ -691,6 +806,7 @@ export interface FileRouteTypes {
     | '/network/ingresses/$namespace/$name'
     | '/network/networkpolicies/$namespace/$name'
     | '/network/services/$namespace/$name'
+    | '/overview/leases/$namespace/$name'
     | '/storage/claims/$namespace/$name'
     | '/storage/snapshots/$namespace/$name'
     | '/workloads/autoscalers/$namespace/$name'
@@ -698,8 +814,11 @@ export interface FileRouteTypes {
     | '/workloads/cronjobs/$namespace/$name'
     | '/workloads/daemonsets/$namespace/$name'
     | '/workloads/deployments/$namespace/$name'
+    | '/workloads/disruptionbudgets/$namespace/$name'
     | '/workloads/jobs/$namespace/$name'
     | '/workloads/pods/$namespace/$name'
+    | '/workloads/replicasets/$namespace/$name'
+    | '/workloads/replicationcontrollers/$namespace/$name'
     | '/workloads/secrets/$namespace/$name'
     | '/workloads/statefulsets/$namespace/$name';
   id:
@@ -718,6 +837,7 @@ export interface FileRouteTypes {
     | '/access/clusterroles_/$name'
     | '/addons/crds_/$name'
     | '/overview/nodes_/$name'
+    | '/overview/priorityclasses_/$name'
     | '/storage/storageclasses_/$name'
     | '/storage/volumes_/$name'
     | '/access/clusterrolebindings/'
@@ -731,6 +851,8 @@ export interface FileRouteTypes {
     | '/network/ingresses/'
     | '/network/networkpolicies/'
     | '/network/services/'
+    | '/overview/leases/'
+    | '/overview/priorityclasses/'
     | '/storage/claims/'
     | '/storage/snapshots/'
     | '/storage/storageclasses/'
@@ -740,8 +862,11 @@ export interface FileRouteTypes {
     | '/workloads/cronjobs/'
     | '/workloads/daemonsets/'
     | '/workloads/deployments/'
+    | '/workloads/disruptionbudgets/'
     | '/workloads/jobs/'
     | '/workloads/pods/'
+    | '/workloads/replicasets/'
+    | '/workloads/replicationcontrollers/'
     | '/workloads/secrets/'
     | '/workloads/statefulsets/'
     | '/access/rolebindings/$namespace/$name'
@@ -752,6 +877,7 @@ export interface FileRouteTypes {
     | '/network/ingresses/$namespace/$name'
     | '/network/networkpolicies/$namespace/$name'
     | '/network/services/$namespace/$name'
+    | '/overview/leases/$namespace/$name'
     | '/storage/claims/$namespace/$name'
     | '/storage/snapshots/$namespace/$name'
     | '/workloads/autoscalers/$namespace/$name'
@@ -759,8 +885,11 @@ export interface FileRouteTypes {
     | '/workloads/cronjobs/$namespace/$name'
     | '/workloads/daemonsets/$namespace/$name'
     | '/workloads/deployments/$namespace/$name'
+    | '/workloads/disruptionbudgets/$namespace/$name'
     | '/workloads/jobs/$namespace/$name'
     | '/workloads/pods/$namespace/$name'
+    | '/workloads/replicasets/$namespace/$name'
+    | '/workloads/replicationcontrollers/$namespace/$name'
     | '/workloads/secrets/$namespace/$name'
     | '/workloads/statefulsets/$namespace/$name';
   fileRoutesById: FileRoutesById;
@@ -780,6 +909,7 @@ export interface RootRouteChildren {
   AccessClusterrolesNameRoute: typeof AccessClusterrolesNameRoute;
   AddonsCrdsNameRoute: typeof AddonsCrdsNameRoute;
   OverviewNodesNameRoute: typeof OverviewNodesNameRoute;
+  OverviewPriorityclassesNameRoute: typeof OverviewPriorityclassesNameRoute;
   StorageStorageclassesNameRoute: typeof StorageStorageclassesNameRoute;
   StorageVolumesNameRoute: typeof StorageVolumesNameRoute;
   AccessClusterrolebindingsIndexRoute: typeof AccessClusterrolebindingsIndexRoute;
@@ -793,6 +923,8 @@ export interface RootRouteChildren {
   NetworkIngressesIndexRoute: typeof NetworkIngressesIndexRoute;
   NetworkNetworkpoliciesIndexRoute: typeof NetworkNetworkpoliciesIndexRoute;
   NetworkServicesIndexRoute: typeof NetworkServicesIndexRoute;
+  OverviewLeasesIndexRoute: typeof OverviewLeasesIndexRoute;
+  OverviewPriorityclassesIndexRoute: typeof OverviewPriorityclassesIndexRoute;
   StorageClaimsIndexRoute: typeof StorageClaimsIndexRoute;
   StorageSnapshotsIndexRoute: typeof StorageSnapshotsIndexRoute;
   StorageStorageclassesIndexRoute: typeof StorageStorageclassesIndexRoute;
@@ -802,8 +934,11 @@ export interface RootRouteChildren {
   WorkloadsCronjobsIndexRoute: typeof WorkloadsCronjobsIndexRoute;
   WorkloadsDaemonsetsIndexRoute: typeof WorkloadsDaemonsetsIndexRoute;
   WorkloadsDeploymentsIndexRoute: typeof WorkloadsDeploymentsIndexRoute;
+  WorkloadsDisruptionbudgetsIndexRoute: typeof WorkloadsDisruptionbudgetsIndexRoute;
   WorkloadsJobsIndexRoute: typeof WorkloadsJobsIndexRoute;
   WorkloadsPodsIndexRoute: typeof WorkloadsPodsIndexRoute;
+  WorkloadsReplicasetsIndexRoute: typeof WorkloadsReplicasetsIndexRoute;
+  WorkloadsReplicationcontrollersIndexRoute: typeof WorkloadsReplicationcontrollersIndexRoute;
   WorkloadsSecretsIndexRoute: typeof WorkloadsSecretsIndexRoute;
   WorkloadsStatefulsetsIndexRoute: typeof WorkloadsStatefulsetsIndexRoute;
   AccessRolebindingsNamespaceNameRoute: typeof AccessRolebindingsNamespaceNameRoute;
@@ -814,6 +949,7 @@ export interface RootRouteChildren {
   NetworkIngressesNamespaceNameRoute: typeof NetworkIngressesNamespaceNameRoute;
   NetworkNetworkpoliciesNamespaceNameRoute: typeof NetworkNetworkpoliciesNamespaceNameRoute;
   NetworkServicesNamespaceNameRoute: typeof NetworkServicesNamespaceNameRoute;
+  OverviewLeasesNamespaceNameRoute: typeof OverviewLeasesNamespaceNameRoute;
   StorageClaimsNamespaceNameRoute: typeof StorageClaimsNamespaceNameRoute;
   StorageSnapshotsNamespaceNameRoute: typeof StorageSnapshotsNamespaceNameRoute;
   WorkloadsAutoscalersNamespaceNameRoute: typeof WorkloadsAutoscalersNamespaceNameRoute;
@@ -821,8 +957,11 @@ export interface RootRouteChildren {
   WorkloadsCronjobsNamespaceNameRoute: typeof WorkloadsCronjobsNamespaceNameRoute;
   WorkloadsDaemonsetsNamespaceNameRoute: typeof WorkloadsDaemonsetsNamespaceNameRoute;
   WorkloadsDeploymentsNamespaceNameRoute: typeof WorkloadsDeploymentsNamespaceNameRoute;
+  WorkloadsDisruptionbudgetsNamespaceNameRoute: typeof WorkloadsDisruptionbudgetsNamespaceNameRoute;
   WorkloadsJobsNamespaceNameRoute: typeof WorkloadsJobsNamespaceNameRoute;
   WorkloadsPodsNamespaceNameRoute: typeof WorkloadsPodsNamespaceNameRoute;
+  WorkloadsReplicasetsNamespaceNameRoute: typeof WorkloadsReplicasetsNamespaceNameRoute;
+  WorkloadsReplicationcontrollersNamespaceNameRoute: typeof WorkloadsReplicationcontrollersNamespaceNameRoute;
   WorkloadsSecretsNamespaceNameRoute: typeof WorkloadsSecretsNamespaceNameRoute;
   WorkloadsStatefulsetsNamespaceNameRoute: typeof WorkloadsStatefulsetsNamespaceNameRoute;
 }
@@ -997,11 +1136,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NetworkServicesIndexRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/overview/leases/': {
+      id: '/overview/leases/';
+      path: '/overview/leases';
+      fullPath: '/overview/leases/';
+      preLoaderRoute: typeof OverviewLeasesIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/overview/nodes_/$name': {
       id: '/overview/nodes_/$name';
       path: '/overview/nodes/$name';
       fullPath: '/overview/nodes/$name';
       preLoaderRoute: typeof OverviewNodesNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/overview/priorityclasses/': {
+      id: '/overview/priorityclasses/';
+      path: '/overview/priorityclasses';
+      fullPath: '/overview/priorityclasses/';
+      preLoaderRoute: typeof OverviewPriorityclassesIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/overview/priorityclasses_/$name': {
+      id: '/overview/priorityclasses_/$name';
+      path: '/overview/priorityclasses/$name';
+      fullPath: '/overview/priorityclasses/$name';
+      preLoaderRoute: typeof OverviewPriorityclassesNameRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/storage/claims/': {
@@ -1081,6 +1241,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkloadsDeploymentsIndexRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/workloads/disruptionbudgets/': {
+      id: '/workloads/disruptionbudgets/';
+      path: '/workloads/disruptionbudgets';
+      fullPath: '/workloads/disruptionbudgets/';
+      preLoaderRoute: typeof WorkloadsDisruptionbudgetsIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/workloads/jobs/': {
       id: '/workloads/jobs/';
       path: '/workloads/jobs';
@@ -1093,6 +1260,20 @@ declare module '@tanstack/react-router' {
       path: '/workloads/pods';
       fullPath: '/workloads/pods/';
       preLoaderRoute: typeof WorkloadsPodsIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/workloads/replicasets/': {
+      id: '/workloads/replicasets/';
+      path: '/workloads/replicasets';
+      fullPath: '/workloads/replicasets/';
+      preLoaderRoute: typeof WorkloadsReplicasetsIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/workloads/replicationcontrollers/': {
+      id: '/workloads/replicationcontrollers/';
+      path: '/workloads/replicationcontrollers';
+      fullPath: '/workloads/replicationcontrollers/';
+      preLoaderRoute: typeof WorkloadsReplicationcontrollersIndexRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/workloads/secrets/': {
@@ -1165,6 +1346,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NetworkServicesNamespaceNameRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/overview/leases/$namespace/$name': {
+      id: '/overview/leases/$namespace/$name';
+      path: '/overview/leases/$namespace/$name';
+      fullPath: '/overview/leases/$namespace/$name';
+      preLoaderRoute: typeof OverviewLeasesNamespaceNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/storage/claims/$namespace/$name': {
       id: '/storage/claims/$namespace/$name';
       path: '/storage/claims/$namespace/$name';
@@ -1214,6 +1402,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkloadsDeploymentsNamespaceNameRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/workloads/disruptionbudgets/$namespace/$name': {
+      id: '/workloads/disruptionbudgets/$namespace/$name';
+      path: '/workloads/disruptionbudgets/$namespace/$name';
+      fullPath: '/workloads/disruptionbudgets/$namespace/$name';
+      preLoaderRoute: typeof WorkloadsDisruptionbudgetsNamespaceNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/workloads/jobs/$namespace/$name': {
       id: '/workloads/jobs/$namespace/$name';
       path: '/workloads/jobs/$namespace/$name';
@@ -1226,6 +1421,20 @@ declare module '@tanstack/react-router' {
       path: '/workloads/pods/$namespace/$name';
       fullPath: '/workloads/pods/$namespace/$name';
       preLoaderRoute: typeof WorkloadsPodsNamespaceNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/workloads/replicasets/$namespace/$name': {
+      id: '/workloads/replicasets/$namespace/$name';
+      path: '/workloads/replicasets/$namespace/$name';
+      fullPath: '/workloads/replicasets/$namespace/$name';
+      preLoaderRoute: typeof WorkloadsReplicasetsNamespaceNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/workloads/replicationcontrollers/$namespace/$name': {
+      id: '/workloads/replicationcontrollers/$namespace/$name';
+      path: '/workloads/replicationcontrollers/$namespace/$name';
+      fullPath: '/workloads/replicationcontrollers/$namespace/$name';
+      preLoaderRoute: typeof WorkloadsReplicationcontrollersNamespaceNameRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/workloads/secrets/$namespace/$name': {
@@ -1260,6 +1469,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccessClusterrolesNameRoute: AccessClusterrolesNameRoute,
   AddonsCrdsNameRoute: AddonsCrdsNameRoute,
   OverviewNodesNameRoute: OverviewNodesNameRoute,
+  OverviewPriorityclassesNameRoute: OverviewPriorityclassesNameRoute,
   StorageStorageclassesNameRoute: StorageStorageclassesNameRoute,
   StorageVolumesNameRoute: StorageVolumesNameRoute,
   AccessClusterrolebindingsIndexRoute: AccessClusterrolebindingsIndexRoute,
@@ -1273,6 +1483,8 @@ const rootRouteChildren: RootRouteChildren = {
   NetworkIngressesIndexRoute: NetworkIngressesIndexRoute,
   NetworkNetworkpoliciesIndexRoute: NetworkNetworkpoliciesIndexRoute,
   NetworkServicesIndexRoute: NetworkServicesIndexRoute,
+  OverviewLeasesIndexRoute: OverviewLeasesIndexRoute,
+  OverviewPriorityclassesIndexRoute: OverviewPriorityclassesIndexRoute,
   StorageClaimsIndexRoute: StorageClaimsIndexRoute,
   StorageSnapshotsIndexRoute: StorageSnapshotsIndexRoute,
   StorageStorageclassesIndexRoute: StorageStorageclassesIndexRoute,
@@ -1282,8 +1494,12 @@ const rootRouteChildren: RootRouteChildren = {
   WorkloadsCronjobsIndexRoute: WorkloadsCronjobsIndexRoute,
   WorkloadsDaemonsetsIndexRoute: WorkloadsDaemonsetsIndexRoute,
   WorkloadsDeploymentsIndexRoute: WorkloadsDeploymentsIndexRoute,
+  WorkloadsDisruptionbudgetsIndexRoute: WorkloadsDisruptionbudgetsIndexRoute,
   WorkloadsJobsIndexRoute: WorkloadsJobsIndexRoute,
   WorkloadsPodsIndexRoute: WorkloadsPodsIndexRoute,
+  WorkloadsReplicasetsIndexRoute: WorkloadsReplicasetsIndexRoute,
+  WorkloadsReplicationcontrollersIndexRoute:
+    WorkloadsReplicationcontrollersIndexRoute,
   WorkloadsSecretsIndexRoute: WorkloadsSecretsIndexRoute,
   WorkloadsStatefulsetsIndexRoute: WorkloadsStatefulsetsIndexRoute,
   AccessRolebindingsNamespaceNameRoute: AccessRolebindingsNamespaceNameRoute,
@@ -1296,6 +1512,7 @@ const rootRouteChildren: RootRouteChildren = {
   NetworkNetworkpoliciesNamespaceNameRoute:
     NetworkNetworkpoliciesNamespaceNameRoute,
   NetworkServicesNamespaceNameRoute: NetworkServicesNamespaceNameRoute,
+  OverviewLeasesNamespaceNameRoute: OverviewLeasesNamespaceNameRoute,
   StorageClaimsNamespaceNameRoute: StorageClaimsNamespaceNameRoute,
   StorageSnapshotsNamespaceNameRoute: StorageSnapshotsNamespaceNameRoute,
   WorkloadsAutoscalersNamespaceNameRoute:
@@ -1305,8 +1522,14 @@ const rootRouteChildren: RootRouteChildren = {
   WorkloadsDaemonsetsNamespaceNameRoute: WorkloadsDaemonsetsNamespaceNameRoute,
   WorkloadsDeploymentsNamespaceNameRoute:
     WorkloadsDeploymentsNamespaceNameRoute,
+  WorkloadsDisruptionbudgetsNamespaceNameRoute:
+    WorkloadsDisruptionbudgetsNamespaceNameRoute,
   WorkloadsJobsNamespaceNameRoute: WorkloadsJobsNamespaceNameRoute,
   WorkloadsPodsNamespaceNameRoute: WorkloadsPodsNamespaceNameRoute,
+  WorkloadsReplicasetsNamespaceNameRoute:
+    WorkloadsReplicasetsNamespaceNameRoute,
+  WorkloadsReplicationcontrollersNamespaceNameRoute:
+    WorkloadsReplicationcontrollersNamespaceNameRoute,
   WorkloadsSecretsNamespaceNameRoute: WorkloadsSecretsNamespaceNameRoute,
   WorkloadsStatefulsetsNamespaceNameRoute:
     WorkloadsStatefulsetsNamespaceNameRoute,

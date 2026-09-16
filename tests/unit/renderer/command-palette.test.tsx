@@ -107,8 +107,10 @@ describe('command palette', () => {
         const { router } = renderRoutes(routeTree, '/overview/summary');
         await userEvent.keyboard('{Control>}k{/Control}');
         const dialog = await screen.findByRole('dialog', { name: 'Quick actions' });
+        const all = within(dialog).getAllByRole('option').length;
         await userEvent.type(within(dialog).getByPlaceholderText('Switch cluster, namespace or resource…'), 'nodes');
-        await waitFor(() => expect(within(dialog).getAllByRole('option')).toHaveLength(1));
+        // The filter scores rather than matches exactly, so it narrows the list; Nodes survives it.
+        await waitFor(() => expect(within(dialog).getAllByRole('option').length).toBeLessThan(all));
         await userEvent.click(within(dialog).getByRole('option', { name: 'Nodes' }));
         await waitFor(() => expect(router.state.location.pathname).toBe('/overview/nodes'));
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

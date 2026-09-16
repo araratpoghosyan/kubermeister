@@ -228,3 +228,35 @@ metadata:
 type: helm.sh/release.v1
 data:
   release: SDRzSUFBQUFBQUFBRTUyUFRXdkRNQXhBLzRyUjJRNUp5Z2J6dGVmZHVoMUdZSWhFelV4ajJkaEtXQ241NzhQcEZyYnJRQWQ5b0tlbkd6QjZBZ3NEK1FCNnEzTEV2clF1M2xCTG9HR2hsRjFnc0swR3grY0E5Z1paVU9hOExjWXBYR2tBRFJObWVkOXJDMjNkUHByNnlUUVBwNmEyZFlrMzBEQlE3cE9Mc2lIaEpZNEpCMUo5OEhFaUlWZzE5QitZcEZ6eEpEaWdZTW4vaXU1TzBGUnRkUUFOR09QcjNqeFVkVlhEV2xpQnoyNHNnRVJ4Y2owZXc4eHkvOFhqU0dVaU9PNmdzdU9SM1pteWdBV003cHRxMWRKMGZIRThXSFhjb004WU8vNVJ0QjByVlJ5dEtvcm1mcmZqZmRhSEtjekpxakVSY2NmR21JNy9UYWRQU2ZnTHprSElxc0RUMVRnMlN3dnJGNlpvWlJuYUFRQUE=
+---
+# A budget that covers no running pod on purpose: it lists as Blocked, which is the state worth
+# seeing on the screen, without standing between the eviction specs and the pods they evict.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: web
+  namespace: km-e2e
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: web-budgeted
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: km-e2e-high
+value: 1000
+globalDefault: false
+description: Seeded so the priority class list has a row of its own.
+---
+# A lease of our own, so the Leases screen has a row inside the seeded namespace rather than only
+# the control-plane ones in kube-node-lease.
+apiVersion: coordination.k8s.io/v1
+kind: Lease
+metadata:
+  name: km-e2e-leader
+  namespace: km-e2e
+spec:
+  holderIdentity: km-e2e-1
+  leaseDurationSeconds: 15

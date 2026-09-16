@@ -51,6 +51,8 @@ const client = {
             listEndpointsForAllNamespaces: listAny,
             listNamespacedServiceAccount: listAny,
             listServiceAccountForAllNamespaces: listAny,
+            listNamespacedReplicationController: listAny,
+            listReplicationControllerForAllNamespaces: listAny,
         },
         apps: {
             listNamespacedDeployment,
@@ -59,6 +61,8 @@ const client = {
             listStatefulSetForAllNamespaces,
             listNamespacedDaemonSet,
             listDaemonSetForAllNamespaces,
+            listNamespacedReplicaSet: listAny,
+            listReplicaSetForAllNamespaces: listAny,
         },
         batch: {
             listNamespacedJob,
@@ -71,6 +75,12 @@ const client = {
             listHorizontalPodAutoscalerForAllNamespaces: listAny,
         },
         storage: { listStorageClass: listAny },
+        policy: {
+            listNamespacedPodDisruptionBudget: listAny,
+            listPodDisruptionBudgetForAllNamespaces: listAny,
+        },
+        scheduling: { listPriorityClass: listAny },
+        coordination: { listNamespacedLease: listAny, listLeaseForAllNamespaces: listAny },
         apiextensions: { listCustomResourceDefinition: listAny },
         rbac: {
             listNamespacedRole: listAny,

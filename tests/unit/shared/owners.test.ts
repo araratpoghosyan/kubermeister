@@ -9,13 +9,18 @@ describe('owner links', () => {
         expect(ownerPath('CustomResourceDefinition', 'widgets.example.com', 'team-a')).toBe(
             '/addons/crds/widgets.example.com',
         );
-        // ReplicaSets have no list yet, and an unknown kind never will by guessing.
-        expect(ownerPath('ReplicaSet', 'web-abc', 'team-a')).toBeNull();
+        expect(ownerPath('ReplicaSet', 'web-abc', 'team-a')).toBe('/workloads/replicasets/team-a/web-abc');
+        // An unknown kind never gets a path by guessing.
         expect(ownerPath('Widget', 'thing', 'team-a')).toBeNull();
     });
 
     it('finds the owner a rollout restart would act on, and none for a job', () => {
-        const rs = { kind: 'ReplicaSet', name: 'web-abc', namespace: 'team-a', path: null };
+        const rs = {
+            kind: 'ReplicaSet',
+            name: 'web-abc',
+            namespace: 'team-a',
+            path: '/workloads/replicasets/team-a/web-abc',
+        };
         const deployment = { kind: 'Deployment', name: 'web', namespace: 'team-a', path: '/x' };
         expect(restartableOwner([rs, deployment])).toBe(deployment);
         expect(restartableOwner([{ kind: 'Job', name: 'import', namespace: 'team-a', path: '/x' }])).toBeUndefined();

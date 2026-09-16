@@ -570,7 +570,8 @@ test('links a pod to the workload that runs it, and lists that workload’s pods
     const pod = window.getByTestId('pod-page');
     const chain = pod.getByTestId('owner-chain');
     await expect(chain).toContainText('ReplicaSet');
-    await chain.getByRole('link', { name: 'web' }).click();
+    // The chain links the replica set too, whose name starts with the deployment's own.
+    await chain.getByRole('link', { name: 'web', exact: true }).click();
     await expect(window.getByTestId('deployment-page')).toContainText('namespace: km-e2e');
 });
 
@@ -698,6 +699,47 @@ test('forwards a service, which resolves to whichever pod is ready', async () =>
     await forwards.getByRole('button', { name: /^Stop forward/ }).click();
     await expect(forwards.locator('[data-remembered="web"]')).toBeVisible({ timeout: 30_000 });
     await window.keyboard.press('Escape');
+});
+
+test('lists the replica set behind the deployment, the budget over it, and the cluster plumbing', async () => {
+    const { window } = launched;
+    const sidebar = window.getByTestId('sidebar');
+
+    await sidebar.getByRole('link', { name: 'ReplicaSets' }).click();
+    const sets = window.getByTestId('replicasets-table');
+    // The deployment's own replica set is named by its hash, so it is found by its owner instead.
+    const set = sets.locator('tbody tr', { hasText: 'Deployment/web' }).first();
+    await expect(set).toContainText('busybox:1.36');
+    await set.getByRole('link').click();
+    await expect(window.getByTestId('replicaset-page')).toContainText('owner: Deployment/web');
+
+    // Nothing seeds a replication controller: the screen says so rather than failing to load.
+    await sidebar.getByRole('link', { name: 'ReplicationControllers' }).click();
+    await expect(window.getByText('No ReplicationControllers found.')).toBeVisible();
+
+    await sidebar.getByRole('link', { name: 'DisruptionBudgets' }).click();
+    const budget = window.getByTestId('disruptionbudgets-table').locator('[data-disruptionbudget="web"]');
+    await expect(budget).toContainText('min available 2');
+    // Nothing healthy matches its selector, so it allows no disruption at all.
+    await expect(budget).toContainText('Blocked');
+    await budget.getByRole('link').click();
+    await expect(window.getByTestId('disruptionbudget-page')).toContainText('allowed: 0');
+
+    await sidebar.getByRole('link', { name: 'PriorityClasses' }).click();
+    const priority = window.getByTestId('priorityclasses-table').locator('[data-priorityclass="km-e2e-high"]');
+    await expect(priority).toContainText('1000');
+    await priority.getByRole('link').click();
+    await expect(window.getByTestId('priorityclass-page')).toContainText('preemption: PreemptLowerPriority');
+
+    // "Leases" is a substring of "Releases", so match the whole label.
+    await sidebar.getByRole('link', { name: 'Leases', exact: true }).click();
+    const lease = window.getByTestId('leases-table').locator('[data-lease="km-e2e-leader"]');
+    await expect(lease).toContainText('km-e2e-1');
+    await lease.getByRole('link').click();
+    await expect(window.getByTestId('lease-page')).toContainText('holder: km-e2e-1');
+
+    // Leave the app on a list, since the specs after this one start from wherever this one stopped.
+    await sidebar.getByRole('link', { name: 'Pods' }).click();
 });
 
 test('stops at the startup screen when the kubeconfig path names nothing', async () => {
