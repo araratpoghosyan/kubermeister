@@ -30,6 +30,7 @@ export const IPC_CHANNELS = [
     'resources.list',
     'resources.get',
     'pods.logSnapshot',
+    'pods.logDownload',
     'pods.owners',
     'workloads.pods',
     'events.forObject',

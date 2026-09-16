@@ -34,7 +34,12 @@ import {
 import { clusterEventSchema, objectEventsInputSchema } from './k8s/events.js';
 import { ingressRuleSchema, serviceEndpointSchema, servicePortSchema } from './k8s/network.js';
 import { limitRangeSchema, resourceQuotaSchema } from './k8s/overview.js';
-import { logLineSchema, podLogSnapshotInputSchema } from './k8s/logs.js';
+import {
+    logLineSchema,
+    podLogDownloadInputSchema,
+    podLogDownloadSchema,
+    podLogSnapshotInputSchema,
+} from './k8s/logs.js';
 import {
     alertSchema,
     clusterSparklinesSchema,
@@ -164,6 +169,7 @@ export const ipcSchemas = {
     'pods.owners': { input: namespacedNameSchema, output: ownerChainSchema },
     'workloads.pods': { input: ownedPodsInputSchema, output: z.array(podSchema) },
     'pods.logSnapshot': { input: podLogSnapshotInputSchema, output: z.array(logLineSchema) },
+    'pods.logDownload': { input: podLogDownloadInputSchema, output: podLogDownloadSchema },
     'events.forObject': { input: objectEventsInputSchema, output: z.array(clusterEventSchema) },
     'events.recent': { input: noInput, output: z.array(clusterEventSchema) },
     'events.list': { input: namespacedListSchema, output: z.array(clusterEventSchema) },

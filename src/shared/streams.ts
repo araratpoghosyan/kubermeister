@@ -84,6 +84,8 @@ const podTargetSchema = z.object({
 });
 
 export const podLogsInputSchema = podTargetSchema.extend({
+    /** Follow the previous run of this container instead of the current one. */
+    previous: z.boolean().optional(),
     /** Relative window in seconds; omitted means tail from `tailLines`. */
     sinceSeconds: z
         .number()
