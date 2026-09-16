@@ -33,6 +33,8 @@ import type {
     StatefulSetDetail,
 } from '../../../shared/k8s/workloads.js';
 import type { PauseInput, RollbackInput, RollbackResult, WriteResult } from '../../../shared/k8s/write.js';
+import type { RolloutComparison, RolloutCompareInput } from '../../../shared/k8s/workloads.js';
+import { yamlToText } from '../yaml.js';
 import { apis, getNamespaced, listItems } from '../client.js';
 import { K8sError, withK8s } from '../errors.js';
 import { assertContext } from './write.js';
@@ -375,6 +377,32 @@ export function getDeploymentRollouts(name: string, namespace: string): Promise<
         const d = await readDeployment(name, namespace);
         if (!d) return [];
         return toRollouts(d, await replicaSetsOf(d));
+    });
+}
+
+/**
+ * Two revisions' pod templates, side by side. Both go through the same canonicalisation the
+ * rollback skip check uses — keys ordered, blanks dropped, the controller's own hash label ignored
+ * — so the difference on screen is what somebody changed rather than what the API server filled in.
+ */
+export function compareDeploymentRevisions(input: RolloutCompareInput): Promise<RolloutComparison> {
+    const op = 'deployments.compare';
+    return withK8s(op, async () => {
+        const d = await readDeployment(input.name, input.namespace);
+        if (!d) throw new K8sError('notFound', `Deployment "${input.name}" was not found.`, op);
+        const sets = ownedReplicaSets(d, await replicaSetsOf(d));
+        const find = (revision: string) => sets.find((rs) => revisionOf(rs) === revision);
+        const from = find(input.from);
+        const to = find(input.to);
+        if (!from || !to) {
+            const missing = from ? input.to : input.from;
+            throw new K8sError('notFound', `Revision ${missing} of "${input.name}" is no longer kept.`, op);
+        }
+        const render = (rs: V1ReplicaSet) => yamlToText(canonical(templateForRollback(rs)) as object);
+        return {
+            from: { rev: input.from, yaml: render(from) },
+            to: { rev: input.to, yaml: render(to) },
+        };
     });
 }
 

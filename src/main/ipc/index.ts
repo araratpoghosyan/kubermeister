@@ -62,6 +62,7 @@ import {
     getDeploymentRolloutStatus,
     getDeploymentRollouts,
     rollbackDeployment,
+    compareDeploymentRevisions,
     setDeploymentPaused,
 } from '../k8s/resources/workloads.js';
 import { getResource, listResources } from '../k8s/resources/index.js';
@@ -190,6 +191,7 @@ const handlers: Handlers = {
     'deployments.rolloutStatus': ({ name, namespace }) => getDeploymentRolloutStatus(name, namespace),
     'deployments.rollback': (input) => rollbackDeployment(input),
     'deployments.pause': (input) => setDeploymentPaused(input),
+    'deployments.compare': (input) => compareDeploymentRevisions(input),
     'configMaps.entries': ({ name, namespace }) => getConfigMapEntries(name, namespace),
     'secrets.entries': ({ name, namespace }) => getSecretEntries(name, namespace),
     'services.ports': ({ name, namespace }) => getServicePorts(name, namespace),

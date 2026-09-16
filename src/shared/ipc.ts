@@ -81,6 +81,8 @@ import {
     namespacedNameSchema,
     replicaSetSchema,
     rolloutSchema,
+    rolloutCompareInputSchema,
+    rolloutComparisonSchema,
     rolloutStatusSchema,
     secretEntrySchema,
 } from './k8s/workloads.js';
@@ -202,6 +204,7 @@ export const ipcSchemas = {
     'deployments.rolloutStatus': { input: namespacedNameSchema, output: rolloutStatusSchema.nullable() },
     'deployments.rollback': { input: rollbackInputSchema, output: rollbackResultSchema },
     'deployments.pause': { input: pauseInputSchema, output: writeResultSchema },
+    'deployments.compare': { input: rolloutCompareInputSchema, output: rolloutComparisonSchema },
     'configMaps.entries': { input: namespacedNameSchema, output: z.array(configMapEntrySchema) },
     'secrets.entries': { input: namespacedNameSchema, output: z.array(secretEntrySchema) },
     'services.ports': { input: namespacedNameSchema, output: z.array(servicePortSchema) },

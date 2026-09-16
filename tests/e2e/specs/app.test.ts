@@ -908,6 +908,29 @@ test('filters a list by label and reads the owner and finalizers of an object', 
     await expect(card).toContainText('T');
 });
 
+test('compares two revisions of the seeded deployment', async () => {
+    const { window } = launched;
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Deployments' }).click();
+    await window.getByTestId('deployments-table').locator('[data-deployment="web"]').getByRole('link').click();
+    const page = window.getByTestId('deployment-page');
+
+    // A second revision of its own, so this spec does not depend on what earlier ones left behind.
+    await page.getByRole('button', { name: 'Restart' }).click();
+    await window.getByRole('alertdialog').getByRole('button', { name: 'Restart' }).click();
+    await page.getByRole('tab', { name: /History/ }).click();
+    await expect(page.getByTestId('rollout-history').locator('[data-revision="2"]')).toBeVisible({ timeout: 30_000 });
+
+    const diff = page.getByTestId('revision-diff');
+    await expect(diff).toBeVisible({ timeout: 30_000 });
+    // A restart changes exactly one thing in the template, and that is what the diff shows.
+    // A restart writes the stamp annotation, so the two newest revisions differ by it — added when
+    // the older one had none, and a changed value when an earlier spec already restarted this one.
+    // Whichever way round the two newest revisions sit — a restart that added the stamp, or a
+    // rollback to a template that never had one — the difference between them is that annotation.
+    await expect(diff).toContainText('restartedAt');
+    await expect(diff.locator('[data-diff="added"], [data-diff="removed"]').first()).toBeVisible();
+});
+
 test('shows what else a pod is tied to, and why', async () => {
     const { window } = launched;
     await window.getByTestId('sidebar').getByRole('link', { name: 'Pods' }).click();
