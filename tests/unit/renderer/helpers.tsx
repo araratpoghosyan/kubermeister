@@ -9,7 +9,7 @@ import {
     type AnyRoute,
 } from '@tanstack/react-router';
 import { render, type RenderResult } from '@testing-library/react';
-import type { ReactElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { ThemeProvider } from '@/components/theme-provider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -19,13 +19,17 @@ function testQueryClient(): QueryClient {
 
 /** Render under the app's providers with a fresh QueryClient and retries off so failures surface immediately. */
 export function renderWithQuery(ui: ReactElement): RenderResult {
-    return render(
+    const client = testQueryClient();
+    // A wrapper rather than nesting, so `rerender` keeps the providers: rendering the bare element
+    // again would drop the query client under any component that asks for one.
+    const Providers = ({ children }: { children: ReactNode }) => (
         <ThemeProvider>
-            <QueryClientProvider client={testQueryClient()}>
-                <TooltipProvider delayDuration={0}>{ui}</TooltipProvider>
+            <QueryClientProvider client={client}>
+                <TooltipProvider delayDuration={0}>{children}</TooltipProvider>
             </QueryClientProvider>
-        </ThemeProvider>,
+        </ThemeProvider>
     );
+    return render(ui, { wrapper: Providers });
 }
 
 /** Render a route tree at `path` under the app's providers, on an in-memory history. */

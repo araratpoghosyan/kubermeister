@@ -28,6 +28,16 @@ export const LOG_BUFFER_OPTIONS = [2_000, 10_000, 50_000] as const;
 /** Terminal font sizes offered in Settings, in points. */
 export const TERMINAL_FONT_SIZES = [11, 12, 14, 16] as const;
 
+/** One forward worth offering again: what it pointed at, and where it listened. */
+export const rememberedForwardSchema = z.object({
+    context: z.string().min(1),
+    kind: z.enum(['Pod', 'Service']),
+    namespace: z.string().min(1),
+    name: z.string().min(1),
+    targetPort: z.number().int().min(1).max(65535),
+    localPort: z.number().int().min(1).max(65535),
+});
+
 const dataSchema = z.object({
     /** Poll cadence for the live lists, metrics and dashboard queries. */
     refreshIntervalSec: z.number().int().positive(),
@@ -35,6 +45,8 @@ const dataSchema = z.object({
     logBufferLines: z.number().int().positive(),
     /** Font size of the shell terminals, in points. */
     terminalFontSize: z.number().int().min(8).max(32),
+    /** Forwards this app has opened, offered again on the context they belong to. */
+    forwards: z.array(rememberedForwardSchema).max(50),
 });
 
 /**
@@ -85,6 +97,7 @@ export const settingsPatchSchema = z.object({
  */
 export const settingsInputSchema = settingsPatchSchema.omit({ connection: true, window: true });
 
+export type RememberedForward = z.infer<typeof rememberedForwardSchema>;
 export type Settings = z.infer<typeof settingsSchema>;
 export type SettingsPatch = z.infer<typeof settingsPatchSchema>;
 export type SettingsInput = z.infer<typeof settingsInputSchema>;
@@ -95,7 +108,7 @@ export const DEFAULT_SETTINGS: Settings = {
     version: 1,
     session: { lastContext: null, lastNamespace: null, restoreOnLaunch: true },
     connection: { kubeconfigPath: null },
-    data: { refreshIntervalSec: 12, logBufferLines: 2_000, terminalFontSize: 12 },
+    data: { refreshIntervalSec: 12, logBufferLines: 2_000, terminalFontSize: 12, forwards: [] },
     updates: { mode: 'check' },
     window: { bounds: null },
 };

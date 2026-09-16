@@ -3,14 +3,17 @@ import { useCallback } from 'react';
 import { invoke } from './ipc';
 import { listPathForSubPage } from './nav';
 import { invalidateClusterQueries, queryClient, useIpcQuery } from './query';
+import { stopAllForwards } from './port-forwards';
 import { closeAllShells } from './shell-sessions';
 
 /**
- * Switch kube-context and forget everything read from the previous one. Open shells go with it:
- * main ends their streams anyway, and a terminal left behind names a pod of the cluster being left.
+ * Switch kube-context and forget everything read from the previous one. Open shells and forwards go
+ * with it: main ends their streams anyway, and either one left behind names an object of the
+ * cluster being left.
  */
 export async function switchContext(name: string): Promise<void> {
     closeAllShells();
+    stopAllForwards();
     await invoke('context.set', { name });
     await invalidateClusterQueries();
 }

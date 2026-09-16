@@ -183,8 +183,17 @@ test('follows pod logs, runs a command in the pod shell, and starts a port-forwa
     await expect(window.getByTestId('port-forward-status')).toContainText('Listening on 127.0.0.1:38080 → 8080', {
         timeout: 15_000,
     });
-    await window.getByRole('button', { name: 'Stop' }).click();
-    await expect(window.getByRole('button', { name: 'Start' })).toBeVisible();
+
+    // The forward outlives the page that started it, and the manager is where it is listed.
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Nodes' }).click();
+    await window.getByRole('button', { name: 'Port forwards' }).click();
+    const forwards = window.getByTestId('forward-list');
+    await expect(
+        forwards.locator('[data-forward="web-1"]').or(forwards.locator('[data-forward^="web-"]')),
+    ).toContainText('127.0.0.1:38080');
+    await forwards.getByRole('button', { name: /^Stop forward/ }).click();
+    await expect(window.getByTestId('forward-list').locator('[data-forward]')).toHaveCount(0);
+    await window.keyboard.press('Escape');
 });
 
 test('opens the command palette from the keyboard and jumps to a screen', async () => {
@@ -668,6 +677,27 @@ test('attaches a debug container to the seeded pod and opens its shell', async (
     // The pod's containers card lists it as a debug container once the kubelet starts it.
     await window.getByRole('tab', { name: 'Overview' }).click();
     await expect(window.getByTestId('containers')).toContainText('debug', { timeout: 60_000 });
+});
+
+test('forwards a service, which resolves to whichever pod is ready', async () => {
+    const { window } = launched;
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Services' }).click();
+    await window.getByTestId('services-table').locator('[data-service="web"]').getByRole('link').click();
+    const page = window.getByTestId('service-page');
+    // The forward control sits with the ports it forwards.
+    await window.getByRole('tab', { name: 'Ports' }).click();
+    await page.getByRole('textbox', { name: 'Local port' }).fill('38081');
+    await page.getByRole('button', { name: 'Start' }).click();
+    await expect(page.getByTestId('port-forward-status')).toContainText('Listening on 127.0.0.1:38081', {
+        timeout: 15_000,
+    });
+
+    // It is remembered, so it is offered again after being stopped.
+    await window.getByRole('button', { name: 'Port forwards' }).click();
+    const forwards = window.getByTestId('forward-list');
+    await forwards.getByRole('button', { name: /^Stop forward/ }).click();
+    await expect(forwards.locator('[data-remembered="web"]')).toBeVisible({ timeout: 30_000 });
+    await window.keyboard.press('Escape');
 });
 
 test('stops at the startup screen when the kubeconfig path names nothing', async () => {

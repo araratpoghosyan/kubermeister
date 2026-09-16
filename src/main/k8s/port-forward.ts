@@ -1,9 +1,19 @@
 import * as net from 'node:net';
-import { PortForward } from '@kubernetes/client-node';
+import { PortForward, type V1Endpoints } from '@kubernetes/client-node';
 import { streamSchemas, type StreamController, type StreamSend } from '../../shared/streams.js';
 import { kubeConfig } from './client.js';
 import { apis, readOrNull } from './client.js';
 import { reportMissingPod } from './pod-target.js';
+
+/** A ready pod behind a service, or null when the service has none right now. */
+export function readyPodOf(endpoints: V1Endpoints | undefined): string | null {
+    for (const subset of endpoints?.subsets ?? []) {
+        for (const address of subset.addresses ?? []) {
+            if (address.targetRef?.kind === 'Pod' && address.targetRef.name) return address.targetRef.name;
+        }
+    }
+    return null;
+}
 
 type PodWebSocket = Awaited<ReturnType<PortForward['portForward']>>;
 
@@ -15,8 +25,32 @@ type PodWebSocket = Awaited<ReturnType<PortForward['portForward']>>;
  */
 export async function startPodPortForward(rawInput: unknown, send: StreamSend): Promise<StreamController> {
     const input = streamSchemas['pods.portForward'].parse(rawInput);
-    const pod = await readOrNull(() => apis().core.readNamespacedPod({ name: input.name, namespace: input.namespace }));
-    if (!pod) return reportMissingPod(send, input.name, input.namespace);
+
+    /**
+     * Which pod a connection goes to. For a pod that is the pod; for a service it is whichever of
+     * its endpoints is ready at the moment the connection arrives, so a forward to a service keeps
+     * working across a rollout rather than dying with the pod it first found.
+     */
+    const resolvePod = async (): Promise<string | null> => {
+        if (input.kind === 'Pod') {
+            const pod = await readOrNull(() =>
+                apis().core.readNamespacedPod({ name: input.name, namespace: input.namespace }),
+            );
+            return pod ? input.name : null;
+        }
+        const endpoints = await readOrNull(() =>
+            apis().core.readNamespacedEndpoints({ name: input.name, namespace: input.namespace }),
+        );
+        return readyPodOf(endpoints);
+    };
+
+    let current = await resolvePod();
+    if (!current) {
+        if (input.kind === 'Pod') return reportMissingPod(send, input.name, input.namespace);
+        send({ type: 'error', message: `service "${input.namespace}/${input.name}" has no ready endpoints` });
+        send({ type: 'end' });
+        return { stop: () => {} };
+    }
 
     const forward = new PortForward(kubeConfig());
     const sockets = new Set<net.Socket>();
@@ -37,9 +71,26 @@ export async function startPodPortForward(rawInput: unknown, send: StreamSend): 
             closeWs();
         });
         socket.on('error', () => socket.destroy());
-        forward
-            .portForward(input.namespace, input.name, [input.targetPort], socket, null, socket)
-            .then((podSocket) => {
+        // Re-resolved per connection, not once at start: that is what carries a service forward
+        // across a rollout, and it costs one read on a connection that is about to do far more.
+        void resolvePod()
+            .then(async (pod) => {
+                if (!pod) throw new Error(`${input.name} has no ready pod to forward to`);
+                if (pod !== current) {
+                    current = pod;
+                    send({
+                        type: 'data',
+                        data: { status: 'listening', localPort: input.localPort, targetPort: input.targetPort, pod },
+                    });
+                }
+                const podSocket = await forward.portForward(
+                    input.namespace,
+                    pod,
+                    [input.targetPort],
+                    socket,
+                    null,
+                    socket,
+                );
                 ws = podSocket;
                 if (socket.destroyed) closeWs();
             })
@@ -54,7 +105,12 @@ export async function startPodPortForward(rawInput: unknown, send: StreamSend): 
         server.listen(input.localPort, '127.0.0.1', () => {
             send({
                 type: 'data',
-                data: { status: 'listening', localPort: input.localPort, targetPort: input.targetPort },
+                data: {
+                    status: 'listening',
+                    localPort: input.localPort,
+                    targetPort: input.targetPort,
+                    pod: current ?? undefined,
+                },
             });
             resolve();
         });
