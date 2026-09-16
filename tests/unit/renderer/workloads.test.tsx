@@ -231,7 +231,17 @@ describe('workload details', () => {
             within(rail)
                 .getAllByRole('tab')
                 .map((t) => t.textContent),
-        ).toEqual(['Overview', 'Pods', 'Events', 'Status', 'History2', 'ReplicaSets2', 'ManifestYAML', 'Labels1']);
+        ).toEqual([
+            'Overview',
+            'Pods',
+            'Logs',
+            'Events',
+            'Status',
+            'History2',
+            'ReplicaSets2',
+            'ManifestYAML',
+            'Labels1',
+        ]);
         await userEvent.click(within(rail).getByRole('tab', { name: /History/ }));
         const history = within(page).getByTestId('rollout-history');
         expect(page).toHaveTextContent('2 revisions');

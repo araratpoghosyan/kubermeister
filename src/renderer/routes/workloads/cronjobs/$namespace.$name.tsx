@@ -9,6 +9,7 @@ import {
     type DetailTabGroup,
 } from '@/components/templates/resource-detail';
 import { podsTab } from '@/components/templates/owned-pods';
+import { workloadLogsTab } from '@/components/workload/workload-logs-tab';
 import { manifestTab } from '@/components/templates/manifest-panel';
 import { EditResourceButton } from '@/components/templates/edit-resource-button';
 import { DeleteResourceButton } from '@/components/templates/delete-resource-button';
@@ -36,6 +37,7 @@ function CronJobDetailPage() {
                           ['Age', row.age],
                       ]),
                       podsTab({ kind: 'CronJob', name, namespace }),
+                      workloadLogsTab({ kind: 'CronJob', name, namespace }),
                       eventsTab({ kind: 'CronJob', name, namespace }),
                   ],
               },
