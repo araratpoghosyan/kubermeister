@@ -5,7 +5,7 @@ import { K8sError } from '../../../src/main/k8s/errors';
 type Listener = (event: unknown, input: unknown) => Promise<unknown>;
 const registered = new Map<string, Listener>();
 
-const dialog = { showOpenDialog: vi.fn(), showSaveDialog: vi.fn() };
+const dialog = { showOpenDialog: vi.fn() };
 const focused = { id: 1 };
 vi.mock('electron', () => ({
     app: { getName: () => 'Kubermeister', getVersion: () => '0.1.1' },
@@ -66,12 +66,6 @@ const lifecycleMod = {
 };
 const ownersMod = { getPodOwners: vi.fn(), listOwnedPods: vi.fn() };
 const describeMod = { describeObject: vi.fn() };
-const debugMod = {
-    addDebugContainer: vi.fn(),
-    startNodeShell: vi.fn(),
-    copyFromPod: vi.fn(),
-    copyToPod: vi.fn(),
-};
 const alertsMod = { listAlerts: vi.fn() };
 const samplerMod = { resetHistory: vi.fn() };
 const streamsMod = { endAllStreams: vi.fn() };
@@ -99,7 +93,6 @@ vi.mock('../../../src/main/k8s/resources/write.js', () => writeMod);
 vi.mock('../../../src/main/k8s/resources/lifecycle.js', () => lifecycleMod);
 vi.mock('../../../src/main/k8s/resources/owners.js', () => ownersMod);
 vi.mock('../../../src/main/k8s/resources/describe.js', () => describeMod);
-vi.mock('../../../src/main/k8s/debug.js', () => debugMod);
 
 const { registerHandlers } = await import('../../../src/main/ipc/index.js');
 const { ipcSchemas } = await import('../../../src/shared/ipc.js');
@@ -218,35 +211,6 @@ describe('registerHandlers', () => {
         await expect(
             invoke('resources.describe', { kind: 'Pod', name: 'web-1', namespace: 'team-a' }),
         ).resolves.toMatchObject({ kind: 'Pod' });
-    });
-
-    it('attaches a debug container and starts a node shell through their own modules', async () => {
-        debugMod.addDebugContainer.mockResolvedValue({ pod: 'web-1', namespace: 'team-a', container: 'debugger-1' });
-        debugMod.startNodeShell.mockResolvedValue({ pod: 'shell-1', namespace: 'team-a', container: 'shell' });
-        const pod = { context: 'alpha', name: 'web-1', namespace: 'team-a' };
-        await expect(invoke('pods.debug', pod)).resolves.toMatchObject({ container: 'debugger-1' });
-        await expect(
-            invoke('nodes.debug', { context: 'alpha', name: 'node-1', namespace: 'team-a' }),
-        ).resolves.toMatchObject({ pod: 'shell-1' });
-        expect(debugMod.addDebugContainer).toHaveBeenCalledWith(pod);
-    });
-
-    it('copies a file only after the picker names a local path, and reports a cancelled picker', async () => {
-        const target = { context: 'alpha', name: 'web-1', namespace: 'team-a', container: 'web', remotePath: '/etc' };
-        debugMod.copyFromPod.mockResolvedValue({ localPath: '/tmp/out.tar', remotePath: '/etc' });
-        dialog.showSaveDialog.mockResolvedValue({ canceled: false, filePath: '/tmp/out.tar' });
-        await expect(invoke('pods.copyFrom', target)).resolves.toMatchObject({ localPath: '/tmp/out.tar' });
-        expect(debugMod.copyFromPod).toHaveBeenCalledWith({ ...target, localPath: '/tmp/out.tar' });
-
-        // A picker the user called off copies nothing, and says so rather than failing.
-        dialog.showSaveDialog.mockResolvedValue({ canceled: true, filePath: undefined });
-        await expect(invoke('pods.copyFrom', target)).resolves.toBeNull();
-
-        debugMod.copyToPod.mockResolvedValue({ localPath: '/home/me/f', remotePath: '/etc/f' });
-        dialog.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ['/home/me/f'] });
-        await expect(invoke('pods.copyTo', target)).resolves.toMatchObject({ remotePath: '/etc/f' });
-        dialog.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
-        await expect(invoke('pods.copyTo', target)).resolves.toBeNull();
     });
 
     it('rejects input that does not match the channel schema', async () => {

@@ -109,17 +109,8 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   milliseconds, which would measure the CI runner instead. Lists stay live through `resources.watch` (`src/main/k8s/watch.ts`, the
   client's informer, same row transforms as the list) and `useWatchedList` in
   `src/renderer/lib/watch.ts`, which applies events into the list query's cache. Prefer a watch
-  over polling for anything that changes on its own. - **Getting inside** (`src/main/k8s/debug.ts`): `pods.debug` attaches an ephemeral container
-  through its own subresource, which takes a **JSON** patch (`add` on `/spec/ephemeralContainers`
-  writes the key whether or not it exists); the API has no call to remove one, so the dialog says so
-  before attaching. `nodes.debug` runs a privileged pod on the node that enters the host's
-  namespaces with `nsenter` — the most powerful thing the app does, so it is never implicit, the pod
-  is labelled as the app's and named back to the caller for deletion, and it is created in the
-  namespace the user has selected rather than one the app picks. `pods.copyFrom` / `pods.copyTo`
-  carry files over exec using the container's own tools, streamed to and from disk rather than held
-  in memory; **the local path always comes from the OS picker in main**, never from the renderer,
-  for the same reason the kubeconfig does, and a cancelled picker answers null rather than failing.
-  Port forwards live in `src/renderer/lib/port-forwards.ts`, outside React for the same reason shells
+  over polling for anything that changes on its own.
+- **Port forwards** live in `src/renderer/lib/port-forwards.ts`, outside React for the same reason shells
   are, and are listed and stopped from the top bar rather than from the page that started one. A
   forward may target a **Service**: main resolves it to a ready endpoint **per connection**
   (`readyPodOf`), so it survives the rollout that would end a forward aimed at one pod. Forwards are
@@ -130,9 +121,9 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   the pod is how a shell is closed and a terminal is never left attached to a cluster nobody is
   looking at. The tab is deliberately not `keepMounted`: merely opening a pod's page must not exec
   into it. `src/renderer/lib/terminal-look.ts` holds the font and the two ANSI palettes, because
-  xterm needs literal colours and the app's theme can flip under a running session. The node shell
-  and the debug container are shells of a pod too: the debugger hands its container name back so the
-  tab's picker switches into it, and a node shell navigates to the pod it created.
+  xterm needs literal colours and the app's theme can flip under a running session. The app opens no
+  other way in: it attaches no debug container, runs no privileged pod on a node, and carries no
+  files across the exec channel — `kubectl debug` and `kubectl cp` are where those belong.
   A controller's Logs tab follows every pod it owns at once (`src/renderer/lib/multi-pod-logs.ts`):
   the API server has no call for "the logs of this deployment", so it is one stream per pod, merged
   in arrival order and coloured by pod, restarting when the set of pods changes so a replaced pod

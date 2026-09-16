@@ -24,11 +24,7 @@ type WriteChannel =
     | 'jobs.retry'
     | 'cronJobs.trigger'
     | 'cronJobs.suspend'
-    | 'autoscalers.update'
-    | 'pods.debug'
-    | 'pods.copyFrom'
-    | 'pods.copyTo'
-    | 'nodes.debug';
+    | 'autoscalers.update';
 
 /** What a screen passes to a write: the input minus the context stamp, which is added here. */
 export type WriteVariables<C extends WriteChannel> = Omit<IpcInput<C>, 'context'>;
@@ -208,35 +204,6 @@ export function useUpdateAutoscaler() {
     return useIpcMutation<'autoscalers.update', WriteVariables<'autoscalers.update'>>('autoscalers.update', {
         prepare: (variables, client) => stamp('autoscalers.update', variables, client),
         invalidates: (input) => resourceKeys('HorizontalPodAutoscaler', input.name, input.namespace),
-    });
-}
-
-/** Attach a debug container; the pod's own screens show it among the containers afterwards. */
-export function useAddDebugContainer() {
-    return useIpcMutation<'pods.debug', WriteVariables<'pods.debug'>>('pods.debug', {
-        prepare: (variables, client) => stamp('pods.debug', variables, client),
-        invalidates: (input) => resourceKeys('Pod', input.name, input.namespace),
-    });
-}
-
-/** Copy a file out of a container. Nothing in the cluster changes, so nothing is invalidated. */
-export function useCopyFromPod() {
-    return useIpcMutation<'pods.copyFrom', WriteVariables<'pods.copyFrom'>>('pods.copyFrom', {
-        prepare: (variables, client) => stamp('pods.copyFrom', variables, client),
-    });
-}
-
-export function useCopyToPod() {
-    return useIpcMutation<'pods.copyTo', WriteVariables<'pods.copyTo'>>('pods.copyTo', {
-        prepare: (variables, client) => stamp('pods.copyTo', variables, client),
-    });
-}
-
-/** Start a node shell: a privileged pod appears, so the pod lists follow it. */
-export function useStartNodeShell() {
-    return useIpcMutation<'nodes.debug', WriteVariables<'nodes.debug'>>('nodes.debug', {
-        prepare: (variables, client) => stamp('nodes.debug', variables, client),
-        invalidates: () => [['resources.list'], ['workloads.pods']],
     });
 }
 
