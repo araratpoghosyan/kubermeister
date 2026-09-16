@@ -223,6 +223,41 @@ export const KIND_REGISTRY = {
         scalable: false,
         listPath: '/access/clusterrolebindings',
     },
+    MutatingWebhookConfiguration: {
+        kind: 'MutatingWebhookConfiguration',
+        apiVersion: 'admissionregistration.k8s.io/v1',
+        clusterScoped: true,
+        scalable: false,
+        listPath: '/addons/mutatingwebhooks',
+    },
+    ValidatingWebhookConfiguration: {
+        kind: 'ValidatingWebhookConfiguration',
+        apiVersion: 'admissionregistration.k8s.io/v1',
+        clusterScoped: true,
+        scalable: false,
+        listPath: '/addons/validatingwebhooks',
+    },
+    ValidatingAdmissionPolicy: {
+        kind: 'ValidatingAdmissionPolicy',
+        apiVersion: 'admissionregistration.k8s.io/v1',
+        clusterScoped: true,
+        scalable: false,
+        listPath: '/addons/admissionpolicies',
+    },
+    APIService: {
+        kind: 'APIService',
+        apiVersion: 'apiregistration.k8s.io/v1',
+        clusterScoped: true,
+        scalable: false,
+        listPath: '/addons/apiservices',
+    },
+    FlowSchema: {
+        kind: 'FlowSchema',
+        apiVersion: 'flowcontrol.apiserver.k8s.io/v1',
+        clusterScoped: true,
+        scalable: false,
+        listPath: '/addons/flowschemas',
+    },
     CustomResourceDefinition: {
         kind: 'CustomResourceDefinition',
         apiVersion: 'apiextensions.k8s.io/v1',
@@ -255,11 +290,8 @@ export type RestartKind = (typeof RESTARTABLE_KINDS)[number];
  * (namespace stamping, event lookup) consults, so two call sites can never disagree about a kind.
  */
 export const CLUSTER_SCOPED_EXTRA_KINDS: readonly string[] = [
-    'APIService',
-    'MutatingWebhookConfiguration',
     'Namespace',
     'Node',
-    'ValidatingWebhookConfiguration',
     'VolumeAttachment',
     'VolumeSnapshotClass',
 ];

@@ -5,6 +5,8 @@ import type { EndpointReady, NetworkStatus } from '../../shared/k8s/network';
 import type { ClaimStatus, SnapshotReady, VolumeStatus } from '../../shared/k8s/storage';
 import type { ContainerState, PodStatus } from '../../shared/k8s/pods';
 import type { DisruptionStatus } from '../../shared/k8s/policy';
+import type { WebhookStatus } from '../../shared/k8s/admission';
+import type { ApiServiceStatus } from '../../shared/k8s/apiserver';
 import type { DeploymentStatus, JobStatus, RolloutState } from '../../shared/k8s/workloads';
 
 /** Presentational tone a status badge renders with. */
@@ -63,6 +65,10 @@ export const RELEASE_TONE: Record<ReleaseStatus, StatusTone> = {
     Terminating: 'warn',
     Unknown: 'neutral',
 };
+/** A webhook that fails closed is a dependency of writing at all, which is worth flagging. */
+export const WEBHOOK_TONE: Record<WebhookStatus, StatusTone> = { Blocking: 'warn', Permissive: 'neutral' };
+export const API_SERVICE_TONE: Record<ApiServiceStatus, StatusTone> = { Available: 'ok', Unavailable: 'danger' };
+
 /** A budget allowing no disruption blocks a drain, which is worth flagging rather than colouring ok. */
 export const DISRUPTION_TONE: Record<DisruptionStatus, StatusTone> = { Satisfied: 'ok', Blocked: 'warn' };
 export const JOB_TONE: Record<JobStatus, StatusTone> = { Complete: 'ok', Running: 'accent', Failed: 'danger' };

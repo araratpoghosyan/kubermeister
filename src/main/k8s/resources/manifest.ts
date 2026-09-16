@@ -56,6 +56,11 @@ const LIST_FNS: Record<ManifestKind, ListFn> = {
     RoleBinding: (ns) => apis().rbac.listNamespacedRoleBinding({ namespace: ns }),
     ClusterRole: () => apis().rbac.listClusterRole(),
     ClusterRoleBinding: () => apis().rbac.listClusterRoleBinding(),
+    MutatingWebhookConfiguration: () => apis().admission.listMutatingWebhookConfiguration(),
+    ValidatingWebhookConfiguration: () => apis().admission.listValidatingWebhookConfiguration(),
+    ValidatingAdmissionPolicy: () => apis().admission.listValidatingAdmissionPolicy(),
+    APIService: () => apis().apiregistration.listAPIService(),
+    FlowSchema: () => apis().flowcontrol.listFlowSchema(),
     CustomResourceDefinition: () => apis().apiextensions.listCustomResourceDefinition(),
     Node: () => apis().core.listNode(),
 };

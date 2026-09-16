@@ -82,6 +82,13 @@ const client = {
             listCSIStorageCapacityForAllNamespaces: listAny,
         },
         runtime: { listRuntimeClass: listAny },
+        admission: {
+            listMutatingWebhookConfiguration: listAny,
+            listValidatingWebhookConfiguration: listAny,
+            listValidatingAdmissionPolicy: listAny,
+        },
+        apiregistration: { listAPIService: listAny },
+        flowcontrol: { listFlowSchema: listAny },
         policy: {
             listNamespacedPodDisruptionBudget: listAny,
             listPodDisruptionBudgetForAllNamespaces: listAny,

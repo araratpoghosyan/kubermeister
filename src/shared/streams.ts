@@ -7,6 +7,8 @@ import { endpointsSchema, ingressSchema, networkPolicySchema, serviceSchema } fr
 import { customResourceSchema } from './k8s/addons.js';
 import { leaseSchema, podDisruptionBudgetSchema, priorityClassSchema } from './k8s/policy.js';
 import { ingressClassSchema, runtimeClassSchema } from './k8s/classes.js';
+import { admissionPolicySchema, webhookConfigSchema } from './k8s/admission.js';
+import { apiServiceSchema, flowSchemaSchema } from './k8s/apiserver.js';
 import { csiCapacitySchema, csiDriverSchema, csiNodeSchema } from './k8s/csi.js';
 import { drainOptionsSchema, type DrainEvent } from './k8s/drain.js';
 import {
@@ -84,6 +86,11 @@ export const watchEventSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('RoleBinding'), type: watchType, item: roleBindingSchema }),
     z.object({ kind: z.literal('ClusterRole'), type: watchType, item: clusterRoleSchema }),
     z.object({ kind: z.literal('ClusterRoleBinding'), type: watchType, item: clusterRoleBindingSchema }),
+    z.object({ kind: z.literal('MutatingWebhookConfiguration'), type: watchType, item: webhookConfigSchema }),
+    z.object({ kind: z.literal('ValidatingWebhookConfiguration'), type: watchType, item: webhookConfigSchema }),
+    z.object({ kind: z.literal('ValidatingAdmissionPolicy'), type: watchType, item: admissionPolicySchema }),
+    z.object({ kind: z.literal('APIService'), type: watchType, item: apiServiceSchema }),
+    z.object({ kind: z.literal('FlowSchema'), type: watchType, item: flowSchemaSchema }),
     z.object({ kind: z.literal('CustomResourceDefinition'), type: watchType, item: customResourceSchema }),
 ]);
 

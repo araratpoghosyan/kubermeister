@@ -211,6 +211,12 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   CSI kinds (drivers, nodes, storage capacity) read through `apis().storage`. A CSIDriver's
   `attachRequired` defaults to **true** when unset, unlike its other flags, so an omitted spec must
   not read as a driver that needs no attach step.
+  The admission kinds (webhook configurations, ValidatingAdmissionPolicies) read through
+  `apis().admission`, APIServices through `apis().apiregistration` and FlowSchemas through
+  `apis().flowcontrol`. A webhook configuration reads Blocking when any of its webhooks fails
+  closed — the API's own default when `failurePolicy` is unset — because such a configuration is a
+  dependency of writing at all, and an unavailable APIService explains why a whole API group's
+  kinds have vanished.
   Deployments also have `deployments.replicaSets`, `deployments.rollouts`,
   `deployments.rolloutStatus` and `metrics.deploymentSeries` (the sum of the selected pods' tracked
   series), plus the two writes that belong to a rollout rather than to a kind in general:

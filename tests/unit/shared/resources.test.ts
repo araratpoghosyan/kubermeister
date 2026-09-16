@@ -56,6 +56,11 @@ describe('kind registry', () => {
             'RoleBinding',
             'ClusterRole',
             'ClusterRoleBinding',
+            'MutatingWebhookConfiguration',
+            'ValidatingWebhookConfiguration',
+            'ValidatingAdmissionPolicy',
+            'APIService',
+            'FlowSchema',
             'CustomResourceDefinition',
         ]);
         expect(kindInfo('HorizontalPodAutoscaler')).toMatchObject({

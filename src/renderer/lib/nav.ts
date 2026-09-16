@@ -17,10 +17,12 @@ import {
     LayersIcon,
     LockIcon,
     PackageIcon,
+    PencilIcon,
     PlayIcon,
     PlugIcon,
     RocketIcon,
     RouteIcon,
+    ScaleIcon,
     ServerIcon,
     SettingsIcon,
     ShieldCheckIcon,
@@ -28,6 +30,7 @@ import {
     TimerIcon,
     TrendingUpIcon,
     UserIcon,
+    WavesIcon,
     WaypointsIcon,
 } from 'lucide-react';
 import type { RoutePath } from './router';
@@ -245,6 +248,36 @@ export const DOMAINS: Domain[] = [
                     { id: 'charts', label: 'Helm charts', path: '/addons/charts', icon: PackageIcon },
                     { id: 'releases', label: 'Releases', path: '/addons/releases', icon: RocketIcon },
                     { id: 'crds', label: 'CRDs', path: '/addons/crds', icon: CodeIcon },
+                ],
+            },
+            {
+                label: 'ADMISSION',
+                items: [
+                    {
+                        id: 'mutatingwebhooks',
+                        label: 'MutatingWebhooks',
+                        path: '/addons/mutatingwebhooks',
+                        icon: PencilIcon,
+                    },
+                    {
+                        id: 'validatingwebhooks',
+                        label: 'ValidatingWebhooks',
+                        path: '/addons/validatingwebhooks',
+                        icon: ShieldIcon,
+                    },
+                    {
+                        id: 'admissionpolicies',
+                        label: 'AdmissionPolicies',
+                        path: '/addons/admissionpolicies',
+                        icon: ScaleIcon,
+                    },
+                ],
+            },
+            {
+                label: 'API SERVER',
+                items: [
+                    { id: 'apiservices', label: 'APIServices', path: '/addons/apiservices', icon: PlugIcon },
+                    { id: 'flowschemas', label: 'FlowSchemas', path: '/addons/flowschemas', icon: WavesIcon },
                 ],
             },
         ],

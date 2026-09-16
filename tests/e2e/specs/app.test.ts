@@ -301,7 +301,7 @@ test('shows the events stream, the namespace quota and its limit range', async (
 
 test('lists the seeded service and opens its ports and endpoints', async () => {
     const { window } = launched;
-    await window.getByTestId('sidebar').getByRole('link', { name: 'Services' }).click();
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Services', exact: true }).click();
     const row = window.getByTestId('services-table').locator('[data-service="web"]');
     await expect(row).toContainText('ClusterIP');
     await expect(row).toContainText('80/TCP');
@@ -682,7 +682,7 @@ test('attaches a debug container to the seeded pod and opens its shell', async (
 
 test('forwards a service, which resolves to whichever pod is ready', async () => {
     const { window } = launched;
-    await window.getByTestId('sidebar').getByRole('link', { name: 'Services' }).click();
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Services', exact: true }).click();
     await window.getByTestId('services-table').locator('[data-service="web"]').getByRole('link').click();
     const page = window.getByTestId('service-page');
     // The forward control sits with the ports it forwards.
@@ -771,6 +771,43 @@ test('lists the class kinds and the CSI plumbing behind the volumes', async () =
     await expect(capacity).toContainText('10Gi');
     await capacity.getByRole('link').click();
     await expect(window.getByTestId('capacity-page')).toContainText('class: local-path');
+
+    // Leave the app on a list, since the specs after this one start from wherever this one stopped.
+    await sidebar.getByRole('link', { name: 'Pods' }).click();
+});
+
+test('lists what stands between a write and the cluster, and the API server’s own extensions', async () => {
+    const { window } = launched;
+    const sidebar = window.getByTestId('sidebar');
+
+    await sidebar.getByRole('link', { name: 'MutatingWebhooks' }).click();
+    const mutating = window.getByTestId('mutatingwebhooks-table').locator('[data-mutatingwebhook="km-e2e-mutating"]');
+    await expect(mutating).toContainText('mutate.km-e2e.test');
+    // The seeded hooks fail open, so they are reported as harmless rather than as a dependency.
+    await expect(mutating).toContainText('Permissive');
+    await mutating.getByRole('link').click();
+    await expect(window.getByTestId('mutatingwebhook-page')).toContainText('webhooks: 1');
+
+    await sidebar.getByRole('link', { name: 'ValidatingWebhooks' }).click();
+    const validating = window
+        .getByTestId('validatingwebhooks-table')
+        .locator('[data-validatingwebhook="km-e2e-validating"]');
+    await expect(validating).toContainText('Ignore');
+
+    await sidebar.getByRole('link', { name: 'AdmissionPolicies' }).click();
+    const policy = window.getByTestId('admissionpolicies-table').locator('[data-admissionpolicy="km-e2e-policy"]');
+    await expect(policy).toContainText('apps/deployments');
+    await policy.getByRole('link').click();
+    await expect(window.getByTestId('admissionpolicy-page')).toContainText('validations: 1');
+
+    // These two need no seeding: every API server serves its own core API and its own flow schemas.
+    await sidebar.getByRole('link', { name: 'APIServices' }).click();
+    const core = window.getByTestId('apiservices-table').locator('[data-apiservice="v1."]');
+    await expect(core).toContainText('Local');
+    await expect(core).toContainText('Available');
+
+    await sidebar.getByRole('link', { name: 'FlowSchemas' }).click();
+    await expect(window.getByTestId('flowschemas-table').locator('[data-flowschema="exempt"]')).toBeVisible();
 
     // Leave the app on a list, since the specs after this one start from wherever this one stopped.
     await sidebar.getByRole('link', { name: 'Pods' }).click();

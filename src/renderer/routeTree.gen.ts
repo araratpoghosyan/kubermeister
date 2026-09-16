@@ -26,9 +26,19 @@ import { Route as AccessClusterrolesNameRouteImport } from './routes/access/clus
 import { Route as AccessRolebindingsIndexRouteImport } from './routes/access/rolebindings/index';
 import { Route as AccessRolesIndexRouteImport } from './routes/access/roles/index';
 import { Route as AccessServiceaccountsIndexRouteImport } from './routes/access/serviceaccounts/index';
+import { Route as AddonsAdmissionpoliciesIndexRouteImport } from './routes/addons/admissionpolicies/index';
+import { Route as AddonsAdmissionpoliciesNameRouteImport } from './routes/addons/admissionpolicies_.$name';
+import { Route as AddonsApiservicesIndexRouteImport } from './routes/addons/apiservices/index';
+import { Route as AddonsApiservicesNameRouteImport } from './routes/addons/apiservices_.$name';
 import { Route as AddonsCrdsIndexRouteImport } from './routes/addons/crds/index';
 import { Route as AddonsCrdsNameRouteImport } from './routes/addons/crds_.$name';
+import { Route as AddonsFlowschemasIndexRouteImport } from './routes/addons/flowschemas/index';
+import { Route as AddonsFlowschemasNameRouteImport } from './routes/addons/flowschemas_.$name';
+import { Route as AddonsMutatingwebhooksIndexRouteImport } from './routes/addons/mutatingwebhooks/index';
+import { Route as AddonsMutatingwebhooksNameRouteImport } from './routes/addons/mutatingwebhooks_.$name';
 import { Route as AddonsReleasesIndexRouteImport } from './routes/addons/releases/index';
+import { Route as AddonsValidatingwebhooksIndexRouteImport } from './routes/addons/validatingwebhooks/index';
+import { Route as AddonsValidatingwebhooksNameRouteImport } from './routes/addons/validatingwebhooks_.$name';
 import { Route as NetworkEndpointsIndexRouteImport } from './routes/network/endpoints/index';
 import { Route as NetworkIngressclassesIndexRouteImport } from './routes/network/ingressclasses/index';
 import { Route as NetworkIngressclassesNameRouteImport } from './routes/network/ingressclasses_.$name';
@@ -177,6 +187,28 @@ const AccessServiceaccountsIndexRoute =
     path: '/access/serviceaccounts/',
     getParentRoute: () => rootRouteImport,
   } as any);
+const AddonsAdmissionpoliciesIndexRoute =
+  AddonsAdmissionpoliciesIndexRouteImport.update({
+    id: '/addons/admissionpolicies/',
+    path: '/addons/admissionpolicies/',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const AddonsAdmissionpoliciesNameRoute =
+  AddonsAdmissionpoliciesNameRouteImport.update({
+    id: '/addons/admissionpolicies_/$name',
+    path: '/addons/admissionpolicies/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const AddonsApiservicesIndexRoute = AddonsApiservicesIndexRouteImport.update({
+  id: '/addons/apiservices/',
+  path: '/addons/apiservices/',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const AddonsApiservicesNameRoute = AddonsApiservicesNameRouteImport.update({
+  id: '/addons/apiservices_/$name',
+  path: '/addons/apiservices/$name',
+  getParentRoute: () => rootRouteImport,
+} as any);
 const AddonsCrdsIndexRoute = AddonsCrdsIndexRouteImport.update({
   id: '/addons/crds/',
   path: '/addons/crds/',
@@ -187,11 +219,45 @@ const AddonsCrdsNameRoute = AddonsCrdsNameRouteImport.update({
   path: '/addons/crds/$name',
   getParentRoute: () => rootRouteImport,
 } as any);
+const AddonsFlowschemasIndexRoute = AddonsFlowschemasIndexRouteImport.update({
+  id: '/addons/flowschemas/',
+  path: '/addons/flowschemas/',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const AddonsFlowschemasNameRoute = AddonsFlowschemasNameRouteImport.update({
+  id: '/addons/flowschemas_/$name',
+  path: '/addons/flowschemas/$name',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const AddonsMutatingwebhooksIndexRoute =
+  AddonsMutatingwebhooksIndexRouteImport.update({
+    id: '/addons/mutatingwebhooks/',
+    path: '/addons/mutatingwebhooks/',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const AddonsMutatingwebhooksNameRoute =
+  AddonsMutatingwebhooksNameRouteImport.update({
+    id: '/addons/mutatingwebhooks_/$name',
+    path: '/addons/mutatingwebhooks/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
 const AddonsReleasesIndexRoute = AddonsReleasesIndexRouteImport.update({
   id: '/addons/releases/',
   path: '/addons/releases/',
   getParentRoute: () => rootRouteImport,
 } as any);
+const AddonsValidatingwebhooksIndexRoute =
+  AddonsValidatingwebhooksIndexRouteImport.update({
+    id: '/addons/validatingwebhooks/',
+    path: '/addons/validatingwebhooks/',
+    getParentRoute: () => rootRouteImport,
+  } as any);
+const AddonsValidatingwebhooksNameRoute =
+  AddonsValidatingwebhooksNameRouteImport.update({
+    id: '/addons/validatingwebhooks_/$name',
+    path: '/addons/validatingwebhooks/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
 const NetworkEndpointsIndexRoute = NetworkEndpointsIndexRouteImport.update({
   id: '/network/endpoints/',
   path: '/network/endpoints/',
@@ -542,7 +608,12 @@ export interface FileRoutesByFullPath {
   '/overview/summary': typeof OverviewSummaryRoute;
   '/access/clusterrolebindings/$name': typeof AccessClusterrolebindingsNameRoute;
   '/access/clusterroles/$name': typeof AccessClusterrolesNameRoute;
+  '/addons/admissionpolicies/$name': typeof AddonsAdmissionpoliciesNameRoute;
+  '/addons/apiservices/$name': typeof AddonsApiservicesNameRoute;
   '/addons/crds/$name': typeof AddonsCrdsNameRoute;
+  '/addons/flowschemas/$name': typeof AddonsFlowschemasNameRoute;
+  '/addons/mutatingwebhooks/$name': typeof AddonsMutatingwebhooksNameRoute;
+  '/addons/validatingwebhooks/$name': typeof AddonsValidatingwebhooksNameRoute;
   '/network/ingressclasses/$name': typeof NetworkIngressclassesNameRoute;
   '/overview/nodes/$name': typeof OverviewNodesNameRoute;
   '/overview/priorityclasses/$name': typeof OverviewPriorityclassesNameRoute;
@@ -556,8 +627,13 @@ export interface FileRoutesByFullPath {
   '/access/rolebindings/': typeof AccessRolebindingsIndexRoute;
   '/access/roles/': typeof AccessRolesIndexRoute;
   '/access/serviceaccounts/': typeof AccessServiceaccountsIndexRoute;
+  '/addons/admissionpolicies/': typeof AddonsAdmissionpoliciesIndexRoute;
+  '/addons/apiservices/': typeof AddonsApiservicesIndexRoute;
   '/addons/crds/': typeof AddonsCrdsIndexRoute;
+  '/addons/flowschemas/': typeof AddonsFlowschemasIndexRoute;
+  '/addons/mutatingwebhooks/': typeof AddonsMutatingwebhooksIndexRoute;
   '/addons/releases/': typeof AddonsReleasesIndexRoute;
+  '/addons/validatingwebhooks/': typeof AddonsValidatingwebhooksIndexRoute;
   '/network/endpoints/': typeof NetworkEndpointsIndexRoute;
   '/network/ingressclasses/': typeof NetworkIngressclassesIndexRoute;
   '/network/ingresses/': typeof NetworkIngressesIndexRoute;
@@ -623,7 +699,12 @@ export interface FileRoutesByTo {
   '/overview/summary': typeof OverviewSummaryRoute;
   '/access/clusterrolebindings/$name': typeof AccessClusterrolebindingsNameRoute;
   '/access/clusterroles/$name': typeof AccessClusterrolesNameRoute;
+  '/addons/admissionpolicies/$name': typeof AddonsAdmissionpoliciesNameRoute;
+  '/addons/apiservices/$name': typeof AddonsApiservicesNameRoute;
   '/addons/crds/$name': typeof AddonsCrdsNameRoute;
+  '/addons/flowschemas/$name': typeof AddonsFlowschemasNameRoute;
+  '/addons/mutatingwebhooks/$name': typeof AddonsMutatingwebhooksNameRoute;
+  '/addons/validatingwebhooks/$name': typeof AddonsValidatingwebhooksNameRoute;
   '/network/ingressclasses/$name': typeof NetworkIngressclassesNameRoute;
   '/overview/nodes/$name': typeof OverviewNodesNameRoute;
   '/overview/priorityclasses/$name': typeof OverviewPriorityclassesNameRoute;
@@ -637,8 +718,13 @@ export interface FileRoutesByTo {
   '/access/rolebindings': typeof AccessRolebindingsIndexRoute;
   '/access/roles': typeof AccessRolesIndexRoute;
   '/access/serviceaccounts': typeof AccessServiceaccountsIndexRoute;
+  '/addons/admissionpolicies': typeof AddonsAdmissionpoliciesIndexRoute;
+  '/addons/apiservices': typeof AddonsApiservicesIndexRoute;
   '/addons/crds': typeof AddonsCrdsIndexRoute;
+  '/addons/flowschemas': typeof AddonsFlowschemasIndexRoute;
+  '/addons/mutatingwebhooks': typeof AddonsMutatingwebhooksIndexRoute;
   '/addons/releases': typeof AddonsReleasesIndexRoute;
+  '/addons/validatingwebhooks': typeof AddonsValidatingwebhooksIndexRoute;
   '/network/endpoints': typeof NetworkEndpointsIndexRoute;
   '/network/ingressclasses': typeof NetworkIngressclassesIndexRoute;
   '/network/ingresses': typeof NetworkIngressesIndexRoute;
@@ -705,7 +791,12 @@ export interface FileRoutesById {
   '/overview/summary': typeof OverviewSummaryRoute;
   '/access/clusterrolebindings_/$name': typeof AccessClusterrolebindingsNameRoute;
   '/access/clusterroles_/$name': typeof AccessClusterrolesNameRoute;
+  '/addons/admissionpolicies_/$name': typeof AddonsAdmissionpoliciesNameRoute;
+  '/addons/apiservices_/$name': typeof AddonsApiservicesNameRoute;
   '/addons/crds_/$name': typeof AddonsCrdsNameRoute;
+  '/addons/flowschemas_/$name': typeof AddonsFlowschemasNameRoute;
+  '/addons/mutatingwebhooks_/$name': typeof AddonsMutatingwebhooksNameRoute;
+  '/addons/validatingwebhooks_/$name': typeof AddonsValidatingwebhooksNameRoute;
   '/network/ingressclasses_/$name': typeof NetworkIngressclassesNameRoute;
   '/overview/nodes_/$name': typeof OverviewNodesNameRoute;
   '/overview/priorityclasses_/$name': typeof OverviewPriorityclassesNameRoute;
@@ -719,8 +810,13 @@ export interface FileRoutesById {
   '/access/rolebindings/': typeof AccessRolebindingsIndexRoute;
   '/access/roles/': typeof AccessRolesIndexRoute;
   '/access/serviceaccounts/': typeof AccessServiceaccountsIndexRoute;
+  '/addons/admissionpolicies/': typeof AddonsAdmissionpoliciesIndexRoute;
+  '/addons/apiservices/': typeof AddonsApiservicesIndexRoute;
   '/addons/crds/': typeof AddonsCrdsIndexRoute;
+  '/addons/flowschemas/': typeof AddonsFlowschemasIndexRoute;
+  '/addons/mutatingwebhooks/': typeof AddonsMutatingwebhooksIndexRoute;
   '/addons/releases/': typeof AddonsReleasesIndexRoute;
+  '/addons/validatingwebhooks/': typeof AddonsValidatingwebhooksIndexRoute;
   '/network/endpoints/': typeof NetworkEndpointsIndexRoute;
   '/network/ingressclasses/': typeof NetworkIngressclassesIndexRoute;
   '/network/ingresses/': typeof NetworkIngressesIndexRoute;
@@ -788,7 +884,12 @@ export interface FileRouteTypes {
     | '/overview/summary'
     | '/access/clusterrolebindings/$name'
     | '/access/clusterroles/$name'
+    | '/addons/admissionpolicies/$name'
+    | '/addons/apiservices/$name'
     | '/addons/crds/$name'
+    | '/addons/flowschemas/$name'
+    | '/addons/mutatingwebhooks/$name'
+    | '/addons/validatingwebhooks/$name'
     | '/network/ingressclasses/$name'
     | '/overview/nodes/$name'
     | '/overview/priorityclasses/$name'
@@ -802,8 +903,13 @@ export interface FileRouteTypes {
     | '/access/rolebindings/'
     | '/access/roles/'
     | '/access/serviceaccounts/'
+    | '/addons/admissionpolicies/'
+    | '/addons/apiservices/'
     | '/addons/crds/'
+    | '/addons/flowschemas/'
+    | '/addons/mutatingwebhooks/'
     | '/addons/releases/'
+    | '/addons/validatingwebhooks/'
     | '/network/endpoints/'
     | '/network/ingressclasses/'
     | '/network/ingresses/'
@@ -869,7 +975,12 @@ export interface FileRouteTypes {
     | '/overview/summary'
     | '/access/clusterrolebindings/$name'
     | '/access/clusterroles/$name'
+    | '/addons/admissionpolicies/$name'
+    | '/addons/apiservices/$name'
     | '/addons/crds/$name'
+    | '/addons/flowschemas/$name'
+    | '/addons/mutatingwebhooks/$name'
+    | '/addons/validatingwebhooks/$name'
     | '/network/ingressclasses/$name'
     | '/overview/nodes/$name'
     | '/overview/priorityclasses/$name'
@@ -883,8 +994,13 @@ export interface FileRouteTypes {
     | '/access/rolebindings'
     | '/access/roles'
     | '/access/serviceaccounts'
+    | '/addons/admissionpolicies'
+    | '/addons/apiservices'
     | '/addons/crds'
+    | '/addons/flowschemas'
+    | '/addons/mutatingwebhooks'
     | '/addons/releases'
+    | '/addons/validatingwebhooks'
     | '/network/endpoints'
     | '/network/ingressclasses'
     | '/network/ingresses'
@@ -950,7 +1066,12 @@ export interface FileRouteTypes {
     | '/overview/summary'
     | '/access/clusterrolebindings_/$name'
     | '/access/clusterroles_/$name'
+    | '/addons/admissionpolicies_/$name'
+    | '/addons/apiservices_/$name'
     | '/addons/crds_/$name'
+    | '/addons/flowschemas_/$name'
+    | '/addons/mutatingwebhooks_/$name'
+    | '/addons/validatingwebhooks_/$name'
     | '/network/ingressclasses_/$name'
     | '/overview/nodes_/$name'
     | '/overview/priorityclasses_/$name'
@@ -964,8 +1085,13 @@ export interface FileRouteTypes {
     | '/access/rolebindings/'
     | '/access/roles/'
     | '/access/serviceaccounts/'
+    | '/addons/admissionpolicies/'
+    | '/addons/apiservices/'
     | '/addons/crds/'
+    | '/addons/flowschemas/'
+    | '/addons/mutatingwebhooks/'
     | '/addons/releases/'
+    | '/addons/validatingwebhooks/'
     | '/network/endpoints/'
     | '/network/ingressclasses/'
     | '/network/ingresses/'
@@ -1032,7 +1158,12 @@ export interface RootRouteChildren {
   OverviewSummaryRoute: typeof OverviewSummaryRoute;
   AccessClusterrolebindingsNameRoute: typeof AccessClusterrolebindingsNameRoute;
   AccessClusterrolesNameRoute: typeof AccessClusterrolesNameRoute;
+  AddonsAdmissionpoliciesNameRoute: typeof AddonsAdmissionpoliciesNameRoute;
+  AddonsApiservicesNameRoute: typeof AddonsApiservicesNameRoute;
   AddonsCrdsNameRoute: typeof AddonsCrdsNameRoute;
+  AddonsFlowschemasNameRoute: typeof AddonsFlowschemasNameRoute;
+  AddonsMutatingwebhooksNameRoute: typeof AddonsMutatingwebhooksNameRoute;
+  AddonsValidatingwebhooksNameRoute: typeof AddonsValidatingwebhooksNameRoute;
   NetworkIngressclassesNameRoute: typeof NetworkIngressclassesNameRoute;
   OverviewNodesNameRoute: typeof OverviewNodesNameRoute;
   OverviewPriorityclassesNameRoute: typeof OverviewPriorityclassesNameRoute;
@@ -1046,8 +1177,13 @@ export interface RootRouteChildren {
   AccessRolebindingsIndexRoute: typeof AccessRolebindingsIndexRoute;
   AccessRolesIndexRoute: typeof AccessRolesIndexRoute;
   AccessServiceaccountsIndexRoute: typeof AccessServiceaccountsIndexRoute;
+  AddonsAdmissionpoliciesIndexRoute: typeof AddonsAdmissionpoliciesIndexRoute;
+  AddonsApiservicesIndexRoute: typeof AddonsApiservicesIndexRoute;
   AddonsCrdsIndexRoute: typeof AddonsCrdsIndexRoute;
+  AddonsFlowschemasIndexRoute: typeof AddonsFlowschemasIndexRoute;
+  AddonsMutatingwebhooksIndexRoute: typeof AddonsMutatingwebhooksIndexRoute;
   AddonsReleasesIndexRoute: typeof AddonsReleasesIndexRoute;
+  AddonsValidatingwebhooksIndexRoute: typeof AddonsValidatingwebhooksIndexRoute;
   NetworkEndpointsIndexRoute: typeof NetworkEndpointsIndexRoute;
   NetworkIngressclassesIndexRoute: typeof NetworkIngressclassesIndexRoute;
   NetworkIngressesIndexRoute: typeof NetworkIngressesIndexRoute;
@@ -1222,6 +1358,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccessServiceaccountsIndexRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/addons/admissionpolicies/': {
+      id: '/addons/admissionpolicies/';
+      path: '/addons/admissionpolicies';
+      fullPath: '/addons/admissionpolicies/';
+      preLoaderRoute: typeof AddonsAdmissionpoliciesIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/addons/admissionpolicies_/$name': {
+      id: '/addons/admissionpolicies_/$name';
+      path: '/addons/admissionpolicies/$name';
+      fullPath: '/addons/admissionpolicies/$name';
+      preLoaderRoute: typeof AddonsAdmissionpoliciesNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/addons/apiservices/': {
+      id: '/addons/apiservices/';
+      path: '/addons/apiservices';
+      fullPath: '/addons/apiservices/';
+      preLoaderRoute: typeof AddonsApiservicesIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/addons/apiservices_/$name': {
+      id: '/addons/apiservices_/$name';
+      path: '/addons/apiservices/$name';
+      fullPath: '/addons/apiservices/$name';
+      preLoaderRoute: typeof AddonsApiservicesNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/addons/crds/': {
       id: '/addons/crds/';
       path: '/addons/crds';
@@ -1236,11 +1400,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AddonsCrdsNameRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/addons/flowschemas/': {
+      id: '/addons/flowschemas/';
+      path: '/addons/flowschemas';
+      fullPath: '/addons/flowschemas/';
+      preLoaderRoute: typeof AddonsFlowschemasIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/addons/flowschemas_/$name': {
+      id: '/addons/flowschemas_/$name';
+      path: '/addons/flowschemas/$name';
+      fullPath: '/addons/flowschemas/$name';
+      preLoaderRoute: typeof AddonsFlowschemasNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/addons/mutatingwebhooks/': {
+      id: '/addons/mutatingwebhooks/';
+      path: '/addons/mutatingwebhooks';
+      fullPath: '/addons/mutatingwebhooks/';
+      preLoaderRoute: typeof AddonsMutatingwebhooksIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/addons/mutatingwebhooks_/$name': {
+      id: '/addons/mutatingwebhooks_/$name';
+      path: '/addons/mutatingwebhooks/$name';
+      fullPath: '/addons/mutatingwebhooks/$name';
+      preLoaderRoute: typeof AddonsMutatingwebhooksNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/addons/releases/': {
       id: '/addons/releases/';
       path: '/addons/releases';
       fullPath: '/addons/releases/';
       preLoaderRoute: typeof AddonsReleasesIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/addons/validatingwebhooks/': {
+      id: '/addons/validatingwebhooks/';
+      path: '/addons/validatingwebhooks';
+      fullPath: '/addons/validatingwebhooks/';
+      preLoaderRoute: typeof AddonsValidatingwebhooksIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/addons/validatingwebhooks_/$name': {
+      id: '/addons/validatingwebhooks_/$name';
+      path: '/addons/validatingwebhooks/$name';
+      fullPath: '/addons/validatingwebhooks/$name';
+      preLoaderRoute: typeof AddonsValidatingwebhooksNameRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/network/endpoints/': {
@@ -1672,7 +1878,12 @@ const rootRouteChildren: RootRouteChildren = {
   OverviewSummaryRoute: OverviewSummaryRoute,
   AccessClusterrolebindingsNameRoute: AccessClusterrolebindingsNameRoute,
   AccessClusterrolesNameRoute: AccessClusterrolesNameRoute,
+  AddonsAdmissionpoliciesNameRoute: AddonsAdmissionpoliciesNameRoute,
+  AddonsApiservicesNameRoute: AddonsApiservicesNameRoute,
   AddonsCrdsNameRoute: AddonsCrdsNameRoute,
+  AddonsFlowschemasNameRoute: AddonsFlowschemasNameRoute,
+  AddonsMutatingwebhooksNameRoute: AddonsMutatingwebhooksNameRoute,
+  AddonsValidatingwebhooksNameRoute: AddonsValidatingwebhooksNameRoute,
   NetworkIngressclassesNameRoute: NetworkIngressclassesNameRoute,
   OverviewNodesNameRoute: OverviewNodesNameRoute,
   OverviewPriorityclassesNameRoute: OverviewPriorityclassesNameRoute,
@@ -1686,8 +1897,13 @@ const rootRouteChildren: RootRouteChildren = {
   AccessRolebindingsIndexRoute: AccessRolebindingsIndexRoute,
   AccessRolesIndexRoute: AccessRolesIndexRoute,
   AccessServiceaccountsIndexRoute: AccessServiceaccountsIndexRoute,
+  AddonsAdmissionpoliciesIndexRoute: AddonsAdmissionpoliciesIndexRoute,
+  AddonsApiservicesIndexRoute: AddonsApiservicesIndexRoute,
   AddonsCrdsIndexRoute: AddonsCrdsIndexRoute,
+  AddonsFlowschemasIndexRoute: AddonsFlowschemasIndexRoute,
+  AddonsMutatingwebhooksIndexRoute: AddonsMutatingwebhooksIndexRoute,
   AddonsReleasesIndexRoute: AddonsReleasesIndexRoute,
+  AddonsValidatingwebhooksIndexRoute: AddonsValidatingwebhooksIndexRoute,
   NetworkEndpointsIndexRoute: NetworkEndpointsIndexRoute,
   NetworkIngressclassesIndexRoute: NetworkIngressclassesIndexRoute,
   NetworkIngressesIndexRoute: NetworkIngressesIndexRoute,
