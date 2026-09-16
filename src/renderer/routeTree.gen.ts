@@ -77,6 +77,7 @@ import { Route as WorkloadsStatefulsetsIndexRouteImport } from './routes/workloa
 import { Route as AccessRolebindingsNamespaceNameRouteImport } from './routes/access/rolebindings/$namespace.$name';
 import { Route as AccessRolesNamespaceNameRouteImport } from './routes/access/roles/$namespace.$name';
 import { Route as AccessServiceaccountsNamespaceNameRouteImport } from './routes/access/serviceaccounts/$namespace.$name';
+import { Route as AddonsInstancesCrdIndexRouteImport } from './routes/addons/instances/$crd/index';
 import { Route as AddonsReleasesNamespaceNameRouteImport } from './routes/addons/releases/$namespace.$name';
 import { Route as NetworkEndpointsNamespaceNameRouteImport } from './routes/network/endpoints/$namespace.$name';
 import { Route as NetworkIngressesNamespaceNameRouteImport } from './routes/network/ingresses/$namespace.$name';
@@ -98,6 +99,7 @@ import { Route as WorkloadsReplicasetsNamespaceNameRouteImport } from './routes/
 import { Route as WorkloadsReplicationcontrollersNamespaceNameRouteImport } from './routes/workloads/replicationcontrollers/$namespace.$name';
 import { Route as WorkloadsSecretsNamespaceNameRouteImport } from './routes/workloads/secrets/$namespace.$name';
 import { Route as WorkloadsStatefulsetsNamespaceNameRouteImport } from './routes/workloads/statefulsets/$namespace.$name';
+import { Route as AddonsInstancesCrdNamespaceNameRouteImport } from './routes/addons/instances/$crd/$namespace.$name';
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -468,6 +470,11 @@ const AccessServiceaccountsNamespaceNameRoute =
     path: '/access/serviceaccounts/$namespace/$name',
     getParentRoute: () => rootRouteImport,
   } as any);
+const AddonsInstancesCrdIndexRoute = AddonsInstancesCrdIndexRouteImport.update({
+  id: '/addons/instances/$crd/',
+  path: '/addons/instances/$crd/',
+  getParentRoute: () => rootRouteImport,
+} as any);
 const AddonsReleasesNamespaceNameRoute =
   AddonsReleasesNamespaceNameRouteImport.update({
     id: '/addons/releases/$namespace/$name',
@@ -594,6 +601,12 @@ const WorkloadsStatefulsetsNamespaceNameRoute =
     path: '/workloads/statefulsets/$namespace/$name',
     getParentRoute: () => rootRouteImport,
   } as any);
+const AddonsInstancesCrdNamespaceNameRoute =
+  AddonsInstancesCrdNamespaceNameRouteImport.update({
+    id: '/addons/instances/$crd/$namespace/$name',
+    path: '/addons/instances/$crd/$namespace/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any);
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute;
@@ -685,6 +698,8 @@ export interface FileRoutesByFullPath {
   '/workloads/replicationcontrollers/$namespace/$name': typeof WorkloadsReplicationcontrollersNamespaceNameRoute;
   '/workloads/secrets/$namespace/$name': typeof WorkloadsSecretsNamespaceNameRoute;
   '/workloads/statefulsets/$namespace/$name': typeof WorkloadsStatefulsetsNamespaceNameRoute;
+  '/addons/instances/$crd/': typeof AddonsInstancesCrdIndexRoute;
+  '/addons/instances/$crd/$namespace/$name': typeof AddonsInstancesCrdNamespaceNameRoute;
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute;
@@ -776,6 +791,8 @@ export interface FileRoutesByTo {
   '/workloads/replicationcontrollers/$namespace/$name': typeof WorkloadsReplicationcontrollersNamespaceNameRoute;
   '/workloads/secrets/$namespace/$name': typeof WorkloadsSecretsNamespaceNameRoute;
   '/workloads/statefulsets/$namespace/$name': typeof WorkloadsStatefulsetsNamespaceNameRoute;
+  '/addons/instances/$crd': typeof AddonsInstancesCrdIndexRoute;
+  '/addons/instances/$crd/$namespace/$name': typeof AddonsInstancesCrdNamespaceNameRoute;
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport;
@@ -868,6 +885,8 @@ export interface FileRoutesById {
   '/workloads/replicationcontrollers/$namespace/$name': typeof WorkloadsReplicationcontrollersNamespaceNameRoute;
   '/workloads/secrets/$namespace/$name': typeof WorkloadsSecretsNamespaceNameRoute;
   '/workloads/statefulsets/$namespace/$name': typeof WorkloadsStatefulsetsNamespaceNameRoute;
+  '/addons/instances/$crd/': typeof AddonsInstancesCrdIndexRoute;
+  '/addons/instances/$crd/$namespace/$name': typeof AddonsInstancesCrdNamespaceNameRoute;
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
@@ -960,7 +979,9 @@ export interface FileRouteTypes {
     | '/workloads/replicasets/$namespace/$name'
     | '/workloads/replicationcontrollers/$namespace/$name'
     | '/workloads/secrets/$namespace/$name'
-    | '/workloads/statefulsets/$namespace/$name';
+    | '/workloads/statefulsets/$namespace/$name'
+    | '/addons/instances/$crd/'
+    | '/addons/instances/$crd/$namespace/$name';
   fileRoutesByTo: FileRoutesByTo;
   to:
     | '/'
@@ -1051,7 +1072,9 @@ export interface FileRouteTypes {
     | '/workloads/replicasets/$namespace/$name'
     | '/workloads/replicationcontrollers/$namespace/$name'
     | '/workloads/secrets/$namespace/$name'
-    | '/workloads/statefulsets/$namespace/$name';
+    | '/workloads/statefulsets/$namespace/$name'
+    | '/addons/instances/$crd'
+    | '/addons/instances/$crd/$namespace/$name';
   id:
     | '__root__'
     | '/'
@@ -1142,7 +1165,9 @@ export interface FileRouteTypes {
     | '/workloads/replicasets/$namespace/$name'
     | '/workloads/replicationcontrollers/$namespace/$name'
     | '/workloads/secrets/$namespace/$name'
-    | '/workloads/statefulsets/$namespace/$name';
+    | '/workloads/statefulsets/$namespace/$name'
+    | '/addons/instances/$crd/'
+    | '/addons/instances/$crd/$namespace/$name';
   fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
@@ -1235,6 +1260,8 @@ export interface RootRouteChildren {
   WorkloadsReplicationcontrollersNamespaceNameRoute: typeof WorkloadsReplicationcontrollersNamespaceNameRoute;
   WorkloadsSecretsNamespaceNameRoute: typeof WorkloadsSecretsNamespaceNameRoute;
   WorkloadsStatefulsetsNamespaceNameRoute: typeof WorkloadsStatefulsetsNamespaceNameRoute;
+  AddonsInstancesCrdIndexRoute: typeof AddonsInstancesCrdIndexRoute;
+  AddonsInstancesCrdNamespaceNameRoute: typeof AddonsInstancesCrdNamespaceNameRoute;
 }
 
 declare module '@tanstack/react-router' {
@@ -1715,6 +1742,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccessServiceaccountsNamespaceNameRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/addons/instances/$crd/': {
+      id: '/addons/instances/$crd/';
+      path: '/addons/instances/$crd';
+      fullPath: '/addons/instances/$crd/';
+      preLoaderRoute: typeof AddonsInstancesCrdIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     '/addons/releases/$namespace/$name': {
       id: '/addons/releases/$namespace/$name';
       path: '/addons/releases/$namespace/$name';
@@ -1862,6 +1896,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkloadsStatefulsetsNamespaceNameRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    '/addons/instances/$crd/$namespace/$name': {
+      id: '/addons/instances/$crd/$namespace/$name';
+      path: '/addons/instances/$crd/$namespace/$name';
+      fullPath: '/addons/instances/$crd/$namespace/$name';
+      preLoaderRoute: typeof AddonsInstancesCrdNamespaceNameRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
   }
 }
 
@@ -1964,6 +2005,8 @@ const rootRouteChildren: RootRouteChildren = {
   WorkloadsSecretsNamespaceNameRoute: WorkloadsSecretsNamespaceNameRoute,
   WorkloadsStatefulsetsNamespaceNameRoute:
     WorkloadsStatefulsetsNamespaceNameRoute,
+  AddonsInstancesCrdIndexRoute: AddonsInstancesCrdIndexRoute,
+  AddonsInstancesCrdNamespaceNameRoute: AddonsInstancesCrdNamespaceNameRoute,
 };
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

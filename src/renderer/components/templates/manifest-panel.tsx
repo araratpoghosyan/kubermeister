@@ -25,10 +25,29 @@ import { useRegisterManifestEdit } from './manifest-edit';
 import type { DetailTab } from './resource-detail';
 
 interface ManifestPanelProps {
-    kind: ManifestKind;
+    /** A registered kind; omitted for an instance of a definition the app has no entry for. */
+    kind?: ManifestKind;
+    /** The definition's own name, for an instance read through `customResources.getYaml`. */
+    crd?: string;
     name: string;
     /** Tells same-named objects apart across namespaces; omitted for cluster-scoped kinds. */
     namespace?: string;
+}
+
+/**
+ * The object's YAML, read through whichever channel knows the kind. A custom resource cannot go
+ * through `resources.getYaml`, whose input is the registry's own kinds, so it is read through its
+ * definition instead; both answer the same manifest shape, and only one of the two ever runs.
+ */
+function useManifestQuery({ kind, crd, name, namespace }: ManifestPanelProps) {
+    const custom = useIpcQuery('customResources.getYaml', { crd: crd ?? '', name, namespace }, { enabled: !!crd });
+    const standard = useIpcQuery(
+        'resources.getYaml',
+        // The placeholder kind is never sent: the query stays disabled whenever a definition is named.
+        { kind: kind ?? 'Pod', name, namespace },
+        { enabled: !crd },
+    );
+    return crd ? custom : standard;
 }
 
 /**
@@ -68,8 +87,8 @@ export function spliceResourceVersion(buffer: string, freshYaml: string): string
 /** Inert but focusable, so a control mid-write keeps keyboard focus instead of dropping it to the body. */
 const inertWhen = (off: boolean) => ({ 'aria-disabled': off, className: cn(off && 'pointer-events-none opacity-50') });
 
-export function ManifestPanel({ kind, name, namespace }: ManifestPanelProps) {
-    const query = useIpcQuery('resources.getYaml', { kind, name, namespace });
+export function ManifestPanel({ kind, crd, name, namespace }: ManifestPanelProps) {
+    const query = useManifestQuery({ kind, crd, name, namespace });
     const replace = useReplaceResource();
     const [editing, setEditing] = useState(false);
     // The user's buffer; null means untouched, so the live read shows as it is.
@@ -79,7 +98,7 @@ export function ManifestPanel({ kind, name, namespace }: ManifestPanelProps) {
     // repeat it, so the banner offers a reload that keeps the edits.
     const [conflict, setConflict] = useState(false);
 
-    const liveKind = query.data?.kind ?? kind;
+    const liveKind = query.data?.kind ?? kind ?? crd;
     const text = edits ?? query.data?.yaml ?? '';
     const dirty = editing && edits !== null && edits !== query.data?.yaml;
     const empty = text.trim().length === 0;
@@ -106,8 +125,9 @@ export function ManifestPanel({ kind, name, namespace }: ManifestPanelProps) {
     });
 
     // The object this panel was opened on. Main refuses a manifest that names any other object, so
-    // an edited name or a removed namespace line cannot turn a save into a write elsewhere.
-    const expect = { kind, name, namespace };
+    // an edited name or a removed namespace line cannot turn a save into a write elsewhere. A
+    // custom resource pins the kind the read came back with, since only its definition knows it.
+    const expect = { kind: kind ?? query.data?.kind ?? '', name, namespace };
 
     const handleSave = async () => {
         // The global mutation toast already reports the failure; a conflict additionally arms the banner.
