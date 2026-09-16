@@ -100,7 +100,13 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
 - **Streams** (`src/shared/streams.ts`, `src/main/ipc/streams.ts`) push many messages over time:
   the preload's `stream()` mints a `sub.<subId>` event and drives `stream.start/send/stop`; main
   keys every stream by window so one window can never address another's, and sweeps them on
-  reload or destroy. Lists stay live through `resources.watch` (`src/main/k8s/watch.ts`, the
+  reload or destroy. One informer serves every screen watching the same kind and namespace (`src/main/k8s/watch.ts`):
+  a second screen on the same list replays the informer's cache instead of opening a second watch and
+  re-listing, the informer stops when its last subscriber goes, and `stopAllInformers` runs when the
+  connection changes. Lists render only the rows in view (`DataTable` over `@tanstack/react-virtual`),
+  so a list screen costs the size of the window rather than the size of the cluster — a budget
+  `tests/unit/renderer/performance-budget.test.tsx` locks in by counting mounted cells rather than
+  milliseconds, which would measure the CI runner instead. Lists stay live through `resources.watch` (`src/main/k8s/watch.ts`, the
   client's informer, same row transforms as the list) and `useWatchedList` in
   `src/renderer/lib/watch.ts`, which applies events into the list query's cache. Prefer a watch
   over polling for anything that changes on its own. - **Getting inside** (`src/main/k8s/debug.ts`): `pods.debug` attaches an ephemeral container

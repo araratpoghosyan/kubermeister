@@ -203,19 +203,31 @@ describe('ResourceListPage', () => {
         await waitFor(() => expect(router.state.location.pathname).toBe('/db-1'));
     });
 
-    it('paginates past 50 rows and appends the footer note', async () => {
-        const many = Array.from({ length: 60 }, (_, i) => ({ ...rows[0]!, name: `pod-${String(i).padStart(2, '0')}` }));
+    it('renders only the rows in view, however many the list holds', async () => {
+        const many = Array.from({ length: 2_000 }, (_, i) => ({
+            ...rows[0]!,
+            name: `pod-${String(i).padStart(4, '0')}`,
+        }));
         renderPage({ testId: 'list', query: okQuery(many), footerNote: 'live' });
         await screen.findByTestId('list');
-        expect(bodyRows()).toHaveLength(50);
-        expect(screen.getByTestId('resource-list')).toHaveTextContent('60 results · live');
+        // Two thousand objects, a screenful of DOM: the cost of the screen is the window's size.
+        expect(bodyRows().length).toBeGreaterThan(0);
+        expect(bodyRows().length).toBeLessThan(100);
+        expect(screen.getByTestId('resource-list')).toHaveTextContent('2000 results · live');
+    });
+
+    it('pages a list too large to hold at once, and says where it is', async () => {
+        const many = Array.from({ length: 600 }, (_, i) => ({
+            ...rows[0]!,
+            name: `pod-${String(i).padStart(3, '0')}`,
+        }));
+        renderPage({ testId: 'list', query: okQuery(many) });
+        await screen.findByTestId('list');
         expect(screen.getByText('Page 1 / 2')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Prev' })).toBeDisabled();
         await userEvent.click(screen.getByRole('button', { name: 'Next' }));
-        expect(bodyRows()).toHaveLength(10);
         expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
-        await userEvent.click(screen.getByRole('button', { name: 'Prev' }));
-        expect(bodyRows()).toHaveLength(50);
+        expect(screen.getByText('Page 2 / 2')).toBeInTheDocument();
     });
 
     it('refreshes every query from the toolbar button', async () => {

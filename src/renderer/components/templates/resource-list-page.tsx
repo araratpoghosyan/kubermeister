@@ -83,7 +83,12 @@ interface ResourceListPageProps<T> {
     testId?: string;
 }
 
-const PAGE_SIZE = 50;
+/**
+ * Rows per page. The table renders only what is on screen, so a page is about how much a screen
+ * holds in memory rather than how much it can draw; paging is the fallback for a list so large that
+ * even sorting it client-side would hurt.
+ */
+const PAGE_SIZE = 500;
 
 /** One shared empty selection, so an unselected scope does not re-render the table each time. */
 const EMPTY_SELECTION: RowSelectionState = {};

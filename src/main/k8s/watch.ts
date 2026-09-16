@@ -221,35 +221,118 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
  * lists first (replayed as `added`) and then follows the watch, reconnecting on its own. A failed
  * connection is reported and retried after a pause until the stream is stopped.
  */
+/** One informer, shared by every stream watching the same kind in the same namespace. */
+interface Shared {
+    informer: ReturnType<typeof makeInformer>;
+    subscribers: Set<(event: WatchEvent) => void>;
+    /** Latest cache, replayed to a screen that arrives after the first list. */
+    cached: () => readonly KubernetesObject[];
+    toRow: WatchSource<Kind>['toRow'];
+    kind: Kind;
+    retry?: NodeJS.Timeout;
+    failed?: string;
+}
+
+const shared = new Map<string, Shared>();
+
+const watchKey = (kind: Kind, namespace: string | undefined): string => `${kind}/${namespace ?? '*'}`;
+
+/**
+ * The informer for one kind and namespace, started once however many screens are watching. Two
+ * screens on the same list used to mean two watch connections and two full lists of the same
+ * objects; now the second one replays what the first already has and the API server sees one watch.
+ */
+function acquire(kind: Kind, namespace: string | undefined, source: WatchSource<Kind>): Shared {
+    const key = watchKey(kind, namespace);
+    const existing = shared.get(key);
+    if (existing) return existing;
+
+    const informer = makeInformer(kubeConfig(), source.path(namespace), source.list(namespace));
+    const entry: Shared = {
+        informer,
+        subscribers: new Set(),
+        cached: () => informer.list(),
+        toRow: source.toRow,
+        kind,
+    };
+
+    const fan = (type: WatchEvent['type']) => (object: KubernetesObject) => {
+        const event = { kind, type, item: source.toRow(object) } as WatchEvent;
+        for (const send of entry.subscribers) send(event);
+    };
+    informer.on('add', fan('added'));
+    informer.on('update', fan('modified'));
+    informer.on('delete', fan('deleted'));
+    informer.on('error', (error: unknown) => {
+        entry.failed = error instanceof Error ? error.message : String(error);
+        for (const send of entry.subscribers) send({ kind, type: 'error' } as never);
+        entry.retry = setTimeout(() => {
+            if (shared.get(key) === entry) void informer.start();
+        }, WATCH_RETRY_MS);
+    });
+
+    shared.set(key, entry);
+    return entry;
+}
+
+/** Drop one subscriber, and the informer itself once nobody is left watching. */
+function release(kind: Kind, namespace: string | undefined, subscriber: (event: WatchEvent) => void): void {
+    const key = watchKey(kind, namespace);
+    const entry = shared.get(key);
+    if (!entry) return;
+    entry.subscribers.delete(subscriber);
+    if (entry.subscribers.size > 0) return;
+    if (entry.retry) clearTimeout(entry.retry);
+    shared.delete(key);
+    void entry.informer.stop();
+}
+
+/** Stop every informer: the connection they were made on is going away. */
+export function stopAllInformers(): void {
+    for (const [key, entry] of [...shared.entries()]) {
+        if (entry.retry) clearTimeout(entry.retry);
+        shared.delete(key);
+        void entry.informer.stop();
+    }
+}
+
+/** How many informers are open, for tests and for reasoning about what a screen costs. */
+export const openInformerCount = (): number => shared.size;
+
 export async function startResourceWatch(rawInput: unknown, send: StreamSend): Promise<StreamController> {
     const input = streamSchemas['resources.watch'].parse(rawInput);
     const namespace = resolveNamespace(input.namespace);
     const source = WATCH_SOURCES[input.kind] as WatchSource<Kind> | undefined;
     if (!source) throw new K8sError('invalid', `${input.kind} is not watchable`, 'resources.watch');
-    const informer = makeInformer(kubeConfig(), source.path(namespace), source.list(namespace));
 
+    const entry = acquire(input.kind, namespace, source);
     let active = true;
-    let retry: NodeJS.Timeout | undefined;
-    const emit = (type: WatchEvent['type']) => (object: KubernetesObject) => {
-        if (active) send({ type: 'data', data: { kind: input.kind, type, item: source.toRow(object) } as WatchEvent });
-    };
-    informer.on('add', emit('added'));
-    informer.on('update', emit('modified'));
-    informer.on('delete', emit('deleted'));
-    informer.on('error', (error: unknown) => {
+    const subscriber = (event: WatchEvent) => {
         if (!active) return;
-        send({ type: 'error', message: error instanceof Error ? error.message : String(error) });
-        retry = setTimeout(() => {
-            if (active) void informer.start();
-        }, WATCH_RETRY_MS);
-    });
+        // The shared informer reports a failure once; each subscriber hears it in its own stream.
+        if ((event as { type: string }).type === 'error') {
+            send({ type: 'error', message: entry.failed ?? 'the watch failed' });
+            return;
+        }
+        send({ type: 'data', data: event });
+    };
+    entry.subscribers.add(subscriber);
 
-    await informer.start();
+    const first = entry.subscribers.size === 1;
+    if (first) {
+        await entry.informer.start();
+    } else {
+        // A screen arriving second must not wait for a fresh list: replay what is already cached,
+        // which is exactly the sequence a new informer would have sent it.
+        for (const object of entry.cached()) {
+            subscriber({ kind: input.kind, type: 'added', item: entry.toRow(object) } as WatchEvent);
+        }
+    }
+
     return {
         stop: () => {
             active = false;
-            if (retry) clearTimeout(retry);
-            void informer.stop();
+            release(input.kind, namespace, subscriber);
         },
     };
 }
