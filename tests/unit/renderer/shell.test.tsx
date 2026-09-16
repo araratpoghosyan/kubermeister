@@ -63,7 +63,7 @@ describe('app shell', () => {
         expect(await screen.findByTestId('active-namespace')).toHaveTextContent('team-a · 4 pods');
         expect(await screen.findByTestId('context-selector')).toHaveTextContent('alpha');
         expect(screen.getByTestId('breadcrumbs')).toHaveTextContent('Cluster summary');
-        expect(screen.queryByTestId('update-banner')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('update-pill')).not.toBeInTheDocument();
     });
 
     it('navigates between the overview screens through the sidebar', async () => {

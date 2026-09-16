@@ -14,6 +14,7 @@ describe('parseSettings', () => {
             session: { lastContext: 'prod', lastNamespace: 'default', restoreOnLaunch: true },
             connection: { kubeconfigPath: '/tmp/kubeconfig' },
             data: { refreshIntervalSec: 30 },
+            updates: { mode: 'download' },
             window: { bounds: { x: 0, y: 0, width: 1200, height: 800 } },
         };
         expect(parseSettings(valid)).toEqual(valid);
@@ -48,8 +49,15 @@ describe('parseSettings', () => {
             session: { lastContext: 'staging', lastNamespace: null, restoreOnLaunch: true },
             connection: { kubeconfigPath: null },
             data: { refreshIntervalSec: 12 },
+            updates: { mode: 'check' },
             window: { bounds: null },
         });
+    });
+
+    it('starts existing installs on notify-first updates and rejects an unknown mode', () => {
+        expect(parseSettings({ version: 1 }).updates).toEqual({ mode: 'check' });
+        expect(parseSettings({ version: 1, updates: { mode: 'off' } }).updates).toEqual({ mode: 'off' });
+        expect(parseSettings({ version: 1, updates: { mode: 'always' } }).updates).toEqual({ mode: 'check' });
     });
 
     it('forgets saved window bounds that are not a full rectangle', () => {
@@ -101,6 +109,14 @@ describe('patch schemas', () => {
         expect(settingsInputSchema.safeParse({ session: { lastNamespace: 'kube-system' } }).success).toBe(true);
         const withPath = settingsInputSchema.safeParse({ connection: { kubeconfigPath: '/etc/passwd' } });
         expect(withPath.success && 'connection' in withPath.data).toBe(false);
+    });
+
+    it('lets the renderer change the update mode', () => {
+        expect(settingsInputSchema.safeParse({ updates: { mode: 'off' } }).success).toBe(true);
+        expect(settingsInputSchema.safeParse({ updates: { mode: 'sometimes' } }).success).toBe(false);
+        expect(mergeSettings(DEFAULT_SETTINGS, { updates: { mode: 'download' } }).updates).toEqual({
+            mode: 'download',
+        });
     });
 
     it('lets the renderer change the refresh interval', () => {

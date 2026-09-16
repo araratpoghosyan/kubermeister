@@ -2,12 +2,15 @@ import { useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { MonitorIcon, MoonIcon, SunIcon, type LucideIcon } from 'lucide-react';
-import { REFRESH_INTERVAL_OPTIONS } from '../../shared/settings';
+import { REFRESH_INTERVAL_OPTIONS, UPDATE_MODES, type UpdateMode } from '../../shared/settings';
 import { SettingsPage } from '@/components/templates/settings-page';
 import { Field, FormCard, FormSelect, Toggle } from '@/components/templates/settings-form';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useTheme, type Theme } from '@/components/theme-provider';
+import { useIpcQuery } from '@/lib/query';
 import { pickKubeconfig, resetKubeconfig, updateSettings, useSettings } from '@/lib/settings';
+import { describeUpdate, downloadUpdate, installUpdate, useUpdater } from '@/lib/updates';
 import { cn } from '@/lib/utils';
 
 export const Route = createFileRoute('/settings')({ component: SettingsScreen });
@@ -19,6 +22,14 @@ const THEME_OPTIONS: { value: Theme; label: string; icon: LucideIcon; desc: stri
 ];
 
 const intervalLabel = (sec: number) => `${sec} seconds`;
+
+const UPDATE_MODE_LABELS: Record<UpdateMode, string> = {
+    check: 'Notify me and let me choose',
+    download: 'Download in the background',
+    off: 'Never check automatically',
+};
+const modeForLabel = (label: string): UpdateMode =>
+    UPDATE_MODES.find((mode) => UPDATE_MODE_LABELS[mode] === label) ?? 'check';
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
     return (
@@ -36,6 +47,7 @@ function SettingsScreen() {
     const [kubeconfigBusy, setKubeconfigBusy] = useState(false);
 
     const kubeconfigPath = settings?.connection.kubeconfigPath ?? null;
+    const updateMode = settings?.updates.mode ?? 'check';
     const refreshSec = settings?.data.refreshIntervalSec ?? 12;
     // Fold the current value in so a non-preset interval (the 12 s default) still renders as selected.
     const intervalOptions = Array.from(new Set<number>([...REFRESH_INTERVAL_OPTIONS, refreshSec]))
@@ -115,6 +127,21 @@ function SettingsScreen() {
                 </FormCard>
             </Section>
 
+            <Section title="Updates">
+                <FormCard title="Automatic updates" desc="What happens when a new version of Kubermeister is found.">
+                    <Field label="When a new version is found">
+                        <FormSelect
+                            value={UPDATE_MODE_LABELS[updateMode]}
+                            options={UPDATE_MODES.map((mode) => UPDATE_MODE_LABELS[mode])}
+                            onValueChange={(label) =>
+                                void updateSettings(client, { updates: { mode: modeForLabel(label) } })
+                            }
+                        />
+                    </Field>
+                </FormCard>
+                <AboutCard />
+            </Section>
+
             <Section title="Connection">
                 <FormCard title="Kubeconfig">
                     <Field
@@ -152,5 +179,70 @@ function SettingsScreen() {
                 </FormCard>
             </Section>
         </SettingsPage>
+    );
+}
+
+/** This install's version and channel, and the updater's outcome, with the check the user can start. */
+function AboutCard() {
+    const info = useIpcQuery('app.info', {});
+    const { state, check } = useUpdater();
+    const [checking, setChecking] = useState(false);
+    const { title, detail } = describeUpdate(state);
+
+    const runCheck = async () => {
+        setChecking(true);
+        try {
+            await check();
+        } finally {
+            setChecking(false);
+        }
+    };
+
+    return (
+        <FormCard
+            title="About"
+            desc="This install and its update status."
+            action={
+                <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={checking || state?.status === 'unsupported'}
+                    onClick={() => void runCheck()}
+                >
+                    Check for updates
+                </Button>
+            }
+        >
+            <div className="flex flex-col gap-2" data-testid="about-card">
+                <div className="flex items-center gap-2 text-lead font-medium">
+                    <span>{info.data?.name ?? 'Kubermeister'}</span>
+                    <span className="font-mono text-body text-text-2">{info.data?.version ?? '—'}</span>
+                    {info.data && (
+                        <Badge variant={info.data.channel === 'tip' ? 'warn' : 'neutral'}>
+                            {info.data.channel === 'tip' ? 'Tip channel' : 'Stable channel'}
+                        </Badge>
+                    )}
+                </div>
+                {info.data && (
+                    <div className="text-meta text-text-muted">
+                        Electron {info.data.electron} · Chrome {info.data.chrome} · Node {info.data.node}
+                    </div>
+                )}
+                <div className="mt-1 flex flex-col gap-1 text-cell" data-testid="update-status">
+                    <span>{title}</span>
+                    {detail && <span className="whitespace-pre-wrap text-text-muted">{detail}</span>}
+                </div>
+                {state?.status === 'available' && (
+                    <Button size="sm" className="w-fit" onClick={() => void downloadUpdate()}>
+                        Download update
+                    </Button>
+                )}
+                {state?.status === 'downloaded' && (
+                    <Button size="sm" className="w-fit" onClick={() => void installUpdate()}>
+                        Restart now
+                    </Button>
+                )}
+            </div>
+        </FormCard>
     );
 }

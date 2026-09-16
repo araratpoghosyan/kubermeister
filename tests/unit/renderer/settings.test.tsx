@@ -22,9 +22,19 @@ const settings = {
     session: { lastContext: 'alpha', lastNamespace: 'team-a', restoreOnLaunch: true },
     connection: { kubeconfigPath: null },
     data: { refreshIntervalSec: 12 },
+    updates: { mode: 'check' },
 };
 const data: Record<string, unknown> = {
-    'update.state': { status: 'up-to-date' },
+    'update.state': { status: 'up-to-date', checkedAt: new Date(Date.now() - 5 * 60_000).toISOString() },
+    'app.info': {
+        name: 'Kubermeister Tip',
+        version: '0.2.1-tip.50',
+        channel: 'tip',
+        electron: '44.3.0',
+        chrome: '152.0.0.0',
+        node: '24.21.0',
+        platform: 'darwin',
+    },
     'settings.get': settings,
     'contexts.list': [{ name: 'alpha', cluster: 'a', user: 'u', current: true }],
     'namespaces.list': [],
@@ -39,11 +49,12 @@ describe('settings screen', () => {
         invoke.mockReset();
         invoke.mockImplementation(async (channel: string, input: unknown) => {
             if (channel === 'settings.set') {
-                const patch = input as { session?: object; data?: object };
+                const patch = input as { session?: object; data?: object; updates?: object };
                 return {
                     ...settings,
                     session: { ...settings.session, ...patch.session },
                     data: { ...settings.data, ...patch.data },
+                    updates: { ...settings.updates, ...patch.updates },
                 };
             }
             return data[channel];
@@ -56,7 +67,7 @@ describe('settings screen', () => {
         await userEvent.click(within(sidebar).getByRole('link', { name: /Settings/ }));
         const page = await screen.findByTestId('settings-page');
         expect(page).toHaveTextContent('Preferences for this Kubermeister install.');
-        for (const title of ['General', 'Appearance', 'Connection']) expect(page).toHaveTextContent(title);
+        for (const title of ['General', 'Appearance', 'Updates', 'Connection']) expect(page).toHaveTextContent(title);
         expect(within(sidebar).getByRole('link', { name: /Settings/ })).toHaveAttribute('aria-current', 'page');
         expect(screen.getByTestId('breadcrumbs')).toHaveTextContent('Settings');
     });
@@ -71,18 +82,77 @@ describe('settings screen', () => {
         );
         await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'false'));
 
-        await userEvent.click(screen.getByRole('combobox'));
+        await userEvent.click(screen.getByRole('combobox', { name: 'Refresh interval' }));
         await userEvent.click(await screen.findByRole('option', { name: '30 seconds' }));
         await waitFor(() => expect(invoke).toHaveBeenCalledWith('settings.set', { data: { refreshIntervalSec: 30 } }));
-        expect(screen.getByRole('combobox')).toHaveTextContent('30 seconds');
+        expect(screen.getByRole('combobox', { name: 'Refresh interval' })).toHaveTextContent('30 seconds');
     });
 
     it('offers the preset intervals plus the current non-preset value', async () => {
         renderRoutes(routeTree, '/settings');
         await screen.findByTestId('settings-page');
-        await userEvent.click(screen.getByRole('combobox'));
+        await userEvent.click(screen.getByRole('combobox', { name: 'Refresh interval' }));
         const options = (await screen.findAllByRole('option')).map((o) => o.textContent);
         expect(options).toEqual(['5 seconds', '10 seconds', '12 seconds', '15 seconds', '30 seconds', '60 seconds']);
+    });
+
+    it('persists the update mode through the bridge', async () => {
+        renderRoutes(routeTree, '/settings');
+        const select = await screen.findByRole('combobox', { name: 'When a new version is found' });
+        await waitFor(() => expect(select).toHaveTextContent('Notify me and let me choose'));
+        await userEvent.click(select);
+        const options = (await screen.findAllByRole('option')).map((o) => o.textContent);
+        expect(options).toEqual([
+            'Notify me and let me choose',
+            'Download in the background',
+            'Never check automatically',
+        ]);
+        await userEvent.click(screen.getByRole('option', { name: 'Download in the background' }));
+        await waitFor(() => expect(invoke).toHaveBeenCalledWith('settings.set', { updates: { mode: 'download' } }));
+        expect(select).toHaveTextContent('Download in the background');
+    });
+
+    it('shows this install, its channel and the last check, and runs a check on demand', async () => {
+        invoke.mockImplementation(async (channel: string) =>
+            channel === 'update.check'
+                ? { status: 'available', version: '0.2.1-tip.51', notes: 'Nightly build #51 from abc1234.' }
+                : data[channel],
+        );
+        renderRoutes(routeTree, '/settings');
+        const about = await screen.findByTestId('about-card');
+        await waitFor(() => expect(about).toHaveTextContent('Kubermeister Tip'));
+        expect(about).toHaveTextContent('0.2.1-tip.50');
+        expect(about).toHaveTextContent('Tip channel');
+        expect(about).toHaveTextContent('Electron 44.3.0 · Chrome 152.0.0.0 · Node 24.21.0');
+        const status = screen.getByTestId('update-status');
+        await waitFor(() => expect(status).toHaveTextContent("You're on the latest version."));
+        expect(status).toHaveTextContent('Checked 5 min ago.');
+
+        await userEvent.click(screen.getByRole('button', { name: 'Check for updates' }));
+        await waitFor(() => expect(invoke).toHaveBeenCalledWith('update.check', {}));
+        await waitFor(() => expect(status).toHaveTextContent('Version 0.2.1-tip.51 is available.'));
+        expect(status).toHaveTextContent('Nightly build #51 from abc1234.');
+        await userEvent.click(screen.getByRole('button', { name: 'Download update' }));
+        expect(invoke).toHaveBeenCalledWith('update.download', {});
+    });
+
+    it('disables the check where in-app updates cannot run and offers the restart once downloaded', async () => {
+        invoke.mockImplementation(async (channel: string) =>
+            channel === 'update.state' ? { status: 'unsupported', message: 'Development build' } : data[channel],
+        );
+        renderRoutes(routeTree, '/settings');
+        const status = await screen.findByTestId('update-status');
+        await waitFor(() => expect(status).toHaveTextContent('In-app updates are unavailable here.'));
+        expect(status).toHaveTextContent('Development build');
+        expect(screen.getByRole('button', { name: 'Check for updates' })).toBeDisabled();
+
+        invoke.mockImplementation(async (channel: string) =>
+            channel === 'update.state' ? { status: 'downloaded', version: '0.3.0' } : data[channel],
+        );
+        renderRoutes(routeTree, '/settings');
+        const restart = await screen.findByRole('button', { name: 'Restart now' });
+        await userEvent.click(restart);
+        expect(invoke).toHaveBeenCalledWith('update.install', {});
     });
 
     it('switches the theme from the cards and persists it', async () => {

@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import type { IpcChannel, IpcInput, IpcOutput, IpcResult } from '../../shared/ipc.js';
 import { ipcSchemas } from '../../shared/ipc.js';
+import { channelOfVersion } from '../../shared/updates.js';
 import { reloadKubeConfig } from '../k8s/client.js';
 import { getCurrentContext, listContexts, setContext, setNamespace } from '../k8s/context.js';
 import { K8sError } from '../k8s/errors.js';
@@ -28,7 +29,7 @@ import { getResource, listResources } from '../k8s/resources/index.js';
 import { getNode, listNodes } from '../k8s/resources/nodes.js';
 import { getSettings, updateSettings } from '../settings/store.js';
 import { runStartupChecks } from '../startup/checks.js';
-import { getUpdateState, installUpdate } from '../updater.js';
+import { checkForUpdates, downloadUpdate, getUpdateState, installUpdate } from '../updater.js';
 
 type Handler<C extends IpcChannel> = (input: IpcInput<C>) => Promise<IpcOutput<C>>;
 type Handlers = { [C in IpcChannel]: Handler<C> };
@@ -67,12 +68,15 @@ const handlers: Handlers = {
     'app.info': async () => ({
         name: app.getName(),
         version: app.getVersion(),
+        channel: channelOfVersion(app.getVersion()),
         electron: process.versions.electron,
         chrome: process.versions.chrome,
         node: process.versions.node,
         platform: process.platform,
     }),
     'update.state': async () => getUpdateState(),
+    'update.check': () => checkForUpdates(),
+    'update.download': async () => ({ ok: downloadUpdate() }),
     'update.install': async () => ({ ok: installUpdate() }),
     startupChecks: () => runStartupChecks(),
     'contexts.list': async () => listContexts(),

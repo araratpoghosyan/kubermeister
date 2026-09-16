@@ -22,7 +22,9 @@ const data: Record<string, unknown> = {
         session: { lastContext: null, lastNamespace: null, restoreOnLaunch: true },
         connection: { kubeconfigPath: null },
         data: { refreshIntervalSec: 12 },
+        updates: { mode: 'check' },
     },
+    'update.check': { status: 'checking' },
     'contexts.list': [
         { name: 'alpha', cluster: 'a', user: 'u', current: true },
         { name: 'beta', cluster: 'b', user: 'u', current: false },
@@ -75,6 +77,16 @@ describe('command palette', () => {
         // Choosing an action closes the palette, so this goes last.
         await userEvent.click(within(dialog).getByRole('option', { name: /Create resource/ }));
         expect(await screen.findByTestId('create-page')).toBeInTheDocument();
+    });
+
+    it('starts an update check and opens Settings, where the outcome shows', async () => {
+        const { router } = renderRoutes(routeTree, '/overview/summary');
+        await userEvent.keyboard('{Control>}k{/Control}');
+        const dialog = await screen.findByRole('dialog', { name: 'Quick actions' });
+        await userEvent.click(within(dialog).getByRole('option', { name: /Check for updates/ }));
+        await waitFor(() => expect(invoke).toHaveBeenCalledWith('update.check', {}));
+        await waitFor(() => expect(router.state.location.pathname).toBe('/settings'));
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
 
     it('switches context and namespace through the bridge and closes', async () => {

@@ -41,6 +41,8 @@ const noInput = z.object({});
 const appInfoSchema = z.object({
     name: z.string(),
     version: z.string(),
+    /** Which release feed this build follows; derived from the version's prerelease tag. */
+    channel: z.enum(['stable', 'tip']),
     electron: z.string(),
     chrome: z.string(),
     node: z.string(),
@@ -49,15 +51,34 @@ const appInfoSchema = z.object({
 
 /**
  * Where the in-app updater is. `unsupported` covers development builds and Linux packages that
- * cannot self-update (deb); `message` carries the reason or the error text.
+ * cannot self-update (deb); `available` is a newer version the user has not asked to download yet
+ * (the `updates.mode` setting decides whether that step is automatic); `message` carries the
+ * unsupported reason or the error text.
  */
 export const updateStateSchema = z.object({
-    status: z.enum(['unsupported', 'idle', 'checking', 'up-to-date', 'downloading', 'downloaded', 'error']),
-    /** Version being downloaded or ready to install. */
+    status: z.enum([
+        'unsupported',
+        'idle',
+        'checking',
+        'up-to-date',
+        'available',
+        'downloading',
+        'downloaded',
+        'error',
+    ]),
+    /** Version found, being downloaded or ready to install. */
     version: z.string().optional(),
     /** Download progress, 0 to 100. */
     percent: z.number().min(0).max(100).optional(),
     message: z.string().optional(),
+    /** Release notes of the found version, when the feed carries them as plain text. */
+    notes: z.string().optional(),
+    /** When the found version was published, ISO 8601. */
+    releaseDate: z.string().optional(),
+    /** When the last check finished, ISO 8601. */
+    checkedAt: z.string().optional(),
+    /** An error from a scheduled check nobody asked for; shown in Settings, never as a notification. */
+    background: z.boolean().optional(),
 });
 
 /** One startup preflight check. `error` blocks the app, `warning` lets it open. */
@@ -89,6 +110,8 @@ const namespacedListSchema = z.object({ namespace: namespaceNameSchema.optional(
 export const ipcSchemas = {
     'app.info': { input: noInput, output: appInfoSchema },
     'update.state': { input: noInput, output: updateStateSchema },
+    'update.check': { input: noInput, output: updateStateSchema },
+    'update.download': { input: noInput, output: z.object({ ok: z.boolean() }) },
     'update.install': { input: noInput, output: z.object({ ok: z.boolean() }) },
     startupChecks: { input: noInput, output: startupReportSchema },
     'contexts.list': { input: noInput, output: z.array(kubeContextSchema) },

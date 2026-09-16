@@ -7,6 +7,8 @@
 export const IPC_CHANNELS = [
     'app.info',
     'update.state',
+    'update.check',
+    'update.download',
     'update.install',
     'startupChecks',
     'contexts.list',

@@ -16,20 +16,62 @@ describe('IPC contract', () => {
     });
 
     it('app.info output requires every runtime field', () => {
-        const valid = { name: 'x', version: '1', electron: '44', chrome: '152', node: '24', platform: 'darwin' };
+        const valid = {
+            name: 'x',
+            version: '1',
+            channel: 'stable',
+            electron: '44',
+            chrome: '152',
+            node: '24',
+            platform: 'darwin',
+        };
         expect(ipcSchemas['app.info'].output.safeParse(valid).success).toBe(true);
         const { node: _node, ...missingNode } = valid;
         expect(ipcSchemas['app.info'].output.safeParse(missingNode).success).toBe(false);
+        expect(ipcSchemas['app.info'].output.safeParse({ ...valid, channel: 'nightly' }).success).toBe(false);
     });
 
     it('update.state accepts every status and bounds the progress percentage', () => {
         const output = ipcSchemas['update.state'].output;
-        for (const status of ['unsupported', 'idle', 'checking', 'up-to-date', 'downloading', 'downloaded', 'error']) {
+        const statuses = [
+            'unsupported',
+            'idle',
+            'checking',
+            'up-to-date',
+            'available',
+            'downloading',
+            'downloaded',
+            'error',
+        ];
+        for (const status of statuses) {
             expect(output.safeParse({ status }).success).toBe(true);
         }
         expect(output.safeParse({ status: 'downloading', percent: 42 }).success).toBe(true);
         expect(output.safeParse({ status: 'downloading', percent: 101 }).success).toBe(false);
         expect(output.safeParse({ status: 'rebooting' }).success).toBe(false);
+    });
+
+    it('update.state carries what the found version was published as and when the check ran', () => {
+        const output = ipcSchemas['update.state'].output;
+        const found = {
+            status: 'available',
+            version: '0.3.0',
+            notes: 'Nightly build #51.',
+            releaseDate: '2026-09-16T06:48:44.854Z',
+            checkedAt: '2026-09-16T07:00:00.000Z',
+        };
+        expect(output.safeParse(found).success).toBe(true);
+        expect(output.safeParse({ status: 'error', message: 'offline', background: true }).success).toBe(true);
+        expect(output.safeParse({ status: 'available', notes: ['not', 'text'] }).success).toBe(false);
+    });
+
+    it('the update actions take no input and report whether they applied', () => {
+        expect(ipcSchemas['update.check'].output).toBe(ipcSchemas['update.state'].output);
+        for (const channel of ['update.download', 'update.install'] as const) {
+            expect(ipcSchemas[channel].input.safeParse({}).success).toBe(true);
+            expect(ipcSchemas[channel].output.safeParse({ ok: false }).success).toBe(true);
+            expect(ipcSchemas[channel].output.safeParse({}).success).toBe(false);
+        }
     });
 
     it('context.set requires a non-empty name and namespace.set allows clearing', () => {

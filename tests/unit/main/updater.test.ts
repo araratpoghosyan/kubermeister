@@ -1,14 +1,16 @@
 import { EventEmitter } from 'node:events';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { UpdateMode } from '../../../src/shared/settings';
 
 const electron = { app: { isPackaged: true } };
 vi.mock('electron', () => electron);
 
 class FakeAutoUpdater extends EventEmitter {
     logger: unknown = null;
-    autoDownload = false;
+    autoDownload = true;
     autoInstallOnAppQuit = false;
     checkForUpdates = vi.fn<() => Promise<unknown>>(() => Promise.resolve(null));
+    downloadUpdate = vi.fn<() => Promise<unknown>>(() => Promise.resolve([]));
     quitAndInstall = vi.fn();
 }
 const autoUpdater = new FakeAutoUpdater();
@@ -17,9 +19,14 @@ vi.mock('electron-updater', () => ({ default: { autoUpdater } }));
 const broadcast = vi.fn();
 vi.mock('../../../src/main/ipc/push.js', () => ({ broadcast }));
 
+let mode: UpdateMode = 'check';
+vi.mock('../../../src/main/settings/store.js', () => ({ getSettings: () => ({ updates: { mode } }) }));
+
 const savedAppImage = process.env.APPIMAGE;
 let platform: NodeJS.Platform = 'darwin';
 vi.spyOn(process, 'platform', 'get').mockImplementation(() => platform);
+
+const found = { version: '0.3.0', releaseDate: '2026-09-16T06:48:44.854Z', releaseNotes: 'Nightly build #51.' };
 
 async function loadUpdater() {
     vi.resetModules();
@@ -29,12 +36,17 @@ async function loadUpdater() {
 describe('startUpdater', () => {
     beforeEach(() => {
         vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-09-16T07:00:00.000Z'));
         electron.app.isPackaged = true;
         platform = 'darwin';
+        mode = 'check';
         delete process.env.APPIMAGE;
         autoUpdater.removeAllListeners();
+        autoUpdater.autoDownload = true;
         autoUpdater.checkForUpdates.mockReset().mockResolvedValue(null);
+        autoUpdater.downloadUpdate.mockReset().mockResolvedValue([]);
         autoUpdater.quitAndInstall.mockReset();
+        broadcast.mockReset();
     });
 
     afterEach(() => {
@@ -66,10 +78,10 @@ describe('startUpdater', () => {
         expect(getUpdateState()).toEqual({ status: 'idle' });
     });
 
-    it('configures background download, checks after a delay and then periodically', async () => {
+    it('never lets the library download on its own, checks after a delay and then periodically', async () => {
         const { startUpdater } = await loadUpdater();
         startUpdater();
-        expect(autoUpdater.autoDownload).toBe(true);
+        expect(autoUpdater.autoDownload).toBe(false);
         expect(autoUpdater.autoInstallOnAppQuit).toBe(true);
         expect(autoUpdater.checkForUpdates).not.toHaveBeenCalled();
         await vi.advanceTimersByTimeAsync(15_000);
@@ -78,31 +90,138 @@ describe('startUpdater', () => {
         expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(2);
     });
 
-    it('tracks the updater lifecycle through its events', async () => {
+    it('skips scheduled checks while updates are off, but a manual check still runs', async () => {
+        mode = 'off';
+        const { startUpdater, checkForUpdates } = await loadUpdater();
+        startUpdater();
+        await vi.advanceTimersByTimeAsync(15_000 + 4 * 60 * 60 * 1000);
+        expect(autoUpdater.checkForUpdates).not.toHaveBeenCalled();
+        await checkForUpdates();
+        expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(1);
+    });
+
+    it('in check mode reports a found version and waits for the user to download it', async () => {
         const { startUpdater, getUpdateState } = await loadUpdater();
         startUpdater();
         autoUpdater.emit('checking-for-update');
         expect(getUpdateState()).toEqual({ status: 'checking' });
-        autoUpdater.emit('update-available', { version: '0.2.0' });
-        expect(getUpdateState()).toEqual({ status: 'downloading', version: '0.2.0', percent: 0 });
-        autoUpdater.emit('download-progress', { percent: 41.6 });
-        expect(getUpdateState()).toEqual({ status: 'downloading', version: '0.2.0', percent: 42 });
-        autoUpdater.emit('update-downloaded', { version: '0.2.0' });
-        expect(getUpdateState()).toEqual({ status: 'downloaded', version: '0.2.0' });
-        autoUpdater.emit('update-not-available');
-        expect(getUpdateState()).toEqual({ status: 'up-to-date' });
-        autoUpdater.emit('error', new Error('feed unreachable'));
-        expect(getUpdateState()).toEqual({ status: 'error', message: 'feed unreachable' });
+        autoUpdater.emit('update-available', found);
+        expect(getUpdateState()).toEqual({
+            status: 'available',
+            version: '0.3.0',
+            releaseDate: found.releaseDate,
+            notes: 'Nightly build #51.',
+            checkedAt: '2026-09-16T07:00:00.000Z',
+        });
+        expect(autoUpdater.downloadUpdate).not.toHaveBeenCalled();
         // Every transition is pushed to the renderer.
-        expect(broadcast).toHaveBeenLastCalledWith('update.state', { status: 'error', message: 'feed unreachable' });
+        expect(broadcast).toHaveBeenLastCalledWith('update.state', getUpdateState());
     });
 
-    it('records a failed check as an error state', async () => {
-        autoUpdater.checkForUpdates.mockRejectedValue(new Error('offline'));
+    it('in download mode starts the download at once without ever showing "available"', async () => {
+        mode = 'download';
         const { startUpdater, getUpdateState } = await loadUpdater();
         startUpdater();
+        autoUpdater.emit('update-available', found);
+        expect(autoUpdater.downloadUpdate).toHaveBeenCalledOnce();
+        expect(getUpdateState()).toMatchObject({ status: 'downloading', version: '0.3.0', percent: 0 });
+        expect(broadcast.mock.calls.map(([, state]) => (state as { status: string }).status)).not.toContain(
+            'available',
+        );
+    });
+
+    it('carries the found version through download progress to ready-to-install', async () => {
+        const { startUpdater, getUpdateState, downloadUpdate } = await loadUpdater();
+        startUpdater();
+        autoUpdater.emit('update-available', found);
+        expect(downloadUpdate()).toBe(true);
+        expect(autoUpdater.downloadUpdate).toHaveBeenCalledOnce();
+        expect(getUpdateState()).toMatchObject({ status: 'downloading', version: '0.3.0', percent: 0 });
+        autoUpdater.emit('download-progress', { percent: 41.6 });
+        expect(getUpdateState()).toEqual({
+            status: 'downloading',
+            version: '0.3.0',
+            releaseDate: found.releaseDate,
+            notes: 'Nightly build #51.',
+            percent: 42,
+        });
+        autoUpdater.emit('update-downloaded', found);
+        expect(getUpdateState()).toEqual({
+            status: 'downloaded',
+            version: '0.3.0',
+            releaseDate: found.releaseDate,
+            notes: 'Nightly build #51.',
+        });
+    });
+
+    it('drops release notes that are not plain text', async () => {
+        const { startUpdater, getUpdateState } = await loadUpdater();
+        startUpdater();
+        autoUpdater.emit('update-available', { ...found, releaseNotes: [{ version: '0.3.0', note: 'x' }] });
+        expect(getUpdateState()).not.toHaveProperty('notes');
+        autoUpdater.emit('update-available', { ...found, releaseNotes: '   ' });
+        expect(getUpdateState()).not.toHaveProperty('notes');
+    });
+
+    it('downloads only from the available state', async () => {
+        const { startUpdater, downloadUpdate } = await loadUpdater();
+        startUpdater();
+        expect(downloadUpdate()).toBe(false);
+        autoUpdater.emit('update-not-available');
+        expect(downloadUpdate()).toBe(false);
+        expect(autoUpdater.downloadUpdate).not.toHaveBeenCalled();
+    });
+
+    it('records the time of a check that found nothing', async () => {
+        const { startUpdater, getUpdateState } = await loadUpdater();
+        startUpdater();
+        autoUpdater.emit('update-not-available');
+        expect(getUpdateState()).toEqual({ status: 'up-to-date', checkedAt: '2026-09-16T07:00:00.000Z' });
+    });
+
+    it('marks a failed scheduled check as background noise and a failed manual check as not', async () => {
+        autoUpdater.checkForUpdates.mockRejectedValue(new Error('offline'));
+        const { startUpdater, getUpdateState, checkForUpdates } = await loadUpdater();
+        startUpdater();
         await vi.advanceTimersByTimeAsync(15_000);
-        expect(getUpdateState()).toEqual({ status: 'error', message: 'offline' });
+        expect(getUpdateState()).toEqual({ status: 'error', message: 'offline', background: true });
+        await expect(checkForUpdates()).resolves.toEqual({ status: 'error', message: 'offline' });
+    });
+
+    it('reports library errors and a failed download as errors the user sees', async () => {
+        const { startUpdater, getUpdateState, downloadUpdate } = await loadUpdater();
+        startUpdater();
+        autoUpdater.emit('error', new Error('feed unreachable'));
+        expect(getUpdateState()).toEqual({ status: 'error', message: 'feed unreachable' });
+        autoUpdater.emit('update-available', found);
+        autoUpdater.downloadUpdate.mockRejectedValue('disk full');
+        downloadUpdate();
+        await vi.advanceTimersByTimeAsync(0);
+        expect(getUpdateState()).toEqual({ status: 'error', message: 'disk full' });
+    });
+
+    it('a manual check returns the settled state and never interrupts a download in flight', async () => {
+        const { startUpdater, checkForUpdates, downloadUpdate } = await loadUpdater();
+        startUpdater();
+        autoUpdater.checkForUpdates.mockImplementation(async () => {
+            autoUpdater.emit('update-not-available');
+            return null;
+        });
+        await expect(checkForUpdates()).resolves.toMatchObject({ status: 'up-to-date' });
+        autoUpdater.emit('update-available', found);
+        downloadUpdate();
+        await expect(checkForUpdates()).resolves.toMatchObject({ status: 'downloading' });
+        autoUpdater.emit('update-downloaded', found);
+        await expect(checkForUpdates()).resolves.toMatchObject({ status: 'downloaded' });
+        expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(1);
+    });
+
+    it('a manual check in an unsupported build answers with the reason and touches nothing', async () => {
+        electron.app.isPackaged = false;
+        const { startUpdater, checkForUpdates } = await loadUpdater();
+        startUpdater();
+        await expect(checkForUpdates()).resolves.toEqual({ status: 'unsupported', message: 'Development build' });
+        expect(autoUpdater.checkForUpdates).not.toHaveBeenCalled();
     });
 
     it('installs only when a download is ready', async () => {
@@ -110,7 +229,7 @@ describe('startUpdater', () => {
         startUpdater();
         expect(installUpdate()).toBe(false);
         expect(autoUpdater.quitAndInstall).not.toHaveBeenCalled();
-        autoUpdater.emit('update-downloaded', { version: '0.2.0' });
+        autoUpdater.emit('update-downloaded', found);
         expect(installUpdate()).toBe(true);
         expect(autoUpdater.quitAndInstall).toHaveBeenCalledOnce();
     });
