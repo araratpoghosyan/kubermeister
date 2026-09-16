@@ -16,7 +16,8 @@ type WriteChannel =
     | 'resources.scale'
     | 'resources.restart'
     | 'deployments.rollback'
-    | 'deployments.pause';
+    | 'deployments.pause'
+    | 'nodes.cordon';
 
 /** What a screen passes to a write: the input minus the context stamp, which is added here. */
 export type WriteVariables<C extends WriteChannel> = Omit<IpcInput<C>, 'context'>;
@@ -119,6 +120,14 @@ export function usePauseDeployment() {
     return useIpcMutation<'deployments.pause', WriteVariables<'deployments.pause'>>('deployments.pause', {
         prepare: (variables, client) => stamp('deployments.pause', variables, client),
         invalidates: (input) => deploymentKeys(input.name, input.namespace),
+    });
+}
+
+/** Cordon or uncordon a node; the node screens and the alerts that count schedulable nodes follow. */
+export function useCordonNode() {
+    return useIpcMutation<'nodes.cordon', WriteVariables<'nodes.cordon'>>('nodes.cordon', {
+        prepare: (variables, client) => stamp('nodes.cordon', variables, client),
+        invalidates: () => [['nodes.list'], ['nodes.get'], ['metrics.alerts'], ['nodes.drainPlan']],
     });
 }
 

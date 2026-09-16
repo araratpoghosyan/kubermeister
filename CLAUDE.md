@@ -181,6 +181,15 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   kind (cluster summary, namespaces with pod counts, nodes, events, quotas, limit ranges) keep
   bespoke channels; quotas and limit ranges flatten to one row per resource. Detail routes
   carry the namespace: `/workloads/pods/$namespace/$name`.
+- **Node actions** (`src/main/k8s/drain.ts`): `nodes.cordon` patches `spec.unschedulable`, and a
+  drain is a stream (`nodes.drain`) rather than an invoke, because it writes for minutes and reports
+  each pod as it goes. `nodes.drainPlan` answers what a drain would do for the options the dialog
+  shows, and the drain re-derives the same plan itself, so the screen can never promise one thing
+  and main carry out another. Eviction is what honours PodDisruptionBudgets: a 429 means "not now",
+  so the loop waits and retries to its own two-minute deadline per pod. That loop is the one cluster
+  call outside `withK8s` — the read timeout is the wrong ceiling for something whose job is to keep
+  asking, and the eviction status codes must stay readable. Stopping ends the stream at once and
+  leaves the node cordoned; undoing that is the operator's decision.
 - **Kubernetes access** lives in `src/main/k8s`. The kubeconfig is read-only: switching context
   or namespace changes memory and the app's own settings, never the file. Every cluster call goes
   through `withK8s` (timeout plus `[kind]`-prefixed `K8sError`). No `kubectl` dependency; the

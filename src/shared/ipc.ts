@@ -3,7 +3,9 @@ import type { AllowedChannel } from './ipc-channels.js';
 import { helmChartSchema, releaseRevisionSchema, releaseSchema, releaseTargetSchema } from './k8s/addons.js';
 import { kubeContextSchema } from './k8s/contexts.js';
 import { manifestInputSchema, manifestSchema } from './k8s/manifest.js';
+import { drainPlanInputSchema, drainPlanSchema } from './k8s/drain.js';
 import {
+    cordonInputSchema,
     deleteInputSchema,
     manifestWriteSchema,
     pauseInputSchema,
@@ -139,6 +141,8 @@ export const ipcSchemas = {
     'clusters.list': { input: noInput, output: z.array(clusterSchema) },
     'nodes.list': { input: noInput, output: z.array(nodeSchema) },
     'nodes.get': { input: z.object({ name: z.string().min(1) }), output: nodeDetailSchema.nullable() },
+    'nodes.cordon': { input: cordonInputSchema, output: writeResultSchema },
+    'nodes.drainPlan': { input: drainPlanInputSchema, output: drainPlanSchema },
     'resources.list': { input: resourceListInputSchema, output: resourceListOutputSchema },
     'resources.get': { input: resourceGetInputSchema, output: resourceGetOutputSchema },
     'pods.logSnapshot': { input: podLogSnapshotInputSchema, output: z.array(logLineSchema) },

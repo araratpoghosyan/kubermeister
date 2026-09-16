@@ -455,6 +455,29 @@ test('pauses, resumes and rolls the seeded deployment back to its first revision
     await expect(history.locator('[data-revision="3"]')).toContainText('Current', { timeout: 30_000 });
 });
 
+test('cordons the node, reads what a drain would move, and uncordons it again', async () => {
+    const { window } = launched;
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Nodes' }).click();
+    await window.getByTestId('nodes-table').getByRole('link').first().click();
+    const page = window.getByTestId('node-page');
+    await expect(page.getByRole('button', { name: 'Cordon' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Cordon' }).click();
+    await expect(window.getByText(/cordoned/)).toBeVisible();
+    // The cordon is real: the node reads as cordoned and the control offers the way back.
+    await expect(page.getByRole('button', { name: 'Uncordon' })).toBeVisible({ timeout: 30_000 });
+
+    // The plan is a read, so it says what a drain would do without moving anything.
+    await page.getByRole('button', { name: 'Drain' }).click();
+    const plan = window.getByTestId('drain-plan');
+    await expect(plan).toContainText('to evict');
+    await expect(plan).toContainText('left alone');
+    await window.getByRole('button', { name: 'Cancel' }).click();
+
+    await page.getByRole('button', { name: 'Uncordon' }).click();
+    await expect(page.getByRole('button', { name: 'Cordon' })).toBeVisible({ timeout: 30_000 });
+});
+
 test('stops at the startup screen when the kubeconfig path names nothing', async () => {
     const missing = join(tmpdir(), `km-e2e-missing-${Date.now()}.yaml`);
     const bad = await launchApp({ kubeconfigPath: missing });

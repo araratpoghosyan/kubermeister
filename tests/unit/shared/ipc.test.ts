@@ -152,6 +152,12 @@ describe('IPC contract', () => {
         );
         expect(pause.safeParse({ context: 'alpha', name: 'web', namespace: 'team-a' }).success).toBe(false);
 
+        const cordon = ipcSchemas['nodes.cordon'].input;
+        expect(cordon.safeParse({ context: 'alpha', name: 'node-1', unschedulable: true }).success).toBe(true);
+        // The flag is absolute, never a toggle, so a stale screen cannot flip a node the wrong way.
+        expect(cordon.safeParse({ context: 'alpha', name: 'node-1' }).success).toBe(false);
+        expect(cordon.safeParse({ name: 'node-1', unschedulable: true }).success).toBe(false);
+
         const manifest = ipcSchemas['resources.replace'].input;
         expect(manifest.safeParse({ context: 'alpha', manifest: 'kind: Pod' }).success).toBe(true);
         expect(manifest.safeParse({ manifest: 'kind: Pod' }).success).toBe(false);

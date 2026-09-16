@@ -30,6 +30,16 @@ describe('stream contract', () => {
         expect(Object.keys(streamSchemas).sort()).toEqual([...STREAM_CHANNELS].sort());
     });
 
+    it('takes a drain only with the context it is aimed at and both eviction choices', () => {
+        const drain = streamSchemas['nodes.drain'];
+        const input = { context: 'alpha', name: 'node-1', force: false, deleteEmptyDirData: false };
+        expect(drain.safeParse(input).success).toBe(true);
+        expect(drain.safeParse({ ...input, gracePeriodSeconds: 30 }).success).toBe(true);
+        expect(drain.safeParse({ ...input, context: undefined }).success).toBe(false);
+        expect(drain.safeParse({ ...input, force: undefined }).success).toBe(false);
+        expect(drain.safeParse({ ...input, gracePeriodSeconds: -1 }).success).toBe(false);
+    });
+
     it('validates watch events by kind and type', () => {
         expect(watchEventSchema.safeParse({ kind: 'Pod', type: 'added', item: row }).success).toBe(true);
         expect(watchEventSchema.safeParse({ kind: 'Pod', type: 'renamed', item: row }).success).toBe(false);
