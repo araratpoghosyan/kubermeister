@@ -23,6 +23,7 @@ import {
 import { addDebugContainer, copyFromPod, copyToPod, startNodeShell } from '../k8s/debug.js';
 import type { PodCopyResult, PodFileInput } from '../../shared/k8s/debug.js';
 import { getObjectYaml } from '../k8s/resources/manifest.js';
+import { getNamespaceDetail } from '../k8s/resources/namespaces.js';
 import {
     getCustomResourceInstance,
     getCustomResourceYaml,
@@ -198,6 +199,7 @@ const handlers: Handlers = {
     'releases.rollback': (input) => rollbackRelease(input),
     'releases.uninstall': (input) => uninstallRelease(input),
     'helmCharts.list': () => listHelmCharts(),
+    'namespaces.detail': ({ name }) => getNamespaceDetail(name),
     'customResources.list': ({ crd, namespace }) => listCustomResourceInstances(crd, namespace),
     'customResources.get': ({ crd, name, namespace }) => getCustomResourceInstance(crd, name, namespace),
     'customResources.getYaml': ({ crd, name, namespace }) => getCustomResourceYaml(crd, name, namespace),

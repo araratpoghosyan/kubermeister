@@ -74,6 +74,8 @@ interface ResourceListPageProps<T> {
     toolbar?: React.ReactNode;
     /** Extra attributes per row (`data-*` hooks for tests and styling). */
     rowProps?: (row: T) => Record<string, string>;
+    /** Group rows under headings by this key; the screen owns the control that picks it. */
+    groupBy?: (row: T) => string;
     /**
      * Turn on row selection and the bulk delete bar for this kind. The plural noun for the copy is
      * the page's own `nounPlural` or title.
@@ -173,6 +175,7 @@ export function ResourceListPage<T>({
     footerNote,
     toolbar,
     rowProps,
+    groupBy,
     testId,
 }: ResourceListPageProps<T>) {
     const navigateTo = useNavigateTo();
@@ -367,6 +370,7 @@ export function ResourceListPage<T>({
                         <DataTable
                             table={table}
                             onRowClick={rowClick}
+                            groupBy={groupBy}
                             rowProps={rowProps}
                             containerClassName="min-h-0 flex-1"
                             testId={testId}

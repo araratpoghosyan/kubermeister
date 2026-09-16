@@ -3,16 +3,17 @@ import { namespaceNameSchema } from './names.js';
 import { KIND_REGISTRY, KINDS } from './registry.js';
 
 /**
- * Kinds whose live manifest can be read. Nodes are not in the kind registry (they have bespoke
- * channels of their own) but their detail shows a manifest like every other object, so the
- * vocabulary is the registry's kinds plus Node.
+ * Kinds whose live manifest can be read. Nodes and namespaces are not in the kind registry (they
+ * have bespoke channels of their own) but their details show a manifest like every other object,
+ * and a namespace is created and deleted through the same write path, so the vocabulary is the
+ * registry's kinds plus those two.
  */
-export const manifestKindSchema = z.enum([...KINDS, 'Node']);
+export const manifestKindSchema = z.enum([...KINDS, 'Node', 'Namespace']);
 
 export type ManifestKind = z.infer<typeof manifestKindSchema>;
 
 export function isClusterScopedManifestKind(kind: ManifestKind): boolean {
-    return kind === 'Node' || KIND_REGISTRY[kind].clusterScoped;
+    return kind === 'Node' || kind === 'Namespace' || KIND_REGISTRY[kind].clusterScoped;
 }
 
 /**
@@ -22,6 +23,8 @@ export function isClusterScopedManifestKind(kind: ManifestKind): boolean {
  */
 export const DANGEROUS_KINDS: ReadonlySet<ManifestKind> = new Set<ManifestKind>([
     'Node',
+    // Deleting a namespace takes every object inside it, which is the furthest-reaching delete here.
+    'Namespace',
     'CustomResourceDefinition',
     'PersistentVolume',
     'StorageClass',

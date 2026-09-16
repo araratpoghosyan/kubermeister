@@ -4,7 +4,6 @@ import type {
     V1DaemonSet,
     V1Deployment,
     V1Job,
-    V1ObjectMeta,
     V1ReplicaSet,
     V1ReplicationController,
     V1StatefulSet,
@@ -37,7 +36,7 @@ import type { PauseInput, RollbackInput, RollbackResult, WriteResult } from '../
 import { apis, getNamespaced, listItems } from '../client.js';
 import { K8sError, withK8s } from '../errors.js';
 import { assertContext } from './write.js';
-import { controllerRef } from './owners.js';
+import { ownerLabel } from './controller.js';
 import { age, ago, dash, duration, joinSelector, readyRatio, toPairs } from '../format.js';
 
 /*
@@ -133,12 +132,6 @@ export function toReplicaSet(rs: V1ReplicaSet, now = Date.now()): ReplicaSet {
         ready: rs.status?.readyReplicas ?? 0,
         age: age(rs.metadata?.creationTimestamp, now),
     };
-}
-
-/** `Kind/name` of the controller above an object, which for a ReplicaSet is its Deployment. */
-export function ownerLabel(metadata?: V1ObjectMeta): string {
-    const ref = controllerRef(metadata);
-    return ref ? `${ref.kind}/${ref.name}` : '—';
 }
 
 /**

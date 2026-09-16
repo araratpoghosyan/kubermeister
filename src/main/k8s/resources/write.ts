@@ -182,9 +182,11 @@ export function replaceResource(input: ManifestWrite): Promise<WriteResult> {
 }
 
 const NODE_FACTS = { apiVersion: 'v1', kind: 'Node', clusterScoped: true };
+const NAMESPACE_FACTS = { apiVersion: 'v1', kind: 'Namespace', clusterScoped: true };
 
 function factsFor(kind: ManifestKind): { apiVersion: string; kind: string; clusterScoped: boolean } {
     if (kind === 'Node') return NODE_FACTS;
+    if (kind === 'Namespace') return NAMESPACE_FACTS;
     const info = KIND_REGISTRY[kind];
     return { apiVersion: info.apiVersion, kind: info.kind, clusterScoped: info.clusterScoped };
 }

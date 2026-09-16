@@ -46,6 +46,7 @@ import { Route as NetworkIngressesIndexRouteImport } from './routes/network/ingr
 import { Route as NetworkNetworkpoliciesIndexRouteImport } from './routes/network/networkpolicies/index';
 import { Route as NetworkServicesIndexRouteImport } from './routes/network/services/index';
 import { Route as OverviewLeasesIndexRouteImport } from './routes/overview/leases/index';
+import { Route as OverviewNamespacesNameRouteImport } from './routes/overview/namespaces_.$name';
 import { Route as OverviewNodesNameRouteImport } from './routes/overview/nodes_.$name';
 import { Route as OverviewPriorityclassesIndexRouteImport } from './routes/overview/priorityclasses/index';
 import { Route as OverviewPriorityclassesNameRouteImport } from './routes/overview/priorityclasses_.$name';
@@ -296,6 +297,11 @@ const NetworkServicesIndexRoute = NetworkServicesIndexRouteImport.update({
 const OverviewLeasesIndexRoute = OverviewLeasesIndexRouteImport.update({
   id: '/overview/leases/',
   path: '/overview/leases/',
+  getParentRoute: () => rootRouteImport,
+} as any);
+const OverviewNamespacesNameRoute = OverviewNamespacesNameRouteImport.update({
+  id: '/overview/namespaces_/$name',
+  path: '/overview/namespaces/$name',
   getParentRoute: () => rootRouteImport,
 } as any);
 const OverviewNodesNameRoute = OverviewNodesNameRouteImport.update({
@@ -628,6 +634,7 @@ export interface FileRoutesByFullPath {
   '/addons/mutatingwebhooks/$name': typeof AddonsMutatingwebhooksNameRoute;
   '/addons/validatingwebhooks/$name': typeof AddonsValidatingwebhooksNameRoute;
   '/network/ingressclasses/$name': typeof NetworkIngressclassesNameRoute;
+  '/overview/namespaces/$name': typeof OverviewNamespacesNameRoute;
   '/overview/nodes/$name': typeof OverviewNodesNameRoute;
   '/overview/priorityclasses/$name': typeof OverviewPriorityclassesNameRoute;
   '/overview/runtimeclasses/$name': typeof OverviewRuntimeclassesNameRoute;
@@ -721,6 +728,7 @@ export interface FileRoutesByTo {
   '/addons/mutatingwebhooks/$name': typeof AddonsMutatingwebhooksNameRoute;
   '/addons/validatingwebhooks/$name': typeof AddonsValidatingwebhooksNameRoute;
   '/network/ingressclasses/$name': typeof NetworkIngressclassesNameRoute;
+  '/overview/namespaces/$name': typeof OverviewNamespacesNameRoute;
   '/overview/nodes/$name': typeof OverviewNodesNameRoute;
   '/overview/priorityclasses/$name': typeof OverviewPriorityclassesNameRoute;
   '/overview/runtimeclasses/$name': typeof OverviewRuntimeclassesNameRoute;
@@ -815,6 +823,7 @@ export interface FileRoutesById {
   '/addons/mutatingwebhooks_/$name': typeof AddonsMutatingwebhooksNameRoute;
   '/addons/validatingwebhooks_/$name': typeof AddonsValidatingwebhooksNameRoute;
   '/network/ingressclasses_/$name': typeof NetworkIngressclassesNameRoute;
+  '/overview/namespaces_/$name': typeof OverviewNamespacesNameRoute;
   '/overview/nodes_/$name': typeof OverviewNodesNameRoute;
   '/overview/priorityclasses_/$name': typeof OverviewPriorityclassesNameRoute;
   '/overview/runtimeclasses_/$name': typeof OverviewRuntimeclassesNameRoute;
@@ -910,6 +919,7 @@ export interface FileRouteTypes {
     | '/addons/mutatingwebhooks/$name'
     | '/addons/validatingwebhooks/$name'
     | '/network/ingressclasses/$name'
+    | '/overview/namespaces/$name'
     | '/overview/nodes/$name'
     | '/overview/priorityclasses/$name'
     | '/overview/runtimeclasses/$name'
@@ -1003,6 +1013,7 @@ export interface FileRouteTypes {
     | '/addons/mutatingwebhooks/$name'
     | '/addons/validatingwebhooks/$name'
     | '/network/ingressclasses/$name'
+    | '/overview/namespaces/$name'
     | '/overview/nodes/$name'
     | '/overview/priorityclasses/$name'
     | '/overview/runtimeclasses/$name'
@@ -1096,6 +1107,7 @@ export interface FileRouteTypes {
     | '/addons/mutatingwebhooks_/$name'
     | '/addons/validatingwebhooks_/$name'
     | '/network/ingressclasses_/$name'
+    | '/overview/namespaces_/$name'
     | '/overview/nodes_/$name'
     | '/overview/priorityclasses_/$name'
     | '/overview/runtimeclasses_/$name'
@@ -1190,6 +1202,7 @@ export interface RootRouteChildren {
   AddonsMutatingwebhooksNameRoute: typeof AddonsMutatingwebhooksNameRoute;
   AddonsValidatingwebhooksNameRoute: typeof AddonsValidatingwebhooksNameRoute;
   NetworkIngressclassesNameRoute: typeof NetworkIngressclassesNameRoute;
+  OverviewNamespacesNameRoute: typeof OverviewNamespacesNameRoute;
   OverviewNodesNameRoute: typeof OverviewNodesNameRoute;
   OverviewPriorityclassesNameRoute: typeof OverviewPriorityclassesNameRoute;
   OverviewRuntimeclassesNameRoute: typeof OverviewRuntimeclassesNameRoute;
@@ -1523,6 +1536,13 @@ declare module '@tanstack/react-router' {
       path: '/overview/leases';
       fullPath: '/overview/leases/';
       preLoaderRoute: typeof OverviewLeasesIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    '/overview/namespaces_/$name': {
+      id: '/overview/namespaces_/$name';
+      path: '/overview/namespaces/$name';
+      fullPath: '/overview/namespaces/$name';
+      preLoaderRoute: typeof OverviewNamespacesNameRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     '/overview/nodes_/$name': {
@@ -1926,6 +1946,7 @@ const rootRouteChildren: RootRouteChildren = {
   AddonsMutatingwebhooksNameRoute: AddonsMutatingwebhooksNameRoute,
   AddonsValidatingwebhooksNameRoute: AddonsValidatingwebhooksNameRoute,
   NetworkIngressclassesNameRoute: NetworkIngressclassesNameRoute,
+  OverviewNamespacesNameRoute: OverviewNamespacesNameRoute,
   OverviewNodesNameRoute: OverviewNodesNameRoute,
   OverviewPriorityclassesNameRoute: OverviewPriorityclassesNameRoute,
   OverviewRuntimeclassesNameRoute: OverviewRuntimeclassesNameRoute,
