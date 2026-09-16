@@ -33,6 +33,23 @@ function connect(port: number): Promise<net.Socket> {
     });
 }
 
+describe('resolving a service to a pod', () => {
+    it('takes the first ready pod behind it, and nothing when there is none', async () => {
+        const { readyPodOf } = await import('../../../src/main/k8s/port-forward.js');
+        expect(
+            readyPodOf({
+                subsets: [
+                    { addresses: [{ ip: '10.0.0.1', targetRef: { kind: 'Service', name: 'x' } }] },
+                    { addresses: [{ ip: '10.0.0.2', targetRef: { kind: 'Pod', name: 'web-2' } }] },
+                ],
+            } as never),
+        ).toBe('web-2');
+        // Endpoints with only not-ready addresses, or none at all, resolve to nothing.
+        expect(readyPodOf({ subsets: [{ notReadyAddresses: [{ ip: '10.0.0.3' }] }] } as never)).toBeNull();
+        expect(readyPodOf(undefined)).toBeNull();
+    });
+});
+
 describe('startPodPortForward', () => {
     const ws = { close: vi.fn() };
 
@@ -50,7 +67,11 @@ describe('startPodPortForward', () => {
             { name: 'web-1', namespace: 'team-a', targetPort: 8080, localPort },
             send,
         );
-        expect(send).toHaveBeenCalledWith({ type: 'data', data: { status: 'listening', localPort, targetPort: 8080 } });
+        // The pod being forwarded to is named, which for a service is whichever endpoint was ready.
+        expect(send).toHaveBeenCalledWith({
+            type: 'data',
+            data: { status: 'listening', localPort, targetPort: 8080, pod: 'web-1' },
+        });
 
         const client = await connect(localPort);
         await vi.waitFor(() =>

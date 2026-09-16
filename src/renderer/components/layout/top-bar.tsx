@@ -20,6 +20,7 @@ import { useRefreshIntervalMs } from '@/lib/settings';
 import { CLUSTER_TONE, type StatusTone } from '@/lib/status';
 import { cn } from '@/lib/utils';
 import { NavLink } from './nav-link';
+import { ForwardManager } from './forward-manager';
 import { UpdatePill } from './update-pill';
 
 export function TopBar() {
@@ -67,6 +68,7 @@ export function TopBar() {
                 })}
             </nav>
             <div className="flex-1" />
+            <ForwardManager />
             <UpdatePill />
             <Button size="sm" asChild>
                 <NavLink to="/create">Create resource</NavLink>

@@ -3,6 +3,7 @@ import { GlobeIcon, HeartIcon, PlugIcon, TagIcon, WaypointsIcon } from 'lucide-r
 import { StatusBadge } from '@/components/data-display/status-badge';
 import { RefreshButton } from '@/components/refresh-button';
 import { DetailCard, DetailMetrics, PropertyGrid } from '@/components/templates/detail-cards';
+import { PortForwardControl } from '@/components/pod/port-forward-control';
 import {
     eventsTab,
     labelsTab,
@@ -62,6 +63,16 @@ function ServiceDetailPage() {
                             ))}
                         </TableBody>
                     </Table>
+                    {/* A service forward re-resolves to a ready pod per connection, so it survives
+                        the rollout that would end a forward aimed at one pod. */}
+                    <PortForwardControl
+                        kind="Service"
+                        name={name}
+                        namespace={namespace}
+                        ports={ports
+                            .map((port) => Number.parseInt(port.port, 10))
+                            .filter((port) => Number.isInteger(port) && port > 0)}
+                    />
                 </DetailCard>
             ),
         },

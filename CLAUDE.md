@@ -113,7 +113,13 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   carry files over exec using the container's own tools, streamed to and from disk rather than held
   in memory; **the local path always comes from the OS picker in main**, never from the renderer,
   for the same reason the kubeconfig does, and a cancelled picker answers null rather than failing.
-  Shells live in a drawer at the bottom of the window, not in a route: `src/renderer/lib/shell-sessions.ts`
+  Port forwards live in `src/renderer/lib/port-forwards.ts`, outside React for the same reason shells
+  are, and are listed and stopped from the top bar rather than from the page that started one. A
+  forward may target a **Service**: main resolves it to a ready endpoint **per connection**
+  (`readyPodOf`), so it survives the rollout that would end a forward aimed at one pod. Forwards are
+  remembered per context in settings and only ever _offered_ again — reopening a local port
+  unasked would be the app deciding something about the user's machine — and a context switch stops
+  them all. Shells live in a drawer at the bottom of the window, not in a route: `src/renderer/lib/shell-sessions.ts`
   holds each session and the element its terminal was opened into, so the drawer attaches and detaches
   one as it switches without the remote shell noticing, and a session ends only when closed or when
   the context changes (`closeAllShells`). The store owns its terminals — restyling goes through

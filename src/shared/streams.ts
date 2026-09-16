@@ -104,7 +104,15 @@ export const podExecInputSchema = podTargetSchema.extend({
 
 const tcpPort = z.number().int().min(1).max(65535);
 
+/**
+ * What a forward points at. A pod is forwarded directly; a service is resolved to one of its ready
+ * endpoints, and resolved again when that pod goes, which is the difference between a forward that
+ * survives a rollout and one that dies with a single pod.
+ */
+export const forwardKindSchema = z.enum(['Pod', 'Service']);
+
 export const podPortForwardInputSchema = podTargetSchema.omit({ container: true }).extend({
+    kind: forwardKindSchema.default('Pod'),
     targetPort: tcpPort,
     localPort: tcpPort,
 });
@@ -122,11 +130,14 @@ export const portForwardStatusSchema = z.object({
     status: z.literal('listening'),
     localPort: tcpPort,
     targetPort: tcpPort,
+    /** The pod actually being forwarded to, which for a service changes as its endpoints do. */
+    pod: z.string().optional(),
 });
 
 export type NodeDrainInput = z.infer<typeof nodeDrainInputSchema>;
 export type PodLogsInput = z.infer<typeof podLogsInputSchema>;
 export type PodExecInput = z.infer<typeof podExecInputSchema>;
+export type ForwardKind = z.infer<typeof forwardKindSchema>;
 export type PodPortForwardInput = z.infer<typeof podPortForwardInputSchema>;
 export type PortForwardStatus = z.infer<typeof portForwardStatusSchema>;
 

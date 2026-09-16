@@ -1,13 +1,23 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PodDetail as PodDetailModel } from '../../../src/shared/k8s/pods';
 import { NO_SEARCH } from '@/lib/log-filter';
 import { renderInRouter, renderWithQuery } from './helpers';
 
 const invoke = vi.fn();
-vi.mock('@/lib/ipc', async () => ({ ...(await vi.importActual<typeof import('@/lib/ipc')>('@/lib/ipc')), invoke }));
-const streams = { usePodLogStream: vi.fn(), openPodExec: vi.fn(), usePodPortForward: vi.fn() };
+/** Every forward stream opened, so a test can push what main would send back. */
+const forwardMessages: ((message: unknown) => void)[] = [];
+const stream = vi.fn((_channel: string, _input: unknown, onMessage: (message: unknown) => void) => {
+    forwardMessages.push(onMessage);
+    return { stop: vi.fn(), send: vi.fn() };
+});
+vi.mock('@/lib/ipc', async () => ({
+    ...(await vi.importActual<typeof import('@/lib/ipc')>('@/lib/ipc')),
+    invoke,
+    stream,
+}));
+const streams = { usePodLogStream: vi.fn(), openPodExec: vi.fn() };
 vi.mock('@/lib/pod-streams', async () => ({
     ...(await vi.importActual<typeof import('@/lib/pod-streams')>('@/lib/pod-streams')),
     ...streams,
@@ -21,6 +31,9 @@ vi.mock('sonner', async () => ({
     toast: toasts,
 }));
 
+// Imported here rather than at the top: a static import would pull in the bridge before the mock
+// above has its variables, which fails at module-evaluation time.
+const { forwardSnapshot, stopAllForwards } = await import('@/lib/port-forwards');
 const { LogViewer, SINCE_OPTIONS } = await import('@/components/data-display/log-viewer');
 const { LogsTab } = await import('@/components/pod/logs-tab');
 const { NetworkTab } = await import('@/components/pod/network-tab');
@@ -108,11 +121,12 @@ beforeEach(() => {
     vi.stubGlobal('requestAnimationFrame', () => 1);
     vi.stubGlobal('cancelAnimationFrame', () => {});
     invoke.mockReset();
+    stream.mockClear();
+    forwardMessages.length = 0;
     toasts.success.mockReset();
     download.mockReset();
     streams.usePodLogStream.mockReset();
     streams.usePodLogStream.mockReturnValue(idle);
-    streams.usePodPortForward.mockReset();
 });
 
 describe('LogViewer', () => {
@@ -495,14 +509,9 @@ describe('OverviewTab', () => {
 });
 
 describe('NetworkTab and PortForwardControl', () => {
+    afterEach(() => stopAllForwards());
+
     it('lists connectivity facts with dashes for unknowns', () => {
-        streams.usePodPortForward.mockReturnValue({
-            forwarding: false,
-            status: null,
-            error: null,
-            start: vi.fn(),
-            stop: vi.fn(),
-        });
         const { rerender } = renderWithQuery(<NetworkTab name="web-1" namespace="team-a" pod={pod} />);
         const network = screen.getByTestId('network');
         expect(network).toHaveTextContent('Ports & connectivity');
@@ -523,54 +532,63 @@ describe('NetworkTab and PortForwardControl', () => {
     });
 
     it('starts with a chosen target and typed local port, shows status, and stops', async () => {
-        const forward = { forwarding: false, status: null, error: null, start: vi.fn(), stop: vi.fn() };
-        streams.usePodPortForward.mockReturnValue(forward);
-        const { rerender } = renderWithQuery(<PortForwardControl name="web-1" namespace="team-a" pod={pod} />);
+        renderWithQuery(<PortForwardControl name="web-1" namespace="team-a" pod={pod} />);
         await userEvent.click(screen.getByRole('button', { name: 'Target port' }));
         await userEvent.click(await screen.findByRole('menuitem', { name: '8443' }));
         await userEvent.type(screen.getByRole('textbox', { name: 'Local port' }), '9090');
         await userEvent.click(screen.getByRole('button', { name: 'Start' }));
-        expect(forward.start).toHaveBeenCalledWith({
-            name: 'web-1',
-            namespace: 'team-a',
-            targetPort: 8443,
-            localPort: 9090,
-        });
+        expect(stream).toHaveBeenCalledWith(
+            'pods.portForward',
+            { kind: 'Pod', name: 'web-1', namespace: 'team-a', targetPort: 8443, localPort: 9090 },
+            expect.any(Function),
+        );
 
-        streams.usePodPortForward.mockReturnValue({
-            ...forward,
-            forwarding: true,
-            status: { status: 'listening', localPort: 9090, targetPort: 8443 },
-        });
-        rerender(<PortForwardControl name="web-1" namespace="team-a" pod={pod} />);
-        expect(screen.getByTestId('port-forward-status')).toHaveTextContent('Listening on 127.0.0.1:9090 → 8443');
+        // The forward now lives in the store, so the control reads its state from there.
+        act(() =>
+            forwardMessages[0]!({ type: 'data', data: { status: 'listening', localPort: 9090, targetPort: 8443 } }),
+        );
+        await waitFor(() =>
+            expect(screen.getByTestId('port-forward-status')).toHaveTextContent('Listening on 127.0.0.1:9090 → 8443'),
+        );
         expect(screen.getByRole('textbox', { name: 'Local port' })).toBeDisabled();
         await userEvent.click(screen.getByRole('button', { name: 'Stop' }));
-        expect(forward.stop).toHaveBeenCalledOnce();
+        await waitFor(() => expect(forwardSnapshot()).toEqual([]));
     });
 
     it('rejects an invalid local port, shows stream errors, and handles pods without ports', async () => {
-        const forward = { forwarding: false, status: null, error: null, start: vi.fn(), stop: vi.fn() };
-        streams.usePodPortForward.mockReturnValue(forward);
         const { rerender } = renderWithQuery(<PortForwardControl name="web-1" namespace="team-a" pod={pod} />);
         await userEvent.type(screen.getByRole('textbox', { name: 'Local port' }), 'abc');
         await userEvent.click(screen.getByRole('button', { name: 'Start' }));
-        expect(forward.start).not.toHaveBeenCalled();
+        expect(stream).not.toHaveBeenCalled();
         expect(screen.getByTestId('port-forward-status')).toHaveAttribute('data-error', 'true');
         expect(screen.getByTestId('port-forward-status')).toHaveTextContent(
             'error: enter a valid local port (1–65535)',
         );
 
-        streams.usePodPortForward.mockReturnValue({ ...forward, error: 'address in use' });
         await userEvent.clear(screen.getByRole('textbox', { name: 'Local port' }));
         await userEvent.click(screen.getByRole('button', { name: 'Start' }));
-        expect(forward.start).toHaveBeenCalledWith(expect.objectContaining({ localPort: 8080 }));
-        rerender(<PortForwardControl name="web-1" namespace="team-a" pod={pod} />);
-        expect(screen.getByTestId('port-forward-status')).toHaveTextContent('error: address in use');
+        expect(stream).toHaveBeenCalledWith(
+            'pods.portForward',
+            expect.objectContaining({ localPort: 8080 }),
+            expect.any(Function),
+        );
+        act(() => forwardMessages[0]!({ type: 'error', message: 'address in use' }));
+        await waitFor(() =>
+            expect(screen.getByTestId('port-forward-status')).toHaveTextContent('error: address in use'),
+        );
 
         rerender(
             <PortForwardControl name="web-1" namespace="team-a" pod={{ ...pod, containers: [container('web')] }} />,
         );
         expect(screen.getByText('This pod declares no container ports.')).toBeInTheDocument();
+    });
+
+    it('forwards a service by its own ports, saying so when it exposes none', () => {
+        const { rerender } = renderWithQuery(
+            <PortForwardControl kind="Service" name="web" namespace="team-a" ports={[80]} />,
+        );
+        expect(screen.getByRole('button', { name: 'Target port' })).toHaveTextContent('80');
+        rerender(<PortForwardControl kind="Service" name="web" namespace="team-a" ports={[]} />);
+        expect(screen.getByText('This service exposes no ports.')).toBeInTheDocument();
     });
 });
