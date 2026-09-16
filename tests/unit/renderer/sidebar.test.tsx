@@ -34,7 +34,7 @@ describe('Sidebar', () => {
         expect(within(sidebar).getByRole('link', { name: 'Nodes' })).not.toHaveAttribute('aria-current');
         expect(within(sidebar).getByRole('button', { name: 'Workloads' })).toHaveAttribute('aria-expanded', 'true');
         expect(within(sidebar).getByRole('button', { name: 'Overview' })).toHaveAttribute('aria-expanded', 'true');
-        for (const label of ['COMPUTE', 'BATCH', 'CONFIG', 'TRAFFIC', 'POLICY', 'CSI'])
+        for (const label of ['COMPUTE', 'BATCH', 'CONFIG', 'TRAFFIC', 'POLICY', 'CSI', 'ADMISSION', 'API SERVER'])
             expect(sidebar).toHaveTextContent(label);
         expect(
             within(sidebar)
@@ -82,6 +82,11 @@ describe('Sidebar', () => {
             'Helm charts',
             'Releases',
             'CRDs',
+            'MutatingWebhooks',
+            'ValidatingWebhooks',
+            'AdmissionPolicies',
+            'APIServices',
+            'FlowSchemas',
             'Settings',
         ]);
     });

@@ -12,6 +12,13 @@ import {
 } from './network.js';
 import { customResourceDetailSchema, customResourceSchema } from './addons.js';
 import {
+    admissionPolicyDetailSchema,
+    admissionPolicySchema,
+    webhookConfigDetailSchema,
+    webhookConfigSchema,
+} from './admission.js';
+import { apiServiceDetailSchema, apiServiceSchema, flowSchemaDetailSchema, flowSchemaSchema } from './apiserver.js';
+import {
     ingressClassDetailSchema,
     ingressClassSchema,
     runtimeClassDetailSchema,
@@ -129,6 +136,11 @@ export const resourceListOutputSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('RoleBinding'), items: z.array(roleBindingSchema) }),
     z.object({ kind: z.literal('ClusterRole'), items: z.array(clusterRoleSchema) }),
     z.object({ kind: z.literal('ClusterRoleBinding'), items: z.array(clusterRoleBindingSchema) }),
+    z.object({ kind: z.literal('MutatingWebhookConfiguration'), items: z.array(webhookConfigSchema) }),
+    z.object({ kind: z.literal('ValidatingWebhookConfiguration'), items: z.array(webhookConfigSchema) }),
+    z.object({ kind: z.literal('ValidatingAdmissionPolicy'), items: z.array(admissionPolicySchema) }),
+    z.object({ kind: z.literal('APIService'), items: z.array(apiServiceSchema) }),
+    z.object({ kind: z.literal('FlowSchema'), items: z.array(flowSchemaSchema) }),
     z.object({ kind: z.literal('CustomResourceDefinition'), items: z.array(customResourceSchema) }),
 ]);
 
@@ -165,6 +177,11 @@ export const resourceGetOutputSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('RoleBinding'), item: roleBindingDetailSchema.nullable() }),
     z.object({ kind: z.literal('ClusterRole'), item: clusterRoleDetailSchema.nullable() }),
     z.object({ kind: z.literal('ClusterRoleBinding'), item: clusterRoleBindingDetailSchema.nullable() }),
+    z.object({ kind: z.literal('MutatingWebhookConfiguration'), item: webhookConfigDetailSchema.nullable() }),
+    z.object({ kind: z.literal('ValidatingWebhookConfiguration'), item: webhookConfigDetailSchema.nullable() }),
+    z.object({ kind: z.literal('ValidatingAdmissionPolicy'), item: admissionPolicyDetailSchema.nullable() }),
+    z.object({ kind: z.literal('APIService'), item: apiServiceDetailSchema.nullable() }),
+    z.object({ kind: z.literal('FlowSchema'), item: flowSchemaDetailSchema.nullable() }),
     z.object({ kind: z.literal('CustomResourceDefinition'), item: customResourceDetailSchema.nullable() }),
 ]);
 

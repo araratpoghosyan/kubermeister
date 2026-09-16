@@ -19,6 +19,15 @@ import {
     listServices,
 } from './network.js';
 import { getCustomResource, listCustomResources } from './crds.js';
+import {
+    getAdmissionPolicy,
+    getMutatingWebhook,
+    getValidatingWebhook,
+    listAdmissionPolicies,
+    listMutatingWebhooks,
+    listValidatingWebhooks,
+} from './admission.js';
+import { getApiService, getFlowSchema, listApiServices, listFlowSchemas } from './apiserver.js';
 import { getIngressClass, getRuntimeClass, listIngressClasses, listRuntimeClasses } from './classes.js';
 import { getCsiCapacity, getCsiDriver, getCsiNode, listCsiCapacities, listCsiDrivers, listCsiNodes } from './csi.js';
 import {
@@ -110,6 +119,11 @@ const SOURCES: { [K in Kind]: Source<K> } = {
     RoleBinding: { list: listRoleBindings, get: getRoleBinding },
     ClusterRole: { list: () => listClusterRoles(), get: (name) => getClusterRole(name) },
     ClusterRoleBinding: { list: () => listClusterRoleBindings(), get: (name) => getClusterRoleBinding(name) },
+    MutatingWebhookConfiguration: { list: () => listMutatingWebhooks(), get: (name) => getMutatingWebhook(name) },
+    ValidatingWebhookConfiguration: { list: () => listValidatingWebhooks(), get: (name) => getValidatingWebhook(name) },
+    ValidatingAdmissionPolicy: { list: () => listAdmissionPolicies(), get: (name) => getAdmissionPolicy(name) },
+    APIService: { list: () => listApiServices(), get: (name) => getApiService(name) },
+    FlowSchema: { list: () => listFlowSchemas(), get: (name) => getFlowSchema(name) },
     CustomResourceDefinition: { list: () => listCustomResources(), get: (name) => getCustomResource(name) },
 };
 
@@ -185,6 +199,22 @@ export async function listResources(input: ResourceListInput): Promise<ResourceL
             return { kind: 'ClusterRole', items: await SOURCES.ClusterRole.list() };
         case 'ClusterRoleBinding':
             return { kind: 'ClusterRoleBinding', items: await SOURCES.ClusterRoleBinding.list() };
+        case 'MutatingWebhookConfiguration':
+            return {
+                kind: 'MutatingWebhookConfiguration',
+                items: await SOURCES.MutatingWebhookConfiguration.list(),
+            };
+        case 'ValidatingWebhookConfiguration':
+            return {
+                kind: 'ValidatingWebhookConfiguration',
+                items: await SOURCES.ValidatingWebhookConfiguration.list(),
+            };
+        case 'ValidatingAdmissionPolicy':
+            return { kind: 'ValidatingAdmissionPolicy', items: await SOURCES.ValidatingAdmissionPolicy.list() };
+        case 'APIService':
+            return { kind: 'APIService', items: await SOURCES.APIService.list() };
+        case 'FlowSchema':
+            return { kind: 'FlowSchema', items: await SOURCES.FlowSchema.list() };
         case 'CustomResourceDefinition':
             return { kind: 'CustomResourceDefinition', items: await SOURCES.CustomResourceDefinition.list() };
     }
@@ -271,6 +301,25 @@ export async function getResource(input: ResourceGetInput): Promise<ResourceGetO
             return { kind: 'ClusterRole', item: await SOURCES.ClusterRole.get(input.name) };
         case 'ClusterRoleBinding':
             return { kind: 'ClusterRoleBinding', item: await SOURCES.ClusterRoleBinding.get(input.name) };
+        case 'MutatingWebhookConfiguration':
+            return {
+                kind: 'MutatingWebhookConfiguration',
+                item: await SOURCES.MutatingWebhookConfiguration.get(input.name),
+            };
+        case 'ValidatingWebhookConfiguration':
+            return {
+                kind: 'ValidatingWebhookConfiguration',
+                item: await SOURCES.ValidatingWebhookConfiguration.get(input.name),
+            };
+        case 'ValidatingAdmissionPolicy':
+            return {
+                kind: 'ValidatingAdmissionPolicy',
+                item: await SOURCES.ValidatingAdmissionPolicy.get(input.name),
+            };
+        case 'APIService':
+            return { kind: 'APIService', item: await SOURCES.APIService.get(input.name) };
+        case 'FlowSchema':
+            return { kind: 'FlowSchema', item: await SOURCES.FlowSchema.get(input.name) };
         case 'CustomResourceDefinition':
             return {
                 kind: 'CustomResourceDefinition',

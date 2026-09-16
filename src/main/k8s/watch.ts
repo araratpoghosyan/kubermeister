@@ -8,6 +8,8 @@ import {
     type V1CSINode,
     type V1CSIStorageCapacity,
     type V1IngressClass,
+    type V1MutatingWebhookConfiguration,
+    type V1ValidatingWebhookConfiguration,
     type V1PriorityClass,
     type V1RuntimeClass,
     type V1RoleBinding,
@@ -24,6 +26,8 @@ import { toCustomResource } from './resources/crds.js';
 import { toEndpoints, toIngress, toNetworkPolicy, toService } from './resources/network.js';
 import { toClusterRole, toClusterRoleBinding, toRole, toRoleBinding, toServiceAccount } from './resources/access.js';
 import { toPod, usageFor } from './resources/pods.js';
+import { toAdmissionPolicy, toWebhookConfig } from './resources/admission.js';
+import { toApiService, toFlowSchema } from './resources/apiserver.js';
 import { toIngressClass, toRuntimeClass } from './resources/classes.js';
 import { toCsiCapacity, toCsiDriver, toCsiNode } from './resources/csi.js';
 import { toLease, toPodDisruptionBudget, toPriorityClass } from './resources/policy.js';
@@ -302,6 +306,31 @@ const WATCH_SOURCES: { [K in Kind]?: WatchSource<K> } = {
         path: () => `/apis/rbac.authorization.k8s.io/v1/clusterrolebindings`,
         list: () => () => apis().rbac.listClusterRoleBinding(),
         toRow: (binding) => toClusterRoleBinding(binding as V1ClusterRoleBinding),
+    },
+    MutatingWebhookConfiguration: {
+        path: () => '/apis/admissionregistration.k8s.io/v1/mutatingwebhookconfigurations',
+        list: () => () => apis().admission.listMutatingWebhookConfiguration(),
+        toRow: (configuration) => toWebhookConfig(configuration as V1MutatingWebhookConfiguration),
+    },
+    ValidatingWebhookConfiguration: {
+        path: () => '/apis/admissionregistration.k8s.io/v1/validatingwebhookconfigurations',
+        list: () => () => apis().admission.listValidatingWebhookConfiguration(),
+        toRow: (configuration) => toWebhookConfig(configuration as V1ValidatingWebhookConfiguration),
+    },
+    ValidatingAdmissionPolicy: {
+        path: () => '/apis/admissionregistration.k8s.io/v1/validatingadmissionpolicies',
+        list: () => () => apis().admission.listValidatingAdmissionPolicy(),
+        toRow: (policy) => toAdmissionPolicy(policy),
+    },
+    APIService: {
+        path: () => '/apis/apiregistration.k8s.io/v1/apiservices',
+        list: () => () => apis().apiregistration.listAPIService(),
+        toRow: (service) => toApiService(service),
+    },
+    FlowSchema: {
+        path: () => '/apis/flowcontrol.apiserver.k8s.io/v1/flowschemas',
+        list: () => () => apis().flowcontrol.listFlowSchema(),
+        toRow: (schema) => toFlowSchema(schema),
     },
     CustomResourceDefinition: {
         path: () => '/apis/apiextensions.k8s.io/v1/customresourcedefinitions',

@@ -10,6 +10,9 @@ import {
     KubernetesObjectApi,
     NetworkingV1Api,
     RbacAuthorizationV1Api,
+    AdmissionregistrationV1Api,
+    ApiregistrationV1Api,
+    FlowcontrolApiserverV1Api,
     NodeV1Api,
     StorageV1Api,
     PolicyV1Api,
@@ -40,6 +43,9 @@ export interface ApiBundle {
     storage: StorageV1Api;
     /** The `node.k8s.io` group, which holds RuntimeClasses rather than nodes themselves. */
     runtime: NodeV1Api;
+    admission: AdmissionregistrationV1Api;
+    apiregistration: ApiregistrationV1Api;
+    flowcontrol: FlowcontrolApiserverV1Api;
     policy: PolicyV1Api;
     scheduling: SchedulingV1Api;
     coordination: CoordinationV1Api;
@@ -132,6 +138,9 @@ export function apis(): ApiBundle {
             rbac: c.makeApiClient(RbacAuthorizationV1Api),
             storage: c.makeApiClient(StorageV1Api),
             runtime: c.makeApiClient(NodeV1Api),
+            admission: c.makeApiClient(AdmissionregistrationV1Api),
+            apiregistration: c.makeApiClient(ApiregistrationV1Api),
+            flowcontrol: c.makeApiClient(FlowcontrolApiserverV1Api),
             policy: c.makeApiClient(PolicyV1Api),
             scheduling: c.makeApiClient(SchedulingV1Api),
             coordination: c.makeApiClient(CoordinationV1Api),

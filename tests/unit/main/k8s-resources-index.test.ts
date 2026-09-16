@@ -83,6 +83,22 @@ const csiMod = {
     getCsiCapacity: vi.fn(),
 };
 vi.mock('../../../src/main/k8s/resources/csi.js', () => csiMod);
+const admissionMod = {
+    listMutatingWebhooks: vi.fn(),
+    getMutatingWebhook: vi.fn(),
+    listValidatingWebhooks: vi.fn(),
+    getValidatingWebhook: vi.fn(),
+    listAdmissionPolicies: vi.fn(),
+    getAdmissionPolicy: vi.fn(),
+};
+vi.mock('../../../src/main/k8s/resources/admission.js', () => admissionMod);
+const apiserverMod = {
+    listApiServices: vi.fn(),
+    getApiService: vi.fn(),
+    listFlowSchemas: vi.fn(),
+    getFlowSchema: vi.fn(),
+};
+vi.mock('../../../src/main/k8s/resources/apiserver.js', () => apiserverMod);
 const crdsMod = { listCustomResources: vi.fn(), getCustomResource: vi.fn() };
 vi.mock('../../../src/main/k8s/resources/crds.js', () => crdsMod);
 
@@ -98,6 +114,8 @@ const readers = [
     policyMod,
     classesMod,
     csiMod,
+    admissionMod,
+    apiserverMod,
     accessMod,
     crdsMod,
 ].flatMap((mod) => Object.entries(mod));

@@ -68,12 +68,15 @@ describe('kubeConfig', () => {
         expect(apis()).toBe(bundle);
         expect(Object.keys(bundle).sort()).toEqual(
             [
+                'admission',
                 'apiextensions',
+                'apiregistration',
                 'apps',
                 'batch',
                 'coordination',
                 'core',
                 'customObjects',
+                'flowcontrol',
                 'hpa',
                 'net',
                 'objects',
