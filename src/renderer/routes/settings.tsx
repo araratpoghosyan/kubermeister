@@ -108,7 +108,7 @@ function SettingsScreen() {
                     </Field>
                 </FormCard>
 
-                <FormCard title="Terminal" desc="Font size of the shell terminals in the drawer.">
+                <FormCard title="Terminal" desc="Font size of the shell terminal on a pod.">
                     <Field label="Font size">
                         <FormSelect
                             value={`${terminalFont} pt`}

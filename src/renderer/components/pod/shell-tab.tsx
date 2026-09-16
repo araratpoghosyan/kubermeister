@@ -1,77 +1,125 @@
-import { useEffect, useRef } from 'react';
-import { TerminalIcon } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
+import '@xterm/xterm/css/xterm.css';
+import { ChevronDownIcon, TerminalIcon } from 'lucide-react';
 import type { PodDetail } from '../../../shared/k8s/pods';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { CopyFilesCard, DebugContainerButton } from '@/components/pod/debug-actions';
-import { openShell, sessionId, useShellSessions } from '@/lib/shell-sessions';
+import { openPodExec } from '@/lib/pod-streams';
 import { useTerminalFontSize } from '@/lib/settings';
-import { readTerminalLook } from '@/lib/terminal-look';
+import { readTerminalLook, readTerminalTheme } from '@/lib/terminal-look';
 
 /**
- * The pod's Shell tab. The terminal itself lives in the drawer at the bottom of the window, not
- * here: a session opened from a page that unmounts when you look at anything else is not a session,
- * it is a demo. This tab opens one and says where it went.
+ * The pod's Shell tab: an exec session into one of its containers, running in the tab itself. A
+ * shell belongs to the pod it is a shell into, so it opens when this tab does and ends with it.
+ * The tab is not kept mounted on purpose: merely looking at a pod should never exec into it.
  */
 export function ShellTab({ name, namespace, pod }: { name: string; namespace: string; pod?: PodDetail | null }) {
+    const ref = useRef<HTMLDivElement>(null);
     const containers = pod?.containers.map((c) => c.name) ?? [];
-    const container = containers[0];
-    const sessions = useShellSessions();
+    const [selectedContainer, setSelectedContainer] = useState<string | null>(null);
+    const container = selectedContainer && containers.includes(selectedContainer) ? selectedContainer : containers[0];
     const fontSize = useTerminalFontSize();
-    const id = container ? sessionId({ namespace, pod: name, container }) : null;
-    const open = !!id && sessions.some((session) => session.id === id);
 
-    // The look is read when a shell is opened, so it must not be a reason to open one.
-    const look = useRef(fontSize);
     useEffect(() => {
-        look.current = fontSize;
-    }, [fontSize]);
+        const host = ref.current;
+        // Wait until the pod (and so a container) has resolved, or one session would open against a
+        // default first and a second against the right container a moment later.
+        if (!host || !container) return;
+        const look = readTerminalLook(document.documentElement, fontSize);
+        const term = new Terminal({
+            fontFamily: look.fontFamily,
+            fontSize: look.fontSize,
+            cursorBlink: true,
+            theme: look.theme,
+        });
+        const fit = new FitAddon();
+        term.loadAddon(fit);
+        term.open(host);
+        // Fit after layout settles, so xterm sizes to the panel's real height.
+        const raf = requestAnimationFrame(() => fit.fit());
 
-    /**
-     * Opened once per pod and container. Not "whenever none is open": closing every shell is
-     * exactly what a context switch does, and reopening one there would put a terminal back into a
-     * cluster the user has just left.
-     */
-    const autoOpened = useRef<string | null>(null);
-    useEffect(() => {
-        if (!id || !container || autoOpened.current === id) return;
-        autoOpened.current = id;
-        openShell({ namespace, pod: name, container }, readTerminalLook(document.documentElement, look.current));
-    }, [id, container, name, namespace]);
+        const control = openPodExec(
+            { name, namespace, container },
+            {
+                onData: (chunk) => term.write(chunk),
+                onError: (message) => term.write(`\r\n\x1b[31m${message}\x1b[0m\r\n`),
+                onEnd: () => term.write('\r\n\x1b[90m[session ended]\x1b[0m\r\n'),
+            },
+        );
+        const typed = term.onData((data) => control.send(data));
+        // Re-fit when the panel resizes (tab layout, window), not only on a window resize.
+        const resize = new ResizeObserver(() => fit.fit());
+        resize.observe(host);
+        // Re-read the theme tokens when the app flips light or dark, without restarting the session.
+        const theme = new MutationObserver(() => {
+            term.options.theme = readTerminalTheme(host);
+        });
+        theme.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+        return () => {
+            cancelAnimationFrame(raf);
+            resize.disconnect();
+            theme.disconnect();
+            typed.dispose();
+            control.stop();
+            term.dispose();
+        };
+        // The font size is read when the session opens; changing it must not restart the shell.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [name, namespace, container]);
 
     return (
-        <Card className="flex flex-col gap-2 rounded-card p-6 shadow-none" data-testid="shell-tab">
-            <div className="flex items-center gap-2 text-body font-medium">
-                <TerminalIcon className="size-4 text-primary" />
-                {open ? 'Shell open below' : 'No container to open a shell into'}
-            </div>
-            <p className="text-cell text-text-muted">
-                Shells run in the drawer at the bottom of the window, so they stay open while you look at other screens.
-                Closing the drawer tab ends the session; switching cluster ends every session.
-            </p>
-            {container && (
-                <div className="flex gap-2">
-                    <DebugContainerButton name={name} namespace={namespace} container={container} />
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                            openShell(
-                                { namespace, pod: name, container },
-                                readTerminalLook(document.documentElement, fontSize),
-                            )
-                        }
-                    >
-                        <TerminalIcon />
-                        {open ? 'Focus shell' : `Open shell into ${container}`}
-                    </Button>
+        <div className="flex min-h-0 flex-1 flex-col gap-3" data-testid="shell-tab">
+            <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden rounded-card bg-code-bg py-0 shadow-none">
+                <div className="flex items-center gap-2 border-b border-border px-3.5 py-2">
+                    <TerminalIcon className="size-3.5 text-text-muted" />
+                    <span className="text-meta text-text-2">{name}</span>
+                    {containers.length > 0 && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    size="xs"
+                                    disabled={containers.length < 2}
+                                    aria-label="Container"
+                                >
+                                    {container ?? '—'}
+                                    <ChevronDownIcon />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start">
+                                {containers.map((one) => (
+                                    <DropdownMenuItem key={one} onSelect={() => setSelectedContainer(one)}>
+                                        {one}
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
+                    <span className="text-meta text-text-muted">/bin/sh</span>
+                    <div className="ml-auto">
+                        {/* A pod built from a small image has no shell to exec into; the debugger
+                            brings one, and the session switches to it once it is attached. */}
+                        <DebugContainerButton
+                            name={name}
+                            namespace={namespace}
+                            container={container}
+                            onAttached={setSelectedContainer}
+                        />
+                    </div>
                 </div>
-            )}
-            {container && (
-                <div className="mt-2 border-t border-border pt-4">
-                    <CopyFilesCard name={name} namespace={namespace} container={container} />
-                </div>
-            )}
-        </Card>
+                <div ref={ref} className="min-h-0 flex-1 overflow-hidden p-2" data-testid="terminal-host" />
+            </Card>
+            {container && <CopyFilesCard name={name} namespace={namespace} container={container} />}
+        </div>
     );
 }

@@ -125,13 +125,14 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   (`readyPodOf`), so it survives the rollout that would end a forward aimed at one pod. Forwards are
   remembered per context in settings and only ever _offered_ again — reopening a local port
   unasked would be the app deciding something about the user's machine — and a context switch stops
-  them all. Shells live in a drawer at the bottom of the window, not in a route: `src/renderer/lib/shell-sessions.ts`
-  holds each session and the element its terminal was opened into, so the drawer attaches and detaches
-  one as it switches without the remote shell noticing, and a session ends only when closed or when
-  the context changes (`closeAllShells`). The store owns its terminals — restyling goes through
-  `applyTerminalLook`, never by a component mutating a session it was handed — and the pod's Shell tab
-  opens one per pod and container rather than whenever none is open, so closing every shell on a
-  context switch cannot immediately put one back into the cluster just left.
+  them all. **A shell belongs to its pod**: the exec session lives in that pod's Shell tab
+  (`src/renderer/components/pod/shell-tab.tsx`), opens when the tab does and ends with it, so leaving
+  the pod is how a shell is closed and a terminal is never left attached to a cluster nobody is
+  looking at. The tab is deliberately not `keepMounted`: merely opening a pod's page must not exec
+  into it. `src/renderer/lib/terminal-look.ts` holds the font and the two ANSI palettes, because
+  xterm needs literal colours and the app's theme can flip under a running session. The node shell
+  and the debug container are shells of a pod too: the debugger hands its container name back so the
+  tab's picker switches into it, and a node shell navigates to the pod it created.
   A controller's Logs tab follows every pod it owns at once (`src/renderer/lib/multi-pod-logs.ts`):
   the API server has no call for "the logs of this deployment", so it is one stream per pod, merged
   in arrival order and coloured by pod, restarting when the set of pods changes so a replaced pod

@@ -1,8 +1,8 @@
 /**
- * How a terminal looks. Lives apart from any component because both the drawer that renders shells
- * and the screens that open them need the same answer, and xterm needs literal colours: it cannot
- * read Tailwind classes, and remote output (`ls --color`, coloured prompts) is tuned per background,
- * so each theme ships a matched palette. Background, foreground and cursor come from the app tokens.
+ * How a terminal looks. Kept apart from any component because xterm needs literal colours: it
+ * cannot read Tailwind classes, and remote output (`ls --color`, coloured prompts) is tuned per
+ * background, so each theme ships a matched palette. Background, foreground and cursor come from
+ * the app's own tokens, re-read when the theme flips under a running session.
  */
 
 export const DARK_ANSI = {
