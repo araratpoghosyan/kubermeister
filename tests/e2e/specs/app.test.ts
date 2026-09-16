@@ -512,6 +512,27 @@ test('rolls the seeded release back to its first revision, then uninstalls it', 
     });
 });
 
+test('links a pod to the workload that runs it, and lists that workload’s pods', async () => {
+    const { window } = launched;
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Deployments' }).click();
+    await window.getByTestId('deployments-table').locator('[data-deployment="web"]').getByRole('link').click();
+    const deployment = window.getByTestId('deployment-page');
+    await window.getByRole('tab', { name: 'Pods' }).click();
+    // The exact count moves while earlier specs' rollouts settle; what matters is that the
+    // deployment's own pods are the ones listed.
+    const owned = deployment.getByTestId('owned-pods');
+    await expect(owned.locator('[data-pod]').first()).toBeVisible({ timeout: 30_000 });
+    await expect(owned.locator('[data-pod^="web-"]').first()).toBeVisible();
+
+    // Following a pod from its workload and back up the chain lands on the same deployment.
+    await owned.getByRole('link').first().click();
+    const pod = window.getByTestId('pod-page');
+    const chain = pod.getByTestId('owner-chain');
+    await expect(chain).toContainText('ReplicaSet');
+    await chain.getByRole('link', { name: 'web' }).click();
+    await expect(window.getByTestId('deployment-page')).toContainText('namespace: km-e2e');
+});
+
 test('stops at the startup screen when the kubeconfig path names nothing', async () => {
     const missing = join(tmpdir(), `km-e2e-missing-${Date.now()}.yaml`);
     const bad = await launchApp({ kubeconfigPath: missing });

@@ -20,6 +20,7 @@ import {
     scaleResource,
 } from '../k8s/resources/write.js';
 import { getObjectYaml } from '../k8s/resources/manifest.js';
+import { getPodOwners, listOwnedPods } from '../k8s/resources/owners.js';
 import {
     getRelease,
     getReleaseRevisions,
@@ -119,6 +120,8 @@ const handlers: Handlers = {
     'nodes.drainPlan': ({ name, ...options }) => getDrainPlan(name, { ...options }),
     'resources.list': (input) => listResources(input),
     'resources.get': (input) => getResource(input),
+    'pods.owners': ({ name, namespace }) => getPodOwners(name, namespace),
+    'workloads.pods': ({ kind, name, namespace }) => listOwnedPods(kind, name, namespace),
     'pods.logSnapshot': (input) => readPodLogSnapshot(input),
     'events.forObject': (input) => listEventsForObject(input),
     'events.recent': () => listRecentEvents(),

@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PodDetail as PodDetailModel } from '../../../src/shared/k8s/pods';
-import { renderWithQuery } from './helpers';
+import { renderInRouter, renderWithQuery } from './helpers';
 
 const invoke = vi.fn();
 vi.mock('@/lib/ipc', async () => ({ ...(await vi.importActual<typeof import('@/lib/ipc')>('@/lib/ipc')), invoke }));
@@ -327,7 +327,62 @@ describe('OverviewTab', () => {
         expect(within(sidecar).getByText('CrashLoop')).toHaveAttribute('data-tone', 'danger');
         expect(sidecar).toHaveTextContent('No probes configured.');
         expect(sidecar).toHaveClass('border-t');
+        // No owner chain has arrived, so there is no workload to roll and Restart stays inert.
         expect(screen.getByRole('button', { name: 'Restart' })).toHaveAttribute('aria-disabled', 'true');
+    });
+
+    it('shows the workload above the pod, linking the kinds it can show', async () => {
+        invoke.mockImplementation(async (channel: string) =>
+            channel === 'pods.owners'
+                ? [
+                      { kind: 'ReplicaSet', name: 'web-abc', namespace: 'team-a', path: null },
+                      {
+                          kind: 'Deployment',
+                          name: 'web',
+                          namespace: 'team-a',
+                          path: '/workloads/deployments/team-a/web',
+                      },
+                  ]
+                : undefined,
+        );
+        renderInRouter(<OverviewTab name="web-1" namespace="team-a" pod={pod} />);
+        const chain = await screen.findByTestId('owner-chain');
+        expect(chain).toHaveTextContent('ReplicaSet');
+        expect(chain).toHaveTextContent('web-abc');
+        // The ReplicaSet has no screen, so it is named but not a link; the Deployment is.
+        expect(within(chain).getAllByRole('link')).toHaveLength(1);
+        expect(within(chain).getByRole('link', { name: 'web' })).toHaveAttribute(
+            'href',
+            expect.stringContaining('/workloads/deployments/team-a/web'),
+        );
+    });
+
+    it('restarts the workload that owns the pod, since a pod alone cannot be restarted', async () => {
+        invoke.mockImplementation(async (channel: string) => {
+            if (channel === 'pods.owners') {
+                return [
+                    { kind: 'ReplicaSet', name: 'web-abc', namespace: 'team-a', path: null },
+                    { kind: 'Deployment', name: 'web', namespace: 'team-a', path: '/workloads/deployments/team-a/web' },
+                ];
+            }
+            if (channel === 'context.current') return { name: 'alpha', cluster: 'a', user: 'u', current: true };
+            if (channel === 'resources.restart') return { kind: 'Deployment', name: 'web', namespace: 'team-a' };
+            return undefined;
+        });
+        renderInRouter(<OverviewTab name="web-1" namespace="team-a" pod={pod} />);
+        // The inert button is replaced by the real one once the chain names a workload to roll.
+        await waitFor(() =>
+            expect(screen.getByRole('button', { name: 'Restart' })).not.toHaveAttribute('aria-disabled'),
+        );
+        await userEvent.click(screen.getByRole('button', { name: 'Restart' }));
+        await waitFor(() =>
+            expect(invoke).toHaveBeenCalledWith('resources.restart', {
+                context: 'alpha',
+                kind: 'Deployment',
+                name: 'web',
+                namespace: 'team-a',
+            }),
+        );
     });
 
     it('shows the latest sampled usage with sparklines once series arrive', async () => {
