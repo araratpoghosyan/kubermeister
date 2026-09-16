@@ -25,6 +25,7 @@ const deployment = {
     available: 2,
     strategy: 'Recreate',
     image: 'nginx:1.27',
+    paused: false,
     age: '3d',
 };
 const statefulSet = {
@@ -65,13 +66,33 @@ const data: Record<string, unknown> = {
         { name: 'web-1', desired: 0, current: 0, ready: 0, age: '3d' },
     ],
     'metrics.deploymentSeries': { cpu: [100, 250], mem: [10, 20] },
+    'deployments.rolloutStatus': {
+        paused: false,
+        desired: 3,
+        updated: 2,
+        ready: 2,
+        available: 2,
+        unavailable: 1,
+        settled: false,
+        conditions: [
+            { type: 'Progressing', status: 'True', reason: 'ReplicaSetUpdated', message: 'rolling', when: '1h ago' },
+        ],
+        sets: [
+            { name: 'web-2', rev: '2', role: 'new', desired: 3, current: 2, ready: 2, age: '2h' },
+            { name: 'web-1', rev: '1', role: 'old', desired: 1, current: 1, ready: 1, age: '3h' },
+        ],
+    },
 };
 
-function withResources(items: Record<string, unknown[]>, details: Record<string, unknown>) {
+function withResources(
+    items: Record<string, unknown[]>,
+    details: Record<string, unknown>,
+    channels: Record<string, unknown> = data,
+) {
     invoke.mockImplementation(async (channel: string, input: { kind?: string }) => {
         if (channel === 'resources.list') return { kind: input.kind, items: items[input.kind!] ?? [] };
         if (channel === 'resources.get') return { kind: input.kind, item: details[input.kind!] ?? null };
-        return data[channel];
+        return channels[channel];
     });
 }
 
@@ -182,7 +203,7 @@ describe('workload details', () => {
             within(rail)
                 .getAllByRole('tab')
                 .map((t) => t.textContent),
-        ).toEqual(['Overview', 'Events', 'History2', 'ReplicaSets2', 'ManifestYAML', 'Labels1']);
+        ).toEqual(['Overview', 'Events', 'Status', 'History2', 'ReplicaSets2', 'ManifestYAML', 'Labels1']);
         await userEvent.click(within(rail).getByRole('tab', { name: /History/ }));
         const history = within(page).getByTestId('rollout-history');
         expect(page).toHaveTextContent('2 revisions');
@@ -191,7 +212,7 @@ describe('workload details', () => {
         expect(within(current).queryByRole('button', { name: 'Roll back' })).not.toBeInTheDocument();
         const superseded = history.querySelector('[data-revision="1"]') as HTMLElement;
         expect(within(superseded).getByText('Superseded')).toHaveAttribute('data-tone', 'neutral');
-        expect(within(superseded).getByRole('button', { name: 'Roll back' })).toHaveAttribute('aria-disabled', 'true');
+        expect(within(superseded).getByRole('button', { name: 'Roll back' })).toBeEnabled();
         expect(invoke).toHaveBeenCalledWith('deployments.rollouts', { name: 'web', namespace: 'team-a' });
 
         await userEvent.click(within(rail).getByRole('tab', { name: /ReplicaSets/ }));
@@ -200,6 +221,91 @@ describe('workload details', () => {
         expect(within(sets).getByText('web-2').closest('tr')?.querySelector('.text-ok')).toHaveTextContent('3');
         expect(within(sets).getByText('web-1').closest('tr')?.querySelector('.text-text-muted')).toHaveTextContent('0');
         expect(invoke).toHaveBeenCalledWith('metrics.deploymentSeries', { namespace: 'team-a', name: 'web' });
+    });
+
+    it('shows live rollout progress, the controller’s conditions and each generation', async () => {
+        renderRoutes(routeTree, '/workloads/deployments/team-a/web');
+        const page = await screen.findByTestId('deployment-page');
+        const rail = await within(page).findByRole('tablist');
+        await userEvent.click(within(rail).getByRole('tab', { name: 'Status' }));
+
+        // Two of three replicas updated: the card reads the share, not the raw counts.
+        await waitFor(() => expect(page).toHaveTextContent('67% of replicas updated'));
+        // The end-to-end spec reads the rollout state through this card, so it is asserted here too.
+        expect(within(page).getByTestId('rollout-progress')).toHaveTextContent('Rolling out');
+        expect(within(page).getByText('Rolling out')).toHaveAttribute('data-tone', 'warn');
+        expect(within(page).getByRole('progressbar', { name: 'Updated replicas' })).toHaveAttribute(
+            'aria-valuenow',
+            '67',
+        );
+        const conditions = within(page).getByTestId('rollout-conditions');
+        expect(within(conditions).getByText('ReplicaSetUpdated')).toBeInTheDocument();
+        const generations = within(page).getByTestId('rollout-generations');
+        expect(within(generations).getByText('New').closest('tr')).toHaveAttribute('data-generation', '2');
+        expect(within(generations).getByText('Old').closest('tr')).toHaveAttribute('data-generation', '1');
+        expect(invoke).toHaveBeenCalledWith('deployments.rolloutStatus', { name: 'web', namespace: 'team-a' });
+    });
+
+    it('reads a scaled-to-zero deployment as fully rolled out, and tolerates an odd condition', async () => {
+        withResources(
+            {},
+            { Deployment: { ...deployment, ...meta } },
+            {
+                ...data,
+                'deployments.rolloutStatus': {
+                    paused: false,
+                    desired: 0,
+                    updated: 0,
+                    ready: 0,
+                    available: 0,
+                    unavailable: 0,
+                    settled: true,
+                    conditions: [{ type: 'Progressing', status: 'Unknown', reason: '—', message: '—', when: '1h ago' }],
+                    sets: [],
+                },
+            },
+        );
+        renderRoutes(routeTree, '/workloads/deployments/team-a/web');
+        const page = await screen.findByTestId('deployment-page');
+        const rail = await within(page).findByRole('tablist');
+        await userEvent.click(within(rail).getByRole('tab', { name: 'Status' }));
+        await waitFor(() => expect(page).toHaveTextContent('100% of replicas updated'));
+        expect(within(page).getByText('Settled')).toHaveAttribute('data-tone', 'ok');
+        expect(within(page).getByText('Unknown')).toHaveAttribute('data-tone', 'warn');
+    });
+
+    it('shows nothing in the status tab until the rollout read answers', async () => {
+        withResources({}, { Deployment: { ...deployment, ...meta } }, { ...data, 'deployments.rolloutStatus': null });
+        renderRoutes(routeTree, '/workloads/deployments/team-a/web');
+        const page = await screen.findByTestId('deployment-page');
+        const rail = await within(page).findByRole('tablist');
+        await userEvent.click(within(rail).getByRole('tab', { name: 'Status' }));
+        await waitFor(() => expect(invoke).toHaveBeenCalledWith('deployments.rolloutStatus', expect.anything()));
+        expect(within(page).queryByTestId('rollout-conditions')).not.toBeInTheDocument();
+    });
+
+    it('reads a paused rollout as held, and offers to resume it', async () => {
+        withResources(
+            {},
+            {
+                Deployment: { ...deployment, ...meta, status: 'Paused', paused: true },
+            },
+            {
+                ...data,
+                'deployments.rolloutStatus': {
+                    ...(data['deployments.rolloutStatus'] as object),
+                    paused: true,
+                },
+            },
+        );
+        renderRoutes(routeTree, '/workloads/deployments/team-a/web');
+        const page = await screen.findByTestId('deployment-page');
+        await waitFor(() => expect(within(page).getByText('Paused')).toHaveAttribute('data-tone', 'neutral'));
+        expect(within(page).getByRole('button', { name: 'Resume' })).toBeInTheDocument();
+
+        await userEvent.click(within(page).getByRole('tab', { name: 'Status' }));
+        await waitFor(() => expect(within(page).getByTestId('rollout-progress')).toHaveTextContent('Paused'));
+        expect(page).toHaveTextContent('No further change is applied');
     });
 
     it('renders the statefulset and daemonset overviews and not-found states', async () => {

@@ -65,9 +65,41 @@ export const restartInputSchema = z.object({
     namespace: namespaceNameSchema,
 });
 
+/**
+ * A rollback names the revision it is aiming at, as the rollout history shows it. Deployments are
+ * namespaced, so the screen names the namespace it rendered rather than leaning on the selection.
+ */
+export const rollbackInputSchema = z.object({
+    ...scopeStamp,
+    name: z.string().min(1),
+    namespace: namespaceNameSchema,
+    /** Revision number as the history displays it, e.g. "3". */
+    revision: z.string().regex(/^\d+$/, 'must be a revision number'),
+});
+
+/**
+ * What a rollback did. A revision whose pod template already matches the live one is reported as
+ * skipped rather than written, which is how kubectl reads it too: there is nothing to roll back to.
+ */
+export const rollbackResultSchema = writeResultSchema.extend({
+    revision: z.string(),
+    skipped: z.boolean(),
+});
+
+/** Hold a rollout where it stands, or let it continue. */
+export const pauseInputSchema = z.object({
+    ...scopeStamp,
+    name: z.string().min(1),
+    namespace: namespaceNameSchema,
+    paused: z.boolean(),
+});
+
 export type WriteResult = z.infer<typeof writeResultSchema>;
 export type ManifestIdentity = z.infer<typeof manifestIdentitySchema>;
 export type ManifestWrite = z.infer<typeof manifestWriteSchema>;
 export type DeleteInput = z.infer<typeof deleteInputSchema>;
 export type ScaleInput = z.infer<typeof scaleInputSchema>;
 export type RestartInput = z.infer<typeof restartInputSchema>;
+export type RollbackInput = z.infer<typeof rollbackInputSchema>;
+export type RollbackResult = z.infer<typeof rollbackResultSchema>;
+export type PauseInput = z.infer<typeof pauseInputSchema>;

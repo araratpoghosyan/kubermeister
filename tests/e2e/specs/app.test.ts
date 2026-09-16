@@ -427,6 +427,34 @@ test('restarts the seeded deployment, which rolls its pods onto a new replica se
     await expect(page.getByTestId('rollout-history').locator('[data-revision="2"]')).toBeVisible();
 });
 
+test('pauses, resumes and rolls the seeded deployment back to its first revision', async () => {
+    const { window } = launched;
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Deployments' }).click();
+    await window.getByTestId('deployments-table').locator('[data-deployment="web"]').getByRole('link').click();
+    const page = window.getByTestId('deployment-page');
+
+    // The rollout picture is live: the generation the deployment points at is marked as the new one.
+    await window.getByRole('tab', { name: 'Status' }).click();
+    await expect(page.getByTestId('rollout-generations')).toContainText('New');
+
+    await page.getByRole('button', { name: 'Pause' }).click();
+    await expect(window.getByText(/Rollout of .* paused/)).toBeVisible();
+    await expect(page.getByTestId('rollout-progress')).toContainText('Paused', { timeout: 30_000 });
+    await page.getByRole('button', { name: 'Resume' }).click();
+    await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible({ timeout: 30_000 });
+
+    // Rolling back restores revision 1's template, which the cluster records as a new revision: the
+    // restart spec above left revision 2 current, so undoing it lands as revision 3.
+    await window.getByRole('tab', { name: /History/ }).click();
+    const history = page.getByTestId('rollout-history');
+    await history.locator('[data-revision="1"]').getByRole('button', { name: 'Roll back' }).click();
+    const dialog = window.getByRole('alertdialog');
+    await expect(dialog).toContainText('Roll back to revision #1?');
+    await dialog.getByRole('button', { name: 'Roll back' }).click();
+    await expect(window.getByText(/Rolled .* back to revision #1/)).toBeVisible();
+    await expect(history.locator('[data-revision="3"]')).toContainText('Current', { timeout: 30_000 });
+});
+
 test('stops at the startup screen when the kubeconfig path names nothing', async () => {
     const missing = join(tmpdir(), `km-e2e-missing-${Date.now()}.yaml`);
     const bad = await launchApp({ kubeconfigPath: missing });

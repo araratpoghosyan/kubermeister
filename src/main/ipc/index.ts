@@ -30,7 +30,13 @@ import {
     getSparklines,
     getWorkloadHealth,
 } from '../k8s/resources/metrics.js';
-import { getDeploymentReplicaSets, getDeploymentRollouts } from '../k8s/resources/workloads.js';
+import {
+    getDeploymentReplicaSets,
+    getDeploymentRolloutStatus,
+    getDeploymentRollouts,
+    rollbackDeployment,
+    setDeploymentPaused,
+} from '../k8s/resources/workloads.js';
 import { getResource, listResources } from '../k8s/resources/index.js';
 import { getNode, listNodes } from '../k8s/resources/nodes.js';
 import { getSettings, updateSettings } from '../settings/store.js';
@@ -117,6 +123,9 @@ const handlers: Handlers = {
     'metrics.deploymentSeries': ({ namespace, name }) => getDeploymentSeries(namespace, name),
     'deployments.replicaSets': ({ name, namespace }) => getDeploymentReplicaSets(name, namespace),
     'deployments.rollouts': ({ name, namespace }) => getDeploymentRollouts(name, namespace),
+    'deployments.rolloutStatus': ({ name, namespace }) => getDeploymentRolloutStatus(name, namespace),
+    'deployments.rollback': (input) => rollbackDeployment(input),
+    'deployments.pause': (input) => setDeploymentPaused(input),
     'configMaps.entries': ({ name, namespace }) => getConfigMapEntries(name, namespace),
     'secrets.entries': ({ name, namespace }) => getSecretEntries(name, namespace),
     'services.ports': ({ name, namespace }) => getServicePorts(name, namespace),

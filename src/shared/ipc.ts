@@ -6,7 +6,10 @@ import { manifestInputSchema, manifestSchema } from './k8s/manifest.js';
 import {
     deleteInputSchema,
     manifestWriteSchema,
+    pauseInputSchema,
     restartInputSchema,
+    rollbackInputSchema,
+    rollbackResultSchema,
     scaleInputSchema,
     writeResultSchema,
 } from './k8s/write.js';
@@ -39,6 +42,7 @@ import {
     namespacedNameSchema,
     replicaSetSchema,
     rolloutSchema,
+    rolloutStatusSchema,
     secretEntrySchema,
 } from './k8s/workloads.js';
 
@@ -151,6 +155,9 @@ export const ipcSchemas = {
     'metrics.deploymentSeries': { input: deploymentSeriesInputSchema, output: resourceSeriesSchema },
     'deployments.replicaSets': { input: namespacedNameSchema, output: z.array(replicaSetSchema) },
     'deployments.rollouts': { input: namespacedNameSchema, output: z.array(rolloutSchema) },
+    'deployments.rolloutStatus': { input: namespacedNameSchema, output: rolloutStatusSchema.nullable() },
+    'deployments.rollback': { input: rollbackInputSchema, output: rollbackResultSchema },
+    'deployments.pause': { input: pauseInputSchema, output: writeResultSchema },
     'configMaps.entries': { input: namespacedNameSchema, output: z.array(configMapEntrySchema) },
     'secrets.entries': { input: namespacedNameSchema, output: z.array(secretEntrySchema) },
     'services.ports': { input: namespacedNameSchema, output: z.array(servicePortSchema) },

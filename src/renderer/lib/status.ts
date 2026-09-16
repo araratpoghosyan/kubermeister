@@ -34,6 +34,7 @@ export const DEPLOYMENT_TONE: Record<DeploymentStatus, StatusTone> = {
     Healthy: 'ok',
     Available: 'ok',
     Progressing: 'warn',
+    Paused: 'neutral',
 };
 export const ROLLOUT_TONE: Record<RolloutState, StatusTone> = { Current: 'ok', Superseded: 'neutral' };
 export const NETWORK_TONE: Record<NetworkStatus, StatusTone> = { Active: 'ok', Pending: 'warn' };

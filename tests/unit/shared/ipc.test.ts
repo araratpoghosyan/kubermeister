@@ -136,6 +136,22 @@ describe('IPC contract', () => {
             false,
         );
 
+        const rollback = ipcSchemas['deployments.rollback'].input;
+        expect(rollback.safeParse({ context: 'alpha', name: 'web', namespace: 'team-a', revision: '3' }).success).toBe(
+            true,
+        );
+        // A revision is a number as the history shows it; a namespace is never inferred for a write.
+        expect(rollback.safeParse({ context: 'alpha', name: 'web', namespace: 'team-a', revision: 'x' }).success).toBe(
+            false,
+        );
+        expect(rollback.safeParse({ context: 'alpha', name: 'web', revision: '3' }).success).toBe(false);
+
+        const pause = ipcSchemas['deployments.pause'].input;
+        expect(pause.safeParse({ context: 'alpha', name: 'web', namespace: 'team-a', paused: true }).success).toBe(
+            true,
+        );
+        expect(pause.safeParse({ context: 'alpha', name: 'web', namespace: 'team-a' }).success).toBe(false);
+
         const manifest = ipcSchemas['resources.replace'].input;
         expect(manifest.safeParse({ context: 'alpha', manifest: 'kind: Pod' }).success).toBe(true);
         expect(manifest.safeParse({ manifest: 'kind: Pod' }).success).toBe(false);
