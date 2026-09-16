@@ -14,7 +14,7 @@ vi.mock('electron', () => ({
     dialog,
 }));
 
-const updater = { getUpdateState: vi.fn(), installUpdate: vi.fn() };
+const updater = { getUpdateState: vi.fn(), installUpdate: vi.fn(), checkForUpdates: vi.fn(), downloadUpdate: vi.fn() };
 const client = { reloadKubeConfig: vi.fn() };
 const context = { listContexts: vi.fn(), getCurrentContext: vi.fn(), setContext: vi.fn(), setNamespace: vi.fn() };
 const store = { getSettings: vi.fn(), updateSettings: vi.fn() };
@@ -122,6 +122,7 @@ describe('registerHandlers', () => {
         await expect(invoke('app.info', {})).resolves.toEqual({
             name: 'Kubermeister',
             version: '0.1.1',
+            channel: 'stable',
             electron: '44.3.0',
             chrome: '152.0.0.0',
             node: process.versions.node,
@@ -140,10 +141,17 @@ describe('registerHandlers', () => {
         await expect(invoke('update.state', {})).rejects.toThrow();
     });
 
-    it('forwards update.state and update.install to the updater', async () => {
+    it('forwards the update channels to the updater', async () => {
         updater.getUpdateState.mockReturnValue({ status: 'downloaded', version: '0.2.0' });
         updater.installUpdate.mockReturnValue(true);
+        updater.checkForUpdates.mockResolvedValue({ status: 'up-to-date', checkedAt: '2026-09-16T07:00:00.000Z' });
+        updater.downloadUpdate.mockReturnValue(false);
         await expect(invoke('update.state', {})).resolves.toEqual({ status: 'downloaded', version: '0.2.0' });
+        await expect(invoke('update.check', {})).resolves.toEqual({
+            status: 'up-to-date',
+            checkedAt: '2026-09-16T07:00:00.000Z',
+        });
+        await expect(invoke('update.download', {})).resolves.toEqual({ ok: false });
         await expect(invoke('update.install', {})).resolves.toEqual({ ok: true });
     });
 

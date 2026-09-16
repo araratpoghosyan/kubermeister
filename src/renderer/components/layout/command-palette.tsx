@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { PlusIcon } from 'lucide-react';
+import { PlusIcon, RefreshCwIcon } from 'lucide-react';
 import {
     CommandDialog,
     CommandEmpty,
@@ -12,6 +12,7 @@ import {
 import { ALL_DOMAINS } from '@/lib/nav';
 import { useIpcQuery } from '@/lib/query';
 import { selectNamespace, useSwitchContext } from '@/lib/scope';
+import { checkForUpdates } from '@/lib/updates';
 import { useNavigateTo } from './nav-link';
 
 interface CommandPaletteProps {
@@ -96,6 +97,17 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                     <CommandItem value="create resource" onSelect={() => go('/create')}>
                         <PlusIcon className="size-3.5 text-text-muted" />
                         <span className="flex-1">Create resource</span>
+                    </CommandItem>
+                    <CommandItem
+                        value="check for updates"
+                        onSelect={() => {
+                            // The outcome shows on the Settings screen's Updates card.
+                            void checkForUpdates();
+                            go('/settings');
+                        }}
+                    >
+                        <RefreshCwIcon className="size-3.5 text-text-muted" />
+                        <span className="flex-1">Check for updates</span>
                     </CommandItem>
                 </CommandGroup>
 

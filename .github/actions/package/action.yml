@@ -74,17 +74,33 @@ runs:
         fi
         npm run package -- "${flags[@]}"
 
-    - name: Upload installers and updater metadata
+    # Installers first, metadata last: the feed file is what a running app reads, so it must never
+    # name an asset that is still uploading.
+    - name: Upload installers
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        TAG: ${{ inputs.release-tag }}
+      run: |
+        shopt -s nullglob
+        case "$RUNNER_OS" in
+          macOS)   files=(release/*.dmg release/*.dmg.blockmap release/*.zip release/*.zip.blockmap) ;;
+          Windows) files=(release/*.exe release/*.exe.blockmap) ;;
+          Linux)   files=(release/*.AppImage release/*.deb) ;;
+        esac
+        gh release upload "$TAG" "${files[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+
+    - name: Upload updater metadata
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github-token }}
         TAG: ${{ inputs.release-tag }}
         CHANNEL: ${{ inputs.metadata-channel }}
       run: |
-        shopt -s nullglob
         case "$RUNNER_OS" in
-          macOS)   files=(release/*.dmg release/*.dmg.blockmap release/*.zip release/*.zip.blockmap "release/${CHANNEL}-mac.yml") ;;
-          Windows) files=(release/*.exe release/*.exe.blockmap "release/${CHANNEL}.yml") ;;
-          Linux)   files=(release/*.AppImage release/*.deb "release/${CHANNEL}-linux.yml") ;;
+          macOS)   file="release/${CHANNEL}-mac.yml" ;;
+          Windows) file="release/${CHANNEL}.yml" ;;
+          Linux)   file="release/${CHANNEL}-linux.yml" ;;
         esac
-        gh release upload "$TAG" "${files[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+        test -f "$file"
+        gh release upload "$TAG" "$file" --repo "$GITHUB_REPOSITORY" --clobber

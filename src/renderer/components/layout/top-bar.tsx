@@ -20,6 +20,7 @@ import { useRefreshIntervalMs } from '@/lib/settings';
 import { CLUSTER_TONE, type StatusTone } from '@/lib/status';
 import { cn } from '@/lib/utils';
 import { NavLink } from './nav-link';
+import { UpdatePill } from './update-pill';
 
 export function TopBar() {
     const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -66,6 +67,7 @@ export function TopBar() {
                 })}
             </nav>
             <div className="flex-1" />
+            <UpdatePill />
             <Button size="sm" asChild>
                 <NavLink to="/create">Create resource</NavLink>
             </Button>

@@ -201,8 +201,15 @@ change them together with the workflows. Packaging runs through `.github/actions
 `CSC_*` and `APPLE_*` secrets macOS is Developer ID signed and notarized, otherwise ad-hoc signed;
 never export an empty `CSC_LINK`. In-app updates: `src/main/updater.ts` (electron-updater) reads the
 feed electron-builder embeds at package time, so each app only follows its own channel; macOS
-updates need the `zip` target next to the dmg. Icons regenerate from `resources/icon.svg` and
-`resources/icon-tip.svg` with `resources/build-icon.sh`.
+updates need the `zip` target next to the dmg. The library never downloads on its own: the
+`updates.mode` setting (`check` by default, `download`, `off`) is read the moment a version is found,
+and main pushes every transition as `update.state`, which `useUpdater` in `src/renderer/lib/updates.ts`
+mirrors for the top-bar `UpdatePill` (popover plus one-shot toasts) and the Settings About card;
+`update.check` is also reachable from the menu and the palette. A failed scheduled check is stored
+with `background: true` and never surfaces as a notification. The packaging action uploads
+installers before the `*.yml` feed so the feed never names an asset that is still uploading; tip
+builds carry their build number in `releaseInfo.releaseNotes`, which the popover shows. Icons
+regenerate from `resources/icon.svg` and `resources/icon-tip.svg` with `resources/build-icon.sh`.
 
 ## Testing
 

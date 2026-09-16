@@ -74,9 +74,12 @@ jobs:
         # <next stable>-tip.<build number>: orderable by electron-updater, unique per commit.
         # Explicit bash: the Windows default shell is PowerShell, where this line yields "".
         shell: bash
-        run: echo "version=$(node -p "require('./package.json').version")-tip.$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "version=$(node -p "require('./package.json').version")-tip.$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
+          echo "notes=Nightly build #$(git rev-list --count HEAD) from ${GITHUB_SHA::7} on $(date -u +%Y-%m-%d). Rebuilt on every change to main." >> "$GITHUB_OUTPUT"
       # Separate identity so tip and stable coexist: name, app id, package name, icons, version,
       # and an update feed fixed to the tip download URL so the tip app only follows tip builds.
+      # The release notes ride in the feed file, which is what the in-app update popover shows.
       - uses: ./.github/actions/package
         with:
           release-tag: tip
@@ -87,6 +90,7 @@ jobs:
             -c.appId=io.kubermeister.tip
             -c.extraMetadata.name=kubermeister-tip
             -c.extraMetadata.version=${{ steps.version.outputs.version }}
+            -c.releaseInfo.releaseNotes=${{ steps.version.outputs.notes }}
             -c.mac.icon=resources/icon-tip.icns
             -c.win.icon=resources/icon-tip.ico
             -c.linux.icon=resources/icon-tip.png

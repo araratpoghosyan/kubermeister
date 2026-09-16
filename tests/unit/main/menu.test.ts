@@ -5,6 +5,8 @@ const menu = { buildFromTemplate: vi.fn((template: unknown) => ({ template })), 
 vi.mock('electron', () => ({ app: { name: 'Kubermeister' }, Menu: menu }));
 const broadcast = vi.fn();
 vi.mock('../../../src/main/ipc/push.js', () => ({ broadcast }));
+const checkForUpdates = vi.fn(() => Promise.resolve({ status: 'checking' }));
+vi.mock('../../../src/main/updater.js', () => ({ checkForUpdates }));
 
 const { buildMenuTemplate, installApplicationMenu } = await import('../../../src/main/menu.js');
 
@@ -12,6 +14,8 @@ const labels = (items: MenuItemConstructorOptions[] | undefined) =>
     (items ?? []).map((i) => i.label ?? i.role ?? i.type);
 const settingsItem = (template: MenuItemConstructorOptions[]) =>
     (template[0]?.submenu as MenuItemConstructorOptions[]).find((i) => i.label === 'Settings…')!;
+const updatesItem = (template: MenuItemConstructorOptions[]) =>
+    (template[0]?.submenu as MenuItemConstructorOptions[]).find((i) => i.label === 'Check for Updates…')!;
 
 describe('application menu', () => {
     beforeEach(() => {
@@ -22,6 +26,10 @@ describe('application menu', () => {
         const template = buildMenuTemplate('darwin');
         expect(template[0]?.label).toBe('Kubermeister');
         expect(labels(template[0]?.submenu as MenuItemConstructorOptions[])).toContain('Settings…');
+        expect(labels(template[0]?.submenu as MenuItemConstructorOptions[]).slice(0, 2)).toEqual([
+            'about',
+            'Check for Updates…',
+        ]);
         expect(settingsItem(template).accelerator).toBe('Cmd+,');
         expect(template.slice(1).map((i) => i.role)).toEqual(['editMenu', 'viewMenu', 'windowMenu']);
     });
@@ -32,6 +40,7 @@ describe('application menu', () => {
             expect(template[0]?.label).toBe('File');
             expect(labels(template[0]?.submenu as MenuItemConstructorOptions[])).toEqual([
                 'Settings…',
+                'Check for Updates…',
                 'separator',
                 'quit',
             ]);
@@ -43,6 +52,16 @@ describe('application menu', () => {
         const item = settingsItem(buildMenuTemplate('darwin'));
         (item.click as () => void)();
         expect(broadcast).toHaveBeenCalledWith('open-settings', {});
+    });
+
+    it('starts a check and opens Settings when Check for Updates is activated', () => {
+        for (const platform of ['darwin', 'win32'] as const) {
+            const item = updatesItem(buildMenuTemplate(platform));
+            (item.click as () => void)();
+        }
+        expect(checkForUpdates).toHaveBeenCalledTimes(2);
+        expect(broadcast).toHaveBeenCalledTimes(2);
+        expect(broadcast).toHaveBeenLastCalledWith('open-settings', {});
     });
 
     it('installs the built menu for the current platform', () => {

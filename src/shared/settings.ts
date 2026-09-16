@@ -27,6 +27,17 @@ const dataSchema = z.object({
     refreshIntervalSec: z.number().int().positive(),
 });
 
+/**
+ * How far the updater goes on its own: `check` finds new versions and lets the user start the
+ * download, `download` fetches them in the background and asks only to restart, `off` never checks
+ * unless asked to from Settings or the menu.
+ */
+export const UPDATE_MODES = ['check', 'download', 'off'] as const;
+
+const updatesSchema = z.object({
+    mode: z.enum(UPDATE_MODES),
+});
+
 const windowBoundsSchema = z.object({
     x: z.number(),
     y: z.number(),
@@ -44,6 +55,7 @@ export const settingsSchema = z.object({
     session: sessionSchema,
     connection: connectionSchema,
     data: dataSchema,
+    updates: updatesSchema,
     window: windowSchema,
 });
 
@@ -52,6 +64,7 @@ export const settingsPatchSchema = z.object({
     session: sessionSchema.partial().optional(),
     connection: connectionSchema.partial().optional(),
     data: dataSchema.partial().optional(),
+    updates: updatesSchema.partial().optional(),
     window: windowSchema.partial().optional(),
 });
 
@@ -66,12 +79,14 @@ export type Settings = z.infer<typeof settingsSchema>;
 export type SettingsPatch = z.infer<typeof settingsPatchSchema>;
 export type SettingsInput = z.infer<typeof settingsInputSchema>;
 export type WindowBounds = z.infer<typeof windowBoundsSchema>;
+export type UpdateMode = (typeof UPDATE_MODES)[number];
 
 export const DEFAULT_SETTINGS: Settings = {
     version: 1,
     session: { lastContext: null, lastNamespace: null, restoreOnLaunch: true },
     connection: { kubeconfigPath: null },
     data: { refreshIntervalSec: 12 },
+    updates: { mode: 'check' },
     window: { bounds: null },
 };
 
@@ -98,6 +113,7 @@ export function parseSettings(raw: unknown): Settings {
         session: parseSection(sessionSchema, file.session, DEFAULT_SETTINGS.session),
         connection: parseSection(connectionSchema, file.connection, DEFAULT_SETTINGS.connection),
         data: parseSection(dataSchema, file.data, DEFAULT_SETTINGS.data),
+        updates: parseSection(updatesSchema, file.updates, DEFAULT_SETTINGS.updates),
         window: parseSection(windowSchema, file.window, DEFAULT_SETTINGS.window),
     };
 }
@@ -109,6 +125,7 @@ export function mergeSettings(current: Settings, patch: SettingsPatch): Settings
         session: { ...current.session, ...patch.session },
         connection: { ...current.connection, ...patch.connection },
         data: { ...current.data, ...patch.data },
+        updates: { ...current.updates, ...patch.updates },
         window: { ...current.window, ...patch.window },
     };
 }

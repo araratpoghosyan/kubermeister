@@ -73,7 +73,11 @@ sudo apt install ./Kubermeister-*-linux-amd64.deb
 
 ### Updating
 
-The app checks for updates on launch and every few hours, downloads them in the background, and
-installs on restart. Stable follows stable releases; Tip follows the nightly build. Installing a
-newer download over the existing app also works; settings are kept. Homebrew users can run
-`brew upgrade` as well.
+The app checks for updates shortly after launch and every few hours. When a new version is found, a
+pill appears in the top bar and a notification offers to update; the download runs in the background
+and a restart finishes it (quitting the app installs it too). Settings › Updates chooses between
+being asked first (the default), downloading silently, or never checking automatically, and its
+About card shows the installed version, its channel and a **Check for updates** button; the same
+check is in the application menu and the ⌘K palette. Stable follows stable releases; Tip follows the
+nightly build. Installing a newer download over the existing app also works; settings are kept.
+Homebrew users can run `brew upgrade` as well.
