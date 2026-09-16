@@ -1,7 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { FileTextIcon, HistoryIcon, RefreshCwIcon, RocketIcon, RotateCcwIcon, Trash2Icon } from 'lucide-react';
+import { FileTextIcon, HistoryIcon, RefreshCwIcon, RocketIcon } from 'lucide-react';
 import { ComingSoonButton } from '@/components/coming-soon-button';
 import { StatusBadge } from '@/components/data-display/status-badge';
+import { ReleaseRollbackButton } from '@/components/release/release-rollback-button';
+import { UninstallReleaseButton } from '@/components/release/uninstall-release-button';
 import { DetailCard } from '@/components/templates/detail-cards';
 import { ResourceDetail, type DetailTabGroup } from '@/components/templates/resource-detail';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -41,11 +43,12 @@ function ReleaseDetailPage() {
                                         <TableHead className="w-[140px]">Chart version</TableHead>
                                         <TableHead className="w-[120px]">Updated</TableHead>
                                         <TableHead>Description</TableHead>
+                                        <TableHead className="w-[110px]" />
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {revisions.map((revision) => (
-                                        <TableRow key={revision.rev}>
+                                        <TableRow key={revision.rev} data-revision={revision.rev}>
                                             <TableCell className="font-mono text-primary tabular-nums">
                                                 #{revision.rev}
                                             </TableCell>
@@ -61,6 +64,17 @@ function ReleaseDetailPage() {
                                                 {revision.updated}
                                             </TableCell>
                                             <TableCell className="text-text-2">{revision.description}</TableCell>
+                                            <TableCell>
+                                                {/* The running revision is the one there is no going back to. */}
+                                                {release && Number(revision.rev) !== release.revision && (
+                                                    <ReleaseRollbackButton
+                                                        name={name}
+                                                        namespace={namespace}
+                                                        revision={Number(revision.rev)}
+                                                        chart={revision.chartVersion}
+                                                    />
+                                                )}
+                                            </TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -104,14 +118,7 @@ function ReleaseDetailPage() {
                         <RefreshCwIcon />
                         Upgrade
                     </ComingSoonButton>
-                    <ComingSoonButton variant="outline" size="sm">
-                        <RotateCcwIcon />
-                        Roll back
-                    </ComingSoonButton>
-                    <ComingSoonButton variant="ghost" size="sm" className="text-danger">
-                        <Trash2Icon />
-                        Uninstall
-                    </ComingSoonButton>
+                    <UninstallReleaseButton name={name} namespace={namespace} />
                 </>
             }
             meta={

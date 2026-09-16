@@ -17,7 +17,9 @@ type WriteChannel =
     | 'resources.restart'
     | 'deployments.rollback'
     | 'deployments.pause'
-    | 'nodes.cordon';
+    | 'nodes.cordon'
+    | 'releases.rollback'
+    | 'releases.uninstall';
 
 /** What a screen passes to a write: the input minus the context stamp, which is added here. */
 export type WriteVariables<C extends WriteChannel> = Omit<IpcInput<C>, 'context'>;
@@ -128,6 +130,35 @@ export function useCordonNode() {
     return useIpcMutation<'nodes.cordon', WriteVariables<'nodes.cordon'>>('nodes.cordon', {
         prepare: (variables, client) => stamp('nodes.cordon', variables, client),
         invalidates: () => [['nodes.list'], ['nodes.get'], ['metrics.alerts'], ['nodes.drainPlan']],
+    });
+}
+
+/** Which queries a release write disturbs: the release screens plus the objects the chart owns. */
+function releaseKeys() {
+    return [
+        ['releases.list'],
+        ['releases.get'],
+        ['releases.revisions'],
+        ['helmCharts.list'],
+        ['resources.list'],
+        ['resources.get'],
+        ['metrics.alerts'],
+    ];
+}
+
+/** Roll a release back to one of its own revisions. */
+export function useRollbackRelease() {
+    return useIpcMutation<'releases.rollback', WriteVariables<'releases.rollback'>>('releases.rollback', {
+        prepare: (variables, client) => stamp('releases.rollback', variables, client),
+        invalidates: releaseKeys,
+    });
+}
+
+/** Uninstall a release, with or without keeping its history. */
+export function useUninstallRelease() {
+    return useIpcMutation<'releases.uninstall', WriteVariables<'releases.uninstall'>>('releases.uninstall', {
+        prepare: (variables, client) => stamp('releases.uninstall', variables, client),
+        invalidates: releaseKeys,
     });
 }
 

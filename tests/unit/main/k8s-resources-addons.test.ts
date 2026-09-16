@@ -3,10 +3,18 @@ import { ApiException, type V1CustomResourceDefinition, type V1Secret } from '@k
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const apiextensions = { listCustomResourceDefinition: vi.fn(), readCustomResourceDefinition: vi.fn() };
-const core = { listNamespacedSecret: vi.fn(), listSecretForAllNamespaces: vi.fn() };
+const core = {
+    listNamespacedSecret: vi.fn(),
+    listSecretForAllNamespaces: vi.fn(),
+    createNamespacedSecret: vi.fn(),
+    replaceNamespacedSecret: vi.fn(),
+    deleteNamespacedSecret: vi.fn(),
+};
+const objects = { create: vi.fn(), read: vi.fn(), replace: vi.fn(), delete: vi.fn() };
 const client = {
-    apis: () => ({ apiextensions, core }),
+    apis: () => ({ apiextensions, core, objects }),
     getActiveNamespace: vi.fn<() => string | null>(),
+    activeContextName: vi.fn<() => string>(() => 'alpha'),
     readOrNull: async <T>(read: () => Promise<T>) => {
         try {
             return await read();
@@ -267,6 +275,218 @@ describe('helm releases', () => {
         await expect(helm.getRelease('traefik', 'kube-system')).rejects.toMatchObject({ op: 'releases.get' });
         await expect(helm.getReleaseRevisions('traefik', 'kube-system')).rejects.toMatchObject({
             op: 'releases.revisions',
+        });
+    });
+});
+
+describe('helm writes', () => {
+    const CONFIG_MAP = [
+        'apiVersion: v1',
+        'kind: ConfigMap',
+        'metadata:',
+        '  name: demo-config',
+        'data:',
+        '  colour: blue',
+    ].join('\n');
+    const WITH_SERVICE = [
+        CONFIG_MAP,
+        '---',
+        'apiVersion: v1',
+        'kind: Service',
+        'metadata:',
+        '  name: demo-svc',
+        '  annotations:',
+        '    helm.sh/resource-policy: keep',
+    ].join('\n');
+
+    const v1 = { ...superseded, name: 'demo', namespace: 'team-a', version: 1, manifest: CONFIG_MAP };
+    const v2 = { ...deployed, name: 'demo', namespace: 'team-a', version: 2, manifest: WITH_SERVICE };
+    const ON_ALPHA = { context: 'alpha', name: 'demo', namespace: 'team-a' };
+
+    /** What the decoded release Secret of each revision looks like to the reader. */
+    const twoRevisions = () => ({ items: [releaseSecret(v1), releaseSecret(v2)] });
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        client.activeContextName.mockReturnValue('alpha');
+        core.listNamespacedSecret.mockResolvedValue(twoRevisions());
+        core.createNamespacedSecret.mockResolvedValue({});
+        core.replaceNamespacedSecret.mockResolvedValue({});
+        core.deleteNamespacedSecret.mockResolvedValue({});
+        objects.create.mockResolvedValue({});
+        objects.delete.mockResolvedValue({});
+        objects.read.mockResolvedValue({ metadata: { resourceVersion: '7' } });
+        objects.replace.mockResolvedValue({});
+    });
+
+    describe('reading a rendered manifest', () => {
+        it('gives namespaced objects the release namespace and leaves cluster-scoped ones alone', () => {
+            const manifest = [
+                CONFIG_MAP,
+                '---',
+                'apiVersion: v1',
+                'kind: Namespace',
+                'metadata:',
+                '  name: other',
+            ].join('\n');
+            expect(helm.manifestObjects(manifest, 'team-a').map((o) => [o.kind, o.metadata.namespace])).toEqual([
+                ['ConfigMap', 'team-a'],
+                ['Namespace', undefined],
+            ]);
+        });
+
+        it('ignores empty documents, and a manifest it cannot read rather than guessing', () => {
+            expect(helm.manifestObjects('---\n\n---\n', 'team-a')).toEqual([]);
+            expect(helm.manifestObjects('a:\n b: [', 'team-a')).toEqual([]);
+            expect(helm.manifestObjects(undefined, 'team-a')).toEqual([]);
+        });
+
+        it('names the revision Secret the way Helm names its own', () => {
+            expect(helm.releaseSecretName('demo', 3)).toBe('sh.helm.release.v1.demo.v3');
+        });
+
+        it('reads back what it encodes', () => {
+            const encoded = helm.encodeRelease({ name: 'demo', version: 4 });
+            const secret = { type: 'helm.sh/release.v1', data: { release: Buffer.from(encoded).toString('base64') } };
+            expect(helm.decodeRelease(secret)).toMatchObject({ name: 'demo', version: 4 });
+        });
+
+        it('spots what one revision had and another does not', () => {
+            const from = helm.manifestObjects(WITH_SERVICE, 'team-a');
+            const to = helm.manifestObjects(CONFIG_MAP, 'team-a');
+            expect(helm.goneBetween(from, to).map((o) => o.metadata.name)).toEqual(['demo-svc']);
+            expect(helm.goneBetween(to, from)).toEqual([]);
+        });
+    });
+
+    describe('rollbackRelease', () => {
+        it('re-applies the revision, removes what it never had, and records a new revision', async () => {
+            const result = await helm.rollbackRelease({ ...ON_ALPHA, revision: 1 });
+            expect(result).toMatchObject({ name: 'demo', revision: 3, removed: 0, kept: 1 });
+
+            // Revision 1's ConfigMap is applied again...
+            expect(objects.create).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    kind: 'ConfigMap',
+                    metadata: expect.objectContaining({ name: 'demo-config' }),
+                }),
+            );
+            // ...and the Service revision 2 added is left alone, because the chart asked for it to be kept.
+            expect(objects.delete).not.toHaveBeenCalled();
+
+            // The new revision is stored as Helm stores one, and the old one is marked superseded.
+            const created = core.createNamespacedSecret.mock.calls[0][0].body;
+            expect(created.metadata.name).toBe('sh.helm.release.v1.demo.v3');
+            expect(created.metadata.labels).toMatchObject({ owner: 'helm', status: 'deployed', version: '3' });
+            expect(
+                helm.decodeRelease({
+                    type: 'helm.sh/release.v1',
+                    data: { release: Buffer.from(created.stringData.release).toString('base64') },
+                }),
+            ).toMatchObject({
+                version: 3,
+                info: { status: 'deployed', description: 'Rollback to 1' },
+            });
+            expect(core.replaceNamespacedSecret.mock.calls[0][0].body.metadata.labels.status).toBe('superseded');
+        });
+
+        it('replaces an object that is already there instead of failing on it', async () => {
+            objects.create.mockRejectedValueOnce(new ApiException(409, 'exists', null, {}));
+            await helm.rollbackRelease({ ...ON_ALPHA, revision: 1 });
+            expect(objects.read).toHaveBeenCalled();
+            expect(objects.replace).toHaveBeenCalledWith(
+                expect.objectContaining({ metadata: expect.objectContaining({ resourceVersion: '7' }) }),
+            );
+        });
+
+        it('removes an object the target revision never rendered', async () => {
+            // Roll back from a revision that added an unkept object.
+            const withExtra = {
+                ...v2,
+                manifest: [CONFIG_MAP, '---', 'apiVersion: v1', 'kind: ConfigMap', 'metadata:', '  name: extra'].join(
+                    '\n',
+                ),
+            };
+            core.listNamespacedSecret.mockResolvedValue({ items: [releaseSecret(v1), releaseSecret(withExtra)] });
+            const result = await helm.rollbackRelease({ ...ON_ALPHA, revision: 1 });
+            expect(objects.delete).toHaveBeenCalledWith(
+                expect.objectContaining({ metadata: expect.objectContaining({ name: 'extra' }) }),
+            );
+            expect(result).toMatchObject({ removed: 1, kept: 0 });
+        });
+
+        it('refuses a revision the release never had, and the one it already runs', async () => {
+            await expect(helm.rollbackRelease({ ...ON_ALPHA, revision: 9 })).rejects.toMatchObject({
+                kind: 'notFound',
+                detail: expect.stringContaining('no revision 9'),
+            });
+            await expect(helm.rollbackRelease({ ...ON_ALPHA, revision: 2 })).rejects.toMatchObject({
+                kind: 'invalid',
+                detail: expect.stringContaining('already runs revision 2'),
+            });
+            expect(core.createNamespacedSecret).not.toHaveBeenCalled();
+        });
+
+        it('refuses a release that is not there, and one aimed at another context', async () => {
+            core.listNamespacedSecret.mockResolvedValue({ items: [] });
+            await expect(helm.rollbackRelease({ ...ON_ALPHA, revision: 1 })).rejects.toMatchObject({
+                kind: 'notFound',
+            });
+            client.activeContextName.mockReturnValue('beta');
+            core.listNamespacedSecret.mockResolvedValue(twoRevisions());
+            await expect(helm.rollbackRelease({ ...ON_ALPHA, revision: 1 })).rejects.toMatchObject({
+                kind: 'conflict',
+            });
+            expect(objects.create).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('uninstallRelease', () => {
+        it('deletes what the release rendered, keeps what the chart kept, and forgets the history', async () => {
+            const result = await helm.uninstallRelease({ ...ON_ALPHA, keepHistory: false });
+            expect(result).toMatchObject({ removed: 1, kept: 1 });
+            expect(objects.delete).toHaveBeenCalledTimes(1);
+            expect(objects.delete).toHaveBeenCalledWith(
+                expect.objectContaining({ metadata: expect.objectContaining({ name: 'demo-config' }) }),
+            );
+            // Both revisions' Secrets go.
+            expect(core.deleteNamespacedSecret).toHaveBeenCalledTimes(2);
+        });
+
+        it('keeps the history marked uninstalled when asked to', async () => {
+            await helm.uninstallRelease({ ...ON_ALPHA, keepHistory: true });
+            expect(core.deleteNamespacedSecret).not.toHaveBeenCalled();
+            const body = core.replaceNamespacedSecret.mock.calls[0][0].body;
+            expect(body.metadata.labels.status).toBe('uninstalled');
+            // The rewritten Secret carries the status in its payload too, not only in the label.
+            expect(
+                helm.decodeRelease({
+                    type: 'helm.sh/release.v1',
+                    data: { release: Buffer.from(body.stringData.release).toString('base64') },
+                }),
+            ).toMatchObject({
+                info: { status: 'uninstalled' },
+            });
+        });
+
+        it('treats an object that is already gone as gone', async () => {
+            objects.delete.mockRejectedValue(new ApiException(404, 'gone', null, {}));
+            await expect(helm.uninstallRelease({ ...ON_ALPHA, keepHistory: false })).resolves.toMatchObject({
+                removed: 1,
+            });
+        });
+
+        it('refuses to uninstall a release that is not there, or from another context', async () => {
+            core.listNamespacedSecret.mockResolvedValue({ items: [] });
+            await expect(helm.uninstallRelease({ ...ON_ALPHA, keepHistory: false })).rejects.toMatchObject({
+                kind: 'notFound',
+            });
+            client.activeContextName.mockReturnValue('beta');
+            core.listNamespacedSecret.mockResolvedValue(twoRevisions());
+            await expect(helm.uninstallRelease({ ...ON_ALPHA, keepHistory: false })).rejects.toMatchObject({
+                kind: 'conflict',
+            });
+            expect(objects.delete).not.toHaveBeenCalled();
         });
     });
 });

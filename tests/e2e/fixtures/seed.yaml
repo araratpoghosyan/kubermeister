@@ -160,8 +160,29 @@ subjects:
     name: default
     namespace: km-e2e
 ---
+# The objects revision 2 of the demo release rendered, applied here the way Helm would have applied
+# them: a rollback has to find them in the cluster, not only in the release's own record.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-config
+  namespace: km-e2e
+data:
+  colour: green
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-extra
+  namespace: km-e2e
+data:
+  note: only-in-v2
+---
 # Helm keeps one Secret per release revision; the cluster runs no Helm controller here, so the
-# release the add-on screens read is seeded directly. `release` is base64(gzip(release json)),
+# release the add-on screens read is seeded directly. Each revision carries a rendered `manifest`:
+# revision 1 renders the demo-config ConfigMap as blue, revision 2 makes it green and adds
+# demo-extra, so a rollback has something real to apply and take away. `release` is
+# base64(gzip(release json)),
 # which the API base64-encodes once more.
 apiVersion: v1
 kind: Secret
@@ -173,7 +194,7 @@ metadata:
     name: demo
 type: helm.sh/release.v1
 data:
-  release: SDRzSUFBQUFBQUFBRTFXT3ZXckRRQkNFWHlWTWZSS25Dekg0M2lCOWNPSEdMTHExTFhKL2FGY0dJL1R1NFZRSUFsUE1mTVhNck1pVUdCNkJVNEhaazFRYUcvcE5IVHVHd1l0bm1VcUdId3ltZkMvd0swUkpGNEdITEpWbjRjQUJCcEZFYjRGckxHOE84SERXblRwNzdvYXZuOEY2MjNTRlFXQVo1Nm5xWG9ydkxFb3hmb3dsMWNqSzJBekdKODNhZGhJckJWSnEvdi9WNHhXRzN2VU9CbFRyNVlDZnZlMHR0dFpWOG4xNndLL2I5Z2RSaXRrSzd3QUFBQT09
+  release: SDRzSUFBQUFBQUFBRTFXT1RVdkdNQkNFLzBxWWMxcmFpb0o3OWVUQm0zaVFncXpOVnNPYkw1cjBCU245NzVLcUJXRVB1N1BEUExNaHNCY1FqUGdJZlZ3NThWU2xpMjlrRUdoY1pjazJCbEN2WWNNY1FSdHk0YkptRVBLYVpNbGl4RUREY1M1dlJwS0xYMkpBR0xyaHJ1bnVtLzcydWUrb3EvTUtEU041V213cVJ5Z2VReTdzbkpxaVQwNktZTmVZUG5rcGxlT2xzT0hDZGY5ZjlXeUZ2aDNhQVJxYzBzc3AzclJkMjJHdldUSE05Z08wN1JxZWc1MGxGeEE0MlY4M3FXcy9ob3NOaHRURFlYN2lOSVkvTkkxQnFjb21WZEhOVDk0WXp0OFVYVndYVXU5dUZlemZmMjNTSkZNQkFBQT0=
 ---
 apiVersion: v1
 kind: Secret
@@ -185,4 +206,4 @@ metadata:
     name: demo
 type: helm.sh/release.v1
 data:
-  release: SDRzSUFBQUFBQUFBRTFXUHpXckVNQXlFWDZYTTJRbU9seGJxYTEraDIwTXZSZGphMURUK3dkWXVMSXZmdlRpRlFFRUh6UWg5R2oyUUtESXNQTWNNdGF0V3lBM3JKMDVzR0FvM3JpM2tCR3NVUXJwazJBZWFrRnpidmxpMmZHY1BoWTJhZkIzYXdtanpNdW5YYVhsK1g3VFZvejZoNExtNUdvcnNTSnpMV3Nuems4dXhiQ3lNcnVDK3FjcTRFbG5JazlEby93YzlNbUdaelh5Q0FwWHljWmluV2M4YWZiQnl1b1IxQUNxWExUaDZ5OWNrZjc5RVdubE1oTllEMUh2L0JVZ0RubGdWQVFBQQ==
+  release: SDRzSUFBQUFBQUFBRTUyUFRXdkRNQXhBLzRyUjJRNUp5Z2J6dGVmZHVoMUdZSWhFelV4ajJkaEtXQ241NzhQcEZyYnJRQWQ5b0tlbkd6QjZBZ3NEK1FCNnEzTEV2clF1M2xCTG9HR2hsRjFnc0swR3grY0E5Z1paVU9hOExjWXBYR2tBRFJObWVkOXJDMjNkUHByNnlUUVBwNmEyZFlrMzBEQlE3cE9Mc2lIaEpZNEpCMUo5OEhFaUlWZzE5QitZcEZ6eEpEaWdZTW4vaXU1TzBGUnRkUUFOR09QcjNqeFVkVlhEV2xpQnoyNHNnRVJ4Y2owZXc4eHkvOFhqU0dVaU9PNmdzdU9SM1pteWdBV003cHRxMWRKMGZIRThXSFhjb004WU8vNVJ0QjByVlJ5dEtvcm1mcmZqZmRhSEtjekpxakVSY2NmR21JNy9UYWRQU2ZnTHprSElxc0RUMVRnMlN3dnJGNlpvWlJuYUFRQUE=

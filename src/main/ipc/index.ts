@@ -20,7 +20,14 @@ import {
     scaleResource,
 } from '../k8s/resources/write.js';
 import { getObjectYaml } from '../k8s/resources/manifest.js';
-import { getRelease, getReleaseRevisions, listHelmCharts, listReleases } from '../k8s/resources/helm.js';
+import {
+    getRelease,
+    getReleaseRevisions,
+    listHelmCharts,
+    listReleases,
+    rollbackRelease,
+    uninstallRelease,
+} from '../k8s/resources/helm.js';
 import { getIngressRules, getServiceEndpoints, getServicePorts } from '../k8s/resources/network.js';
 import { listLimits, listQuotas } from '../k8s/resources/overview.js';
 import {
@@ -137,6 +144,8 @@ const handlers: Handlers = {
     'releases.list': () => listReleases(),
     'releases.get': ({ name, namespace }) => getRelease(name, namespace),
     'releases.revisions': ({ name, namespace }) => getReleaseRevisions(name, namespace),
+    'releases.rollback': (input) => rollbackRelease(input),
+    'releases.uninstall': (input) => uninstallRelease(input),
     'helmCharts.list': () => listHelmCharts(),
     'resources.getYaml': ({ kind, name, namespace }) => getObjectYaml(kind, name, namespace),
     'resources.create': (input) => createResource(input),

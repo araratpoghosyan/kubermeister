@@ -478,6 +478,40 @@ test('cordons the node, reads what a drain would move, and uncordons it again', 
     await expect(page.getByRole('button', { name: 'Cordon' })).toBeVisible({ timeout: 30_000 });
 });
 
+test('rolls the seeded release back to its first revision, then uninstalls it', async () => {
+    const { window } = launched;
+    // Revision 2 rendered an extra ConfigMap; revision 1 never had it.
+    await window.getByTestId('sidebar').getByRole('link', { name: 'ConfigMaps' }).click();
+    await expect(window.getByTestId('configmaps-table').locator('[data-configmap="demo-extra"]')).toBeVisible();
+
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Releases' }).click();
+    await window.getByTestId('releases-table').locator('[data-release="demo"]').getByRole('link').click();
+    const page = window.getByTestId('release-page');
+    await window.getByRole('tab', { name: /Revisions/ }).click();
+    const history = page.getByTestId('release-revisions');
+    await history.locator('[data-revision="1"]').getByRole('button', { name: 'Roll back' }).click();
+    const dialog = window.getByRole('alertdialog');
+    await expect(dialog).toContainText('Roll back to revision 1?');
+    await dialog.getByRole('button', { name: 'Roll back' }).click();
+    await expect(window.getByText(/Rolled/)).toBeVisible();
+
+    // Helm numbers forward: the rollback lands as revision 3, running revision 1's manifest.
+    await expect(history.locator('[data-revision="3"]')).toContainText('Deployed', { timeout: 30_000 });
+    await window.getByTestId('sidebar').getByRole('link', { name: 'ConfigMaps' }).click();
+    await expect(window.getByTestId('configmaps-table').locator('[data-configmap="demo-extra"]')).toHaveCount(0, {
+        timeout: 30_000,
+    });
+
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Releases' }).click();
+    await window.getByTestId('releases-table').locator('[data-release="demo"]').getByRole('link').click();
+    await page.getByRole('button', { name: 'Uninstall' }).click();
+    await window.getByRole('alertdialog').getByRole('button', { name: 'Uninstall' }).click();
+    await expect(window.getByText(/uninstalled/)).toBeVisible();
+    await expect(window.getByTestId('releases-table').locator('[data-release="demo"]')).toHaveCount(0, {
+        timeout: 30_000,
+    });
+});
+
 test('stops at the startup screen when the kubeconfig path names nothing', async () => {
     const missing = join(tmpdir(), `km-e2e-missing-${Date.now()}.yaml`);
     const bad = await launchApp({ kubeconfigPath: missing });
