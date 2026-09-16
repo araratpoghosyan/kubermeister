@@ -9,6 +9,9 @@ class FakeInformer extends EventEmitter {
     }
     start = vi.fn(async () => {});
     stop = vi.fn(async () => {});
+    /** The informer's cache, which a second subscriber is replayed from. */
+    cache: unknown[] = [];
+    list = vi.fn(() => this.cache);
 }
 let informer = new FakeInformer();
 const makeInformer = vi.fn(() => informer);
@@ -94,7 +97,8 @@ const sampler = {
 };
 vi.mock('../../../src/main/k8s/sampler.js', () => sampler);
 
-const { startResourceWatch, WATCH_RETRY_MS } = await import('../../../src/main/k8s/watch.js');
+const { startResourceWatch, WATCH_RETRY_MS, stopAllInformers, openInformerCount } =
+    await import('../../../src/main/k8s/watch.js');
 
 const pod = (name: string) => ({
     metadata: { name, namespace: 'team-a' },
@@ -108,7 +112,55 @@ describe('startResourceWatch', () => {
         makeInformer.mockClear();
         vi.useFakeTimers();
     });
-    afterEach(() => vi.useRealTimers());
+    afterEach(() => {
+        // Informers outlive one stream on purpose, so a test has to leave none behind.
+        stopAllInformers();
+        vi.useRealTimers();
+    });
+
+    it('opens one informer for two screens watching the same list, and replays the cache to the second', async () => {
+        informer.cache = [{ metadata: { name: 'web-1', namespace: 'team-a' }, spec: {}, status: {} }];
+        const first = vi.fn();
+        const second = vi.fn();
+        const a = await startResourceWatch({ kind: 'Pod', namespace: 'team-a' }, first);
+        const b = await startResourceWatch({ kind: 'Pod', namespace: 'team-a' }, second);
+
+        expect(makeInformer).toHaveBeenCalledTimes(1);
+        expect(openInformerCount()).toBe(1);
+        expect(informer.start).toHaveBeenCalledTimes(1);
+        // The second screen is caught up from the cache rather than waiting for a fresh list.
+        expect(second).toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'data', data: expect.objectContaining({ type: 'added' }) }),
+        );
+        expect(first).not.toHaveBeenCalled();
+
+        // Both hear every later event.
+        informer.emit('update', { metadata: { name: 'web-1', namespace: 'team-a' }, spec: {}, status: {} });
+        expect(first).toHaveBeenCalledTimes(1);
+        expect(second).toHaveBeenCalledTimes(2);
+
+        // The informer lives until the last screen goes.
+        a.stop();
+        expect(informer.stop).not.toHaveBeenCalled();
+        b.stop();
+        expect(informer.stop).toHaveBeenCalledTimes(1);
+        expect(openInformerCount()).toBe(0);
+    });
+
+    it('keeps separate informers for different kinds and namespaces', async () => {
+        await startResourceWatch({ kind: 'Pod', namespace: 'team-a' }, vi.fn());
+        await startResourceWatch({ kind: 'Pod', namespace: 'kube-system' }, vi.fn());
+        await startResourceWatch({ kind: 'Deployment', namespace: 'team-a' }, vi.fn());
+        expect(openInformerCount()).toBe(3);
+    });
+
+    it('stops every informer when the connection goes', async () => {
+        await startResourceWatch({ kind: 'Pod', namespace: 'team-a' }, vi.fn());
+        await startResourceWatch({ kind: 'Deployment', namespace: 'team-a' }, vi.fn());
+        stopAllInformers();
+        expect(openInformerCount()).toBe(0);
+        expect(informer.stop).toHaveBeenCalledTimes(2);
+    });
 
     it('refuses a malformed namespace before it can reach the watch path', async () => {
         for (const namespace of ['', 'a/pods/../deployments', 'Team-A', 'a?watch=false']) {

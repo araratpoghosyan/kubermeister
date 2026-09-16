@@ -1,3 +1,5 @@
+import { useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { flexRender, type Table as TanstackTable } from '@tanstack/react-table';
 import { ArrowDownIcon, ArrowUpIcon, ChevronsUpDownIcon } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -12,12 +14,35 @@ interface DataTableProps<TData> {
     testId?: string;
 }
 
-// Rows are not virtualized: `ResourceListPage` paginates client-side (`PAGE_SIZE = 50`), so this only
-// ever renders one page's worth of rows. Add `@tanstack/react-virtual` here before raising that page
-// size; virtualizing 50 rows would be pure overhead today.
+/** Height of one row, which is what the virtualiser measures against before rows are rendered. */
+const ROW_HEIGHT = 37;
+
+/**
+ * Only the rows in view are mounted. A page of this list can hold thousands of objects, and the
+ * cost of a list screen should be the size of the window rather than the size of the cluster.
+ */
 export function DataTable<TData>({ table, onRowClick, rowProps, containerClassName, testId }: DataTableProps<TData>) {
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const rows = table.getRowModel().rows;
+    const virtualizer = useVirtualizer({
+        count: rows.length,
+        getScrollElement: () => scrollRef.current,
+        estimateSize: () => ROW_HEIGHT,
+        overscan: 12,
+        // A first guess, replaced once the table is measured; without one nothing mounts until
+        // layout has run and the first paint of a list is empty.
+        initialRect: { width: 1200, height: 800 },
+    });
+    const items = virtualizer.getVirtualItems();
+    const before = items.length > 0 ? items[0]!.start : 0;
+    const after = items.length > 0 ? virtualizer.getTotalSize() - items[items.length - 1]!.end : 0;
+
     return (
-        <Table containerClassName={cn('overflow-auto', containerClassName)} data-testid={testId}>
+        <Table
+            containerRef={scrollRef}
+            containerClassName={cn('overflow-auto', containerClassName)}
+            data-testid={testId}
+        >
             <TableHeader className="sticky top-0 z-10 bg-card">
                 {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id} className="border-border hover:bg-transparent">
@@ -67,22 +92,31 @@ export function DataTable<TData>({ table, onRowClick, rowProps, containerClassNa
                 ))}
             </TableHeader>
             <TableBody>
-                {table.getRowModel().rows.map((row) => (
-                    <TableRow
-                        key={row.id}
-                        {...rowProps?.(row.original)}
-                        // The whole row is a click target for convenience; keyboard users reach the
-                        // detail through the Name cell's link, so the row itself is not focusable.
-                        onClick={onRowClick ? () => onRowClick(row.original) : undefined}
-                        className={cn('border-border hover:bg-elev-2', onRowClick && 'cursor-pointer')}
-                    >
-                        {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id} className="px-3 py-2.5 text-body text-text-2">
-                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                            </TableCell>
-                        ))}
-                    </TableRow>
-                ))}
+                {/* Spacer rows stand in for what is scrolled past, so the scrollbar is honest
+                    without the rows themselves being in the document. */}
+                {before > 0 && <tr style={{ height: `${before}px` }} aria-hidden />}
+                {items.map((item) => {
+                    const row = rows[item.index]!;
+                    return (
+                        <TableRow
+                            key={row.id}
+                            ref={virtualizer.measureElement}
+                            data-index={item.index}
+                            {...rowProps?.(row.original)}
+                            // The whole row is a click target for convenience; keyboard users reach the
+                            // detail through the Name cell's link, so the row itself is not focusable.
+                            onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+                            className={cn('border-border hover:bg-elev-2', onRowClick && 'cursor-pointer')}
+                        >
+                            {row.getVisibleCells().map((cell) => (
+                                <TableCell key={cell.id} className="px-3 py-2.5 text-body text-text-2">
+                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                </TableCell>
+                            ))}
+                        </TableRow>
+                    );
+                })}
+                {after > 0 && <tr style={{ height: `${after}px` }} aria-hidden />}
             </TableBody>
         </Table>
     );

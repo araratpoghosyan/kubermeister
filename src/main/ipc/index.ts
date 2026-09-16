@@ -8,6 +8,7 @@ import { K8sError } from '../k8s/errors.js';
 import { listAlerts } from '../k8s/alerts.js';
 import { resetHistory } from '../k8s/sampler.js';
 import { endAllStreams } from './streams.js';
+import { stopAllInformers } from '../k8s/watch.js';
 import { readPodLogSnapshot, readPodLogText } from '../k8s/logs.js';
 import { getActiveCluster, getActiveNamespaceInfo, listClusters, listNamespaces } from '../k8s/resources/cluster.js';
 import { getConfigMapEntries, getSecretEntries } from '../k8s/resources/config.js';
@@ -120,6 +121,9 @@ async function copyFileToPod(input: PodFileInput): Promise<PodCopyResult | null>
  */
 function leaveConnection(reason: string): void {
     endAllStreams(reason);
+    // Every stream is gone, so every informer should be too; this catches any whose last
+    // subscriber's teardown has not run yet, since they hold a watch on the cluster being left.
+    stopAllInformers();
     resetHistory();
 }
 
