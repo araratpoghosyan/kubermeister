@@ -1,6 +1,14 @@
 import { z } from 'zod';
 import type { AllowedChannel } from './ipc-channels.js';
-import { helmChartSchema, releaseRevisionSchema, releaseSchema, releaseTargetSchema } from './k8s/addons.js';
+import {
+    helmChartSchema,
+    releaseRevisionSchema,
+    releaseRollbackInputSchema,
+    releaseSchema,
+    releaseTargetSchema,
+    releaseUninstallInputSchema,
+    releaseWriteResultSchema,
+} from './k8s/addons.js';
 import { kubeContextSchema } from './k8s/contexts.js';
 import { manifestInputSchema, manifestSchema } from './k8s/manifest.js';
 import { drainPlanInputSchema, drainPlanSchema } from './k8s/drain.js';
@@ -170,6 +178,8 @@ export const ipcSchemas = {
     'releases.list': { input: noInput, output: z.array(releaseSchema) },
     'releases.get': { input: releaseTargetSchema, output: releaseSchema.nullable() },
     'releases.revisions': { input: releaseTargetSchema, output: z.array(releaseRevisionSchema) },
+    'releases.rollback': { input: releaseRollbackInputSchema, output: releaseWriteResultSchema },
+    'releases.uninstall': { input: releaseUninstallInputSchema, output: releaseWriteResultSchema },
     'helmCharts.list': { input: noInput, output: z.array(helmChartSchema) },
     'resources.getYaml': { input: manifestInputSchema, output: manifestSchema },
     'resources.create': { input: manifestWriteSchema, output: writeResultSchema },

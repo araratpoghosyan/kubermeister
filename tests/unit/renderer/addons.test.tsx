@@ -13,6 +13,12 @@ vi.mock('@/lib/ipc', async () => ({
     stream,
 }));
 
+const toasts = { success: vi.fn(), error: vi.fn() };
+vi.mock('sonner', async () => ({
+    ...(await vi.importActual<typeof import('sonner')>('sonner')),
+    toast: toasts,
+}));
+
 const { routeTree } = await import('@/routeTree.gen');
 
 const crd = {
@@ -56,6 +62,8 @@ const data: Record<string, unknown> = {
     'releases.get': release,
     'releases.revisions': revisions,
     'helmCharts.list': [chart],
+    'releases.rollback': { name: 'traefik', namespace: 'kube-system', revision: 3, removed: 1, kept: 0 },
+    'releases.uninstall': { name: 'traefik', namespace: 'kube-system', removed: 4, kept: 1 },
 };
 
 beforeEach(() => {
@@ -106,6 +114,56 @@ describe('add-on details', () => {
 
         await userEvent.click(within(page).getByRole('tab', { name: /Values/ }));
         expect(within(page).getByTestId('release-values')).toHaveTextContent('type: LoadBalancer');
+    });
+
+    it('rolls back to an older revision, and offers no rollback for the one running', async () => {
+        renderRoutes(routeTree, '/addons/releases/kube-system/traefik');
+        const page = await screen.findByTestId('release-page');
+        const history = await within(page).findByTestId('release-revisions');
+        await waitFor(() => expect(history).toHaveTextContent('#1'));
+
+        const current = history.querySelector('[data-revision="2"]') as HTMLElement;
+        expect(within(current).queryByRole('button', { name: 'Roll back' })).not.toBeInTheDocument();
+
+        const older = history.querySelector('[data-revision="1"]') as HTMLElement;
+        await userEvent.click(within(older).getByRole('button', { name: 'Roll back' }));
+        const dialog = await screen.findByRole('alertdialog');
+        expect(dialog).toHaveTextContent('Roll back to revision 1?');
+        expect(dialog).toHaveTextContent('records this as a new revision');
+        await userEvent.click(within(dialog).getByRole('button', { name: 'Roll back' }));
+        await waitFor(() =>
+            expect(invoke).toHaveBeenCalledWith('releases.rollback', {
+                context: 'alpha',
+                name: 'traefik',
+                namespace: 'kube-system',
+                revision: 1,
+            }),
+        );
+        expect(toasts.success).toHaveBeenCalledWith('Rolled “traefik” back to revision 1', expect.anything());
+    });
+
+    it('uninstalls a release, with the choice of keeping its history', async () => {
+        renderRoutes(routeTree, '/addons/releases/kube-system/traefik');
+        const page = await screen.findByTestId('release-page');
+        await waitFor(() => expect(page).toHaveTextContent('revision: 2'));
+        await userEvent.click(within(page).getByRole('button', { name: 'Uninstall' }));
+        const dialog = await screen.findByRole('alertdialog');
+        expect(dialog).toHaveTextContent('Uninstall traefik?');
+        expect(dialog).toHaveTextContent('except any the chart marked to be kept');
+
+        await userEvent.click(within(dialog).getByRole('switch', { name: /Keep the release history/ }));
+        await userEvent.click(within(dialog).getByRole('button', { name: 'Uninstall' }));
+        await waitFor(() =>
+            expect(invoke).toHaveBeenCalledWith('releases.uninstall', {
+                context: 'alpha',
+                name: 'traefik',
+                namespace: 'kube-system',
+                keepHistory: true,
+            }),
+        );
+        expect(toasts.success).toHaveBeenCalledWith('Release “traefik” uninstalled', {
+            description: '4 object(s) removed, 1 kept by the chart.',
+        });
     });
 
     it('says a release without user-supplied values runs on chart defaults', async () => {

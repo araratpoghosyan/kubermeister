@@ -53,10 +53,44 @@ export const customResourceDetailSchema = customResourceSchema.extend({
     annotations: z.array(z.tuple([z.string(), z.string()])),
 });
 
+/**
+ * Rolling a release back re-applies the manifest one of its own revisions rendered, and records the
+ * result as a new revision: Helm never rewinds the numbering, and neither does this.
+ */
+export const releaseRollbackInputSchema = z.object({
+    context: z.string().min(1),
+    name: z.string().min(1),
+    namespace: namespaceNameSchema,
+    revision: z.number().int().positive(),
+});
+
+export const releaseUninstallInputSchema = z.object({
+    context: z.string().min(1),
+    name: z.string().min(1),
+    namespace: namespaceNameSchema,
+    /** Keep the release's history, marked uninstalled, instead of deleting every revision's record. */
+    keepHistory: z.boolean(),
+});
+
+/** What a release write did, in the terms the toast reports. */
+export const releaseWriteResultSchema = z.object({
+    name: z.string(),
+    namespace: z.string(),
+    /** The revision the release now runs, absent for an uninstall. */
+    revision: z.number().int().nonnegative().optional(),
+    /** Objects the write removed from the cluster. */
+    removed: z.number().int().nonnegative(),
+    /** Objects left in place because the chart asked for them to be kept. */
+    kept: z.number().int().nonnegative(),
+});
+
 export type ReleaseStatus = z.infer<typeof releaseStatusSchema>;
 export type HelmChart = z.infer<typeof helmChartSchema>;
 export type Release = z.infer<typeof releaseSchema>;
 export type ReleaseRevision = z.infer<typeof releaseRevisionSchema>;
 export type ReleaseTarget = z.infer<typeof releaseTargetSchema>;
+export type ReleaseRollbackInput = z.infer<typeof releaseRollbackInputSchema>;
+export type ReleaseUninstallInput = z.infer<typeof releaseUninstallInputSchema>;
+export type ReleaseWriteResult = z.infer<typeof releaseWriteResultSchema>;
 export type CustomResource = z.infer<typeof customResourceSchema>;
 export type CustomResourceDetail = z.infer<typeof customResourceDetailSchema>;

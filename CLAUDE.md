@@ -190,6 +190,17 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   call outside `withK8s` — the read timeout is the wrong ceiling for something whose job is to keep
   asking, and the eviction status codes must stay readable. Stopping ends the stream at once and
   leaves the node cordoned; undoing that is the operator's decision.
+- **Helm** (`src/main/k8s/resources/helm.ts`) has no API of its own: a release is a Secret of type
+  `helm.sh/release.v1` whose `release` field is base64(gzip(json)), base64'd again by the API, with
+  one Secret per revision named `sh.helm.release.v1.<name>.v<n>`. Reads decode those Secrets; the
+  writes (`releases.rollback`, `releases.uninstall`) act on the objects a revision's stored
+  `manifest` rendered and then keep Helm's own bookkeeping straight — same Secret names, labels and
+  status words — so a release this app rolls back stays one the Helm CLI can read and act on. A
+  rollback re-applies the target revision's objects, removes what that revision never had, records
+  the result as a **new** revision (Helm numbers forward, it never rewinds) and marks the previous
+  one superseded. An uninstall deletes the current revision's objects and either forgets the history
+  or marks it uninstalled. Objects annotated `helm.sh/resource-policy: keep` are never deleted by
+  either, and are counted back to the caller.
 - **Kubernetes access** lives in `src/main/k8s`. The kubeconfig is read-only: switching context
   or namespace changes memory and the app's own settings, never the file. Every cluster call goes
   through `withK8s` (timeout plus `[kind]`-prefixed `K8sError`). No `kubectl` dependency; the
