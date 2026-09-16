@@ -1,7 +1,7 @@
 import type { V1Node, V1Pod } from '@kubernetes/client-node';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const client = { apis: vi.fn(), getActiveNamespace: vi.fn() };
+const client = { apis: vi.fn(), getActiveNamespace: vi.fn(), activeContextName: vi.fn<() => string>(() => 'alpha') };
 vi.mock('../../../src/main/k8s/client.js', () => client);
 const sampler = {
     ensureSampler: vi.fn(),
@@ -177,5 +177,28 @@ describe('node readers', () => {
             },
         });
         await expect(nodes.listNodes()).rejects.toMatchObject({ kind: 'unauthorized', op: 'nodes.list' });
+    });
+});
+
+describe('cordoning a node', () => {
+    it('writes the state the screen displayed, in either direction', async () => {
+        const patch = vi.fn().mockResolvedValue({});
+        client.apis.mockReturnValue({ objects: { patch } });
+        client.activeContextName.mockReturnValue('alpha');
+
+        await expect(nodes.cordonNode({ context: 'alpha', name: 'node-1', unschedulable: true })).resolves.toEqual({
+            kind: 'Node',
+            name: 'node-1',
+        });
+        expect(patch).toHaveBeenCalledWith(expect.objectContaining({ kind: 'Node', spec: { unschedulable: true } }));
+        await nodes.cordonNode({ context: 'alpha', name: 'node-1', unschedulable: false });
+        expect(patch).toHaveBeenLastCalledWith(expect.objectContaining({ spec: { unschedulable: false } }));
+    });
+
+    it('refuses one aimed at a context the app has left', async () => {
+        client.activeContextName.mockReturnValue('beta');
+        await expect(nodes.cordonNode({ context: 'alpha', name: 'node-1', unschedulable: true })).rejects.toMatchObject(
+            { kind: 'conflict' },
+        );
     });
 });

@@ -3,6 +3,7 @@ import { TerminalIcon } from 'lucide-react';
 import type { PodDetail } from '../../../shared/k8s/pods';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { CopyFilesCard, DebugContainerButton } from '@/components/pod/debug-actions';
 import { openShell, sessionId, useShellSessions } from '@/lib/shell-sessions';
 import { useTerminalFontSize } from '@/lib/settings';
 import { readTerminalLook } from '@/lib/terminal-look';
@@ -49,7 +50,8 @@ export function ShellTab({ name, namespace, pod }: { name: string; namespace: st
                 Closing the drawer tab ends the session; switching cluster ends every session.
             </p>
             {container && (
-                <div>
+                <div className="flex gap-2">
+                    <DebugContainerButton name={name} namespace={namespace} container={container} />
                     <Button
                         variant="outline"
                         size="sm"
@@ -63,6 +65,11 @@ export function ShellTab({ name, namespace, pod }: { name: string; namespace: st
                         <TerminalIcon />
                         {open ? 'Focus shell' : `Open shell into ${container}`}
                     </Button>
+                </div>
+            )}
+            {container && (
+                <div className="mt-2 border-t border-border pt-4">
+                    <CopyFilesCard name={name} namespace={namespace} container={container} />
                 </div>
             )}
         </Card>

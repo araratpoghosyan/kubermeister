@@ -9,6 +9,12 @@ vi.mock('@/lib/ipc', async () => ({
     invoke,
 }));
 
+const toasts = { success: vi.fn(), error: vi.fn() };
+vi.mock('sonner', async () => ({
+    ...(await vi.importActual<typeof import('sonner')>('sonner')),
+    toast: toasts,
+}));
+
 const exec = { stop: vi.fn(), send: vi.fn() };
 const streams = { openPodExec: vi.fn(() => exec) };
 vi.mock('@/lib/pod-streams', async () => ({
@@ -43,6 +49,7 @@ vi.mock('@xterm/xterm/css/xterm.css', () => ({}));
 
 const { ShellDrawer } = await import('@/components/shell/shell-drawer');
 const { ShellTab } = await import('@/components/pod/shell-tab');
+const { NodeShellButton } = await import('@/components/node/node-shell-button');
 const { closeAllShells, openShell, shellSnapshot } = await import('@/lib/shell-sessions');
 const { DARK_ANSI, LIGHT_ANSI, readTerminalLook, readTerminalTheme } = await import('@/lib/terminal-look');
 
@@ -68,6 +75,7 @@ beforeEach(() => {
     exec.send.mockReset();
     streams.openPodExec.mockClear();
     terminals.length = 0;
+    toasts.success.mockReset();
 });
 
 afterEach(() => closeAllShells());
@@ -216,5 +224,142 @@ describe('the pod shell tab', () => {
         renderWithQuery(<ShellTab name="web-1" namespace="team-a" pod={null} />);
         expect(streams.openPodExec).not.toHaveBeenCalled();
         expect(screen.getByText('No container to open a shell into')).toBeInTheDocument();
+    });
+});
+
+describe('debugging a pod', () => {
+    beforeEach(() => {
+        invoke.mockImplementation(async (channel: string) => {
+            if (channel === 'settings.get') return SETTINGS;
+            if (channel === 'context.current') return { name: 'alpha', cluster: 'a', user: 'u', current: true };
+            if (channel === 'pods.debug') return { pod: 'web-1', namespace: 'team-a', container: 'debugger-1' };
+            if (channel === 'pods.copyFrom') return { localPath: '/tmp/out.tar', remotePath: '/etc/nginx.conf' };
+            if (channel === 'pods.copyTo') return { localPath: '/home/me/notes.txt', remotePath: '/data/notes.txt' };
+            return null;
+        });
+    });
+
+    it('warns that a debug container cannot be removed, then opens its shell', async () => {
+        renderWithQuery(<ShellTab name="web-1" namespace="team-a" pod={pod} />);
+        await waitFor(() => expect(streams.openPodExec).toHaveBeenCalledTimes(1));
+        await userEvent.click(screen.getByRole('button', { name: 'Debug' }));
+        const dialog = await screen.findByRole('alertdialog');
+        expect(dialog).toHaveTextContent('cannot remove an ephemeral container');
+        await userEvent.type(within(dialog).getByLabelText('Image'), 'alpine:3.20');
+        await userEvent.click(within(dialog).getByRole('button', { name: 'Attach' }));
+        await waitFor(() =>
+            expect(invoke).toHaveBeenCalledWith('pods.debug', {
+                context: 'alpha',
+                name: 'web-1',
+                namespace: 'team-a',
+                targetContainer: 'web',
+                image: 'alpine:3.20',
+            }),
+        );
+        // The debugger's own shell opens in the drawer beside the pod's.
+        await waitFor(() => expect(shellSnapshot().map((s) => s.container)).toContain('debugger-1'));
+    });
+
+    it('copies a file each way, and asks the cluster only when a path is given', async () => {
+        renderWithQuery(<ShellTab name="web-1" namespace="team-a" pod={pod} />);
+        const card = await screen.findByTestId('copy-files');
+        expect(within(card).getByRole('button', { name: 'Copy out' })).toBeDisabled();
+
+        await userEvent.type(within(card).getByLabelText('Path in the container'), '/etc/nginx.conf');
+        await userEvent.click(within(card).getByRole('button', { name: 'Copy out' }));
+        await waitFor(() =>
+            expect(invoke).toHaveBeenCalledWith('pods.copyFrom', {
+                context: 'alpha',
+                name: 'web-1',
+                namespace: 'team-a',
+                container: 'web',
+                remotePath: '/etc/nginx.conf',
+            }),
+        );
+        await userEvent.click(within(card).getByRole('button', { name: 'Copy in' }));
+        await waitFor(() => expect(invoke).toHaveBeenCalledWith('pods.copyTo', expect.anything()));
+    });
+
+    it('claims nothing when the file picker was called off', async () => {
+        invoke.mockImplementation(async (channel: string) => {
+            if (channel === 'settings.get') return SETTINGS;
+            if (channel === 'context.current') return { name: 'alpha', cluster: 'a', user: 'u', current: true };
+            return null;
+        });
+        renderWithQuery(<ShellTab name="web-1" namespace="team-a" pod={pod} />);
+        const card = await screen.findByTestId('copy-files');
+        await userEvent.type(within(card).getByLabelText('Path in the container'), '/etc/nginx.conf');
+        await userEvent.click(within(card).getByRole('button', { name: 'Copy out' }));
+        await waitFor(() => expect(invoke).toHaveBeenCalledWith('pods.copyFrom', expect.anything()));
+        expect(toasts.success).not.toHaveBeenCalled();
+    });
+});
+
+describe('calling off a debug action', () => {
+    it('leaves the pod alone when either dialog is dismissed', async () => {
+        invoke.mockImplementation(async (channel: string) => {
+            if (channel === 'settings.get') return SETTINGS;
+            if (channel === 'context.current') return { name: 'alpha', cluster: 'a', user: 'u', current: true };
+            if (channel === 'namespace.active') return { name: 'team-a', pods: 1, tone: 'accent' };
+            return null;
+        });
+        const { unmount } = renderWithQuery(<ShellTab name="web-1" namespace="team-a" pod={pod} />);
+        await userEvent.click(await screen.findByRole('button', { name: 'Debug' }));
+        await userEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Cancel' }));
+        await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+        expect(invoke).not.toHaveBeenCalledWith('pods.debug', expect.anything());
+        unmount();
+
+        renderWithQuery(<NodeShellButton name="node-1" />);
+        await userEvent.click(await screen.findByRole('button', { name: 'Node shell' }));
+        await userEvent.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Cancel' }));
+        await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+        expect(invoke).not.toHaveBeenCalledWith('nodes.debug', expect.anything());
+    });
+});
+
+describe('a shell on a node', () => {
+    it('spells out what it runs and refuses without a namespace to put it in', async () => {
+        invoke.mockImplementation(async (channel: string) => {
+            if (channel === 'settings.get') return SETTINGS;
+            if (channel === 'context.current') return { name: 'alpha', cluster: 'a', user: 'u', current: true };
+            if (channel === 'namespace.active') return { name: null, pods: 0, tone: 'accent' };
+            return null;
+        });
+        renderWithQuery(<NodeShellButton name="node-1" />);
+        await userEvent.click(await screen.findByRole('button', { name: 'Node shell' }));
+        const dialog = await screen.findByRole('alertdialog');
+        expect(dialog).toHaveTextContent('root on the machine');
+        await waitFor(() => expect(dialog).toHaveTextContent('Select a namespace first'));
+        expect(within(dialog).getByRole('button', { name: 'Open shell' })).toBeDisabled();
+    });
+
+    it('creates the pod and opens a shell into it', async () => {
+        invoke.mockImplementation(async (channel: string) => {
+            if (channel === 'settings.get') return SETTINGS;
+            if (channel === 'context.current') return { name: 'alpha', cluster: 'a', user: 'u', current: true };
+            if (channel === 'namespace.active') return { name: 'team-a', pods: 3, tone: 'accent' };
+            if (channel === 'nodes.debug')
+                return { pod: 'kubermeister-node-shell-node-1-x', namespace: 'team-a', container: 'shell' };
+            return null;
+        });
+        renderWithQuery(<NodeShellButton name="node-1" />);
+        await userEvent.click(await screen.findByRole('button', { name: 'Node shell' }));
+        const dialog = await screen.findByRole('alertdialog');
+        await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Open shell' })).toBeEnabled());
+        await userEvent.click(within(dialog).getByRole('button', { name: 'Open shell' }));
+        await waitFor(() =>
+            expect(invoke).toHaveBeenCalledWith('nodes.debug', {
+                context: 'alpha',
+                name: 'node-1',
+                namespace: 'team-a',
+            }),
+        );
+        await waitFor(() => expect(shellSnapshot().map((s) => s.pod)).toContain('kubermeister-node-shell-node-1-x'));
+        // The pod it leaves behind is named, since deleting it is the user's job.
+        expect(toasts.success).toHaveBeenCalledWith(
+            'Node shell running as “kubermeister-node-shell-node-1-x”',
+            expect.anything(),
+        );
     });
 });

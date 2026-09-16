@@ -250,6 +250,25 @@ describe('readPodLogSnapshot', () => {
     });
 });
 
+describe('a stream that has no pod to attach to', () => {
+    it('reports what is missing, ends, and hands back a controller that does nothing', async () => {
+        const { NOOP_CONTROLLER, reportMissingPod } = await import('../../../src/main/k8s/pod-target.js');
+        const sent: unknown[] = [];
+        const send = (message: unknown) => sent.push(message);
+
+        const controller = reportMissingPod(send, 'web-1', 'team-a', 'sidecar');
+        expect(sent[0]).toMatchObject({ type: 'error', message: expect.stringContaining('container "sidecar"') });
+        expect(sent[1]).toEqual({ type: 'end' });
+        expect(controller).toBe(NOOP_CONTROLLER);
+        // Stopping a stream that never started is allowed, and does nothing.
+        expect(() => controller.stop()).not.toThrow();
+
+        sent.length = 0;
+        reportMissingPod(send, 'web-1', 'team-a');
+        expect(sent[0]).toMatchObject({ message: 'pod "team-a/web-1" not found' });
+    });
+});
+
 describe('readPodLogText', () => {
     beforeEach(() => {
         target.mockReset();

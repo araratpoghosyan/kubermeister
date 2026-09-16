@@ -103,7 +103,17 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   reload or destroy. Lists stay live through `resources.watch` (`src/main/k8s/watch.ts`, the
   client's informer, same row transforms as the list) and `useWatchedList` in
   `src/renderer/lib/watch.ts`, which applies events into the list query's cache. Prefer a watch
-  over polling for anything that changes on its own. Shells live in a drawer at the bottom of the window, not in a route: `src/renderer/lib/shell-sessions.ts`
+  over polling for anything that changes on its own. - **Getting inside** (`src/main/k8s/debug.ts`): `pods.debug` attaches an ephemeral container
+  through its own subresource, which takes a **JSON** patch (`add` on `/spec/ephemeralContainers`
+  writes the key whether or not it exists); the API has no call to remove one, so the dialog says so
+  before attaching. `nodes.debug` runs a privileged pod on the node that enters the host's
+  namespaces with `nsenter` — the most powerful thing the app does, so it is never implicit, the pod
+  is labelled as the app's and named back to the caller for deletion, and it is created in the
+  namespace the user has selected rather than one the app picks. `pods.copyFrom` / `pods.copyTo`
+  carry files over exec using the container's own tools, streamed to and from disk rather than held
+  in memory; **the local path always comes from the OS picker in main**, never from the renderer,
+  for the same reason the kubeconfig does, and a cancelled picker answers null rather than failing.
+  Shells live in a drawer at the bottom of the window, not in a route: `src/renderer/lib/shell-sessions.ts`
   holds each session and the element its terminal was opened into, so the drawer attaches and detaches
   one as it switches without the remote shell noticing, and a session ends only when closed or when
   the context changes (`closeAllShells`). The store owns its terminals — restyling goes through
