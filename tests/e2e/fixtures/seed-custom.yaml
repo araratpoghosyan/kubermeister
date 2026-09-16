@@ -1,0 +1,17 @@
+# Instances of the seeded definition. They are applied after it is established, since a custom
+# resource cannot be created until the API server serves its kind.
+apiVersion: km-e2e.test/v1
+kind: Widget
+metadata:
+  name: left
+  namespace: km-e2e
+spec:
+  size: large
+---
+apiVersion: km-e2e.test/v1
+kind: Widget
+metadata:
+  name: right
+  namespace: km-e2e
+spec:
+  size: small

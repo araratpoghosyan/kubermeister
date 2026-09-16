@@ -217,6 +217,15 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   closed — the API's own default when `failurePolicy` is unset — because such a configuration is a
   dependency of writing at all, and an unavailable APIService explains why a whole API group's
   kinds have vanished.
+  **Instances of a CRD** go through `customResources.list`/`get`/`getYaml` instead
+  (`src/main/k8s/resources/custom.ts`): the app cannot know these kinds in advance, so everything a
+  row shows comes from the definition itself — its storage (or first served) version, its scope, and
+  the `additionalPrinterColumns` `kubectl get` would print, evaluated with the small JSONPath subset
+  those columns actually use (dotted keys, `['quoted']` keys, `[0]` indexes; filters and wildcards
+  are refused rather than half-evaluated). Editing rides the same `resources.replace` as every other
+  kind, since that call derives the API path from the manifest's own `apiVersion` and `kind`; the
+  editor's `expect` pin therefore takes a kind name rather than a registry kind, and scope is
+  checked only for kinds the registry knows.
   Deployments also have `deployments.replicaSets`, `deployments.rollouts`,
   `deployments.rolloutStatus` and `metrics.deploymentSeries` (the sum of the selected pods' tracked
   series), plus the two writes that belong to a rollout rather than to a kind in general:

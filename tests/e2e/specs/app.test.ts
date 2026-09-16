@@ -813,6 +813,29 @@ test('lists what stands between a write and the cluster, and the API server’s 
     await sidebar.getByRole('link', { name: 'Pods' }).click();
 });
 
+test('browses the instances of a definition through the columns it declares', async () => {
+    const { window } = launched;
+    await window.getByTestId('sidebar').getByRole('link', { name: 'CRDs' }).click();
+    await window.getByTestId('crds-table').locator('[data-crd="widgets.km-e2e.test"]').getByRole('link').click();
+    await window.getByTestId('crd-page').getByRole('link', { name: 'View instances' }).click();
+
+    const table = window.getByTestId('instances-table');
+    // The columns are the definition's own additionalPrinterColumns, plus Name and Age.
+    await expect(table.getByRole('columnheader', { name: 'Size' })).toBeVisible();
+    const instance = table.locator('[data-instance="left"]');
+    await expect(instance).toContainText('large');
+    // Nothing sets the status, so the declared column reads as absent rather than as false.
+    await expect(instance).toContainText('—');
+
+    await instance.getByRole('link').click();
+    const page = window.getByTestId('instance-page');
+    await expect(page).toContainText('large');
+    await page.getByRole('tab', { name: /Manifest/ }).click();
+    await expect(page).toContainText('kind: Widget');
+
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Pods' }).click();
+});
+
 test('stops at the startup screen when the kubeconfig path names nothing', async () => {
     const missing = join(tmpdir(), `km-e2e-missing-${Date.now()}.yaml`);
     const bad = await launchApp({ kubeconfigPath: missing });

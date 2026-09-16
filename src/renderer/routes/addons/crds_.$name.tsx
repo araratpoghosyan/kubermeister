@@ -1,6 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { CodeIcon } from 'lucide-react';
+import { CodeIcon, ListIcon } from 'lucide-react';
 import { RefreshButton } from '@/components/refresh-button';
+import { NavLink } from '@/components/layout/nav-link';
+import { Button } from '@/components/ui/button';
 import {
     eventsTab,
     labelsTab,
@@ -60,6 +62,13 @@ function CustomResourceDetailPage() {
                     <RefreshButton
                         queryKeys={[ipcQueryKey('resources.get', { kind: 'CustomResourceDefinition', name })]}
                     />
+                    {/* The instances are the point of a definition, and nothing else in the app lists them. */}
+                    <Button variant="outline" size="xs" asChild>
+                        <NavLink to={`/addons/instances/${encodeURIComponent(name)}`}>
+                            <ListIcon />
+                            View instances
+                        </NavLink>
+                    </Button>
                     <EditResourceButton />
                     <DeleteResourceButton kind="CustomResourceDefinition" name={name} backTo="/addons/crds" />
                 </>

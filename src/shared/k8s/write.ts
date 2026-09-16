@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { manifestKindSchema, refineManifestTarget } from './manifest.js';
+import { manifestKindSchema, refineManifestTarget, type ManifestKind } from './manifest.js';
 import { namespaceNameSchema } from './names.js';
-import { kindSchema, restartKindSchema } from './registry.js';
+import { isKnownKindName, kindSchema, restartKindSchema } from './registry.js';
 
 /** What a write reports back: enough to name the object in a toast and invalidate its screens. */
 export const writeResultSchema = z.object({
@@ -20,11 +20,18 @@ const scopeStamp = { context: z.string().min(1) };
 /** The object a manifest edit started from; a save whose manifest names anything else is refused. */
 export const manifestIdentitySchema = z
     .object({
-        kind: manifestKindSchema,
+        /** A registered kind, or the kind of a custom resource the app has no registry entry for. */
+        kind: z.string().min(1),
         name: z.string().min(1),
         namespace: namespaceNameSchema.optional(),
     })
-    .superRefine(refineManifestTarget);
+    // Only a kind the app knows has a scope to check against; for a custom resource, naming a
+    // namespace or not is what its own definition decided, and the identity just records it.
+    .superRefine((target, ctx) => {
+        if (isKnownKindName(target.kind)) {
+            refineManifestTarget(target as { kind: ManifestKind; namespace?: string }, ctx);
+        }
+    });
 
 export const manifestWriteSchema = z.object({
     ...scopeStamp,

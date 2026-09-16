@@ -137,11 +137,12 @@ export function createResource(input: ManifestWrite): Promise<WriteResult> {
 
 /** The manifest must still describe the object the editor was opened on, or the save is aimed elsewhere. */
 function assertIdentity(spec: KubernetesObject, expect: ManifestIdentity, op: string): void {
-    const facts = factsFor(expect.kind);
+    // A custom resource has no registry entry, and its own kind is already the canonical name.
+    const kind = isKnownKindName(expect.kind) ? factsFor(expect.kind as ManifestKind).kind : expect.kind;
     const actual = `${spec.kind} "${spec.metadata?.namespace ? `${spec.metadata.namespace}/` : ''}${spec.metadata?.name}"`;
-    const wanted = `${facts.kind} "${expect.namespace ? `${expect.namespace}/` : ''}${expect.name}"`;
+    const wanted = `${kind} "${expect.namespace ? `${expect.namespace}/` : ''}${expect.name}"`;
     const sameNamespace = (spec.metadata?.namespace || undefined) === expect.namespace;
-    if (spec.kind !== facts.kind || spec.metadata?.name !== expect.name || !sameNamespace) {
+    if (spec.kind !== kind || spec.metadata?.name !== expect.name || !sameNamespace) {
         throw new K8sError(
             'invalid',
             `The manifest describes ${actual}, but this editor is for ${wanted}. Restore the kind, name and namespace, or use Create resource for a new object.`,
