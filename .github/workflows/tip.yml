@@ -1,7 +1,8 @@
 name: Tip
 
 # Rolling nightly: every push to main that passes CI rebuilds the `tip` pre-release. The tag is
-# force-moved to the commit and the fixed-name assets are replaced, so there is always exactly one
+# force-moved to the commit and the build's assets, named by version, join the release; the
+# previous build's are pruned once the feed names the new one, so there is always exactly one
 # tip release pointing at the latest good commit. The build ships as a separate app, "Kubermeister
 # Tip" (io.kubermeister.tip), so it installs and runs alongside a stable Kubermeister with its own
 # settings. Versioned releases are release.yml.
@@ -81,12 +82,16 @@ jobs:
       # Separate identity so tip and stable coexist: name, app id, package name, icons, version,
       # and an update feed fixed to the tip download URL so the tip app only follows tip builds.
       # The release notes ride in the feed file, which is what the in-app update popover shows.
+      # Installers are named by version (the stable pattern, spelt out because the tip product
+      # name has a space): a build never overwrites the files the live feed points at, and the
+      # action prunes the previous build only after the feed has moved on.
       - uses: ./.github/actions/package
         with:
           release-tag: tip
           metadata-channel: tip
+          prune: 'true'
           flags: |
-            -c.artifactName=Kubermeister-tip-${os}-${arch}.${ext}
+            -c.artifactName=Kubermeister-${version}-${os}-${arch}.${ext}
             -c.productName=Kubermeister Tip
             -c.appId=io.kubermeister.tip
             -c.extraMetadata.name=kubermeister-tip

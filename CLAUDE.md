@@ -341,8 +341,9 @@ Two channels, two apps that install side by side:
 
 - **Tip** (`.github/workflows/tip.yml`): every push to `main`, after `ci.yml` passes as the gate.
   Ships as `Kubermeister Tip` (`io.kubermeister.tip`, badged icon, own settings folder, version
-  `<package.json>-tip.<build number>`). The `tip` tag is force-moved and the fixed-name assets
-  `Kubermeister-tip-<os>-<arch>.<ext>` are replaced on the single rolling pre-release. Its update
+  `<package.json>-tip.<build number>`). The `tip` tag is force-moved and the build's assets,
+  named `Kubermeister-<version>-<os>-<arch>.<ext>` like stable's, join the single rolling
+  pre-release; the previous build's are pruned only after the feed names the new one. Its update
   feed is the generic URL of that release.
 - **Stable** (`.github/workflows/release.yml`): a `vX.Y.Z` tag whose version matches package.json.
   Draft release, package on three OSes, upload installers plus electron-updater metadata
@@ -360,9 +361,13 @@ updates need the `zip` target next to the dmg. The library never downloads on it
 and main pushes every transition as `update.state`, which `useUpdater` in `src/renderer/lib/updates.ts`
 mirrors for the top-bar `UpdatePill` (popover plus one-shot toasts) and the Settings About card;
 `update.check` is also reachable from the menu and the palette. A failed scheduled check is stored
-with `background: true` and never surfaces as a notification. The packaging action uploads
-installers before the `*.yml` feed so the feed never names an asset that is still uploading; tip
-builds carry their build number in `releaseInfo.releaseNotes`, which the popover shows. Icons
+with `background: true` and never surfaces as a notification. **Publishing is fail-safe, not
+fail-proof:** GitHub's upload service does fail a large asset now and then, so the packaging action
+uploads one file at a time with retries, reads every asset back and checks its size and checksum,
+and only then uploads the `*.yml` feed. Installer names carry the version, so a new build never
+overwrites the files a live feed points at, and any failure leaves the previous build complete;
+the feed file is the one asset written in place. Tip builds carry their build number in
+`releaseInfo.releaseNotes`, which the popover shows. Icons
 regenerate from `resources/icon.svg` and `resources/icon-tip.svg` with `resources/build-icon.sh`.
 
 ## Testing
