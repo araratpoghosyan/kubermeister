@@ -26,7 +26,7 @@ function DaemonSetsPage() {
     return (
         <ResourceListPage
             icon={BoxesIcon}
-            title="DaemonSets"
+            title="Daemon Sets"
             columns={columns}
             query={sets}
             detailPath={detailPath}

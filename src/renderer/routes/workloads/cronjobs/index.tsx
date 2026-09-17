@@ -48,7 +48,7 @@ function CronJobsPage() {
     return (
         <ResourceListPage
             icon={TimerIcon}
-            title="CronJobs"
+            title="Cron Jobs"
             columns={columns}
             query={cronJobs}
             detailPath={detailPath}

@@ -115,7 +115,7 @@ describe('network lists', () => {
         await userEvent.click(screen.getByRole('link', { name: 'Endpoints', exact: true }));
         expect(await screen.findByTestId('endpoints-table')).toHaveTextContent('10.0.0.1:8080');
 
-        await userEvent.click(screen.getByRole('link', { name: 'NetworkPolicies' }));
+        await userEvent.click(screen.getByRole('link', { name: 'Network Policies' }));
         const policies = await screen.findByTestId('networkpolicies-table');
         expect(policies).toHaveTextContent('<all pods>');
         expect(policies).toHaveTextContent('Ingress, Egress');

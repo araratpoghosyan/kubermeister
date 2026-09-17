@@ -79,6 +79,18 @@ describe('command palette', () => {
         expect(await screen.findByTestId('create-page')).toBeInTheDocument();
     });
 
+    // The labels carry spaces the API spelling has not, so searching for "networkpolicies" must still land.
+    it('finds a screen typed the way kubectl spells the kind', async () => {
+        renderRoutes(routeTree, '/overview/summary');
+        await userEvent.keyboard('{Control>}k{/Control}');
+        const dialog = await screen.findByRole('dialog', { name: 'Quick actions' });
+        await userEvent.type(
+            within(dialog).getByPlaceholderText('Switch cluster, namespace or resource…'),
+            'networkpolicies',
+        );
+        expect(await within(dialog).findByRole('option', { name: 'Network Policies' })).toBeInTheDocument();
+    });
+
     it('starts an update check and opens Settings, where the outcome shows', async () => {
         const { router } = renderRoutes(routeTree, '/overview/summary');
         await userEvent.keyboard('{Control>}k{/Control}');

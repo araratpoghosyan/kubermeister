@@ -22,7 +22,7 @@ function CsiNodesPage() {
     return (
         <ResourceListPage
             icon={ServerIcon}
-            title="CSINodes"
+            title="CSI Nodes"
             columns={columns}
             query={nodes}
             detailPath={detailPath}

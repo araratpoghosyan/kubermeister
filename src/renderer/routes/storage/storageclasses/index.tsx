@@ -39,7 +39,7 @@ function StorageClassesPage() {
     return (
         <ResourceListPage
             icon={LayersIcon}
-            title="StorageClasses"
+            title="Storage Classes"
             columns={columns}
             query={classes}
             detailPath={detailPath}

@@ -25,7 +25,7 @@ function CsiDriversPage() {
     return (
         <ResourceListPage
             icon={PlugIcon}
-            title="CSIDrivers"
+            title="CSI Drivers"
             columns={columns}
             query={drivers}
             detailPath={detailPath}

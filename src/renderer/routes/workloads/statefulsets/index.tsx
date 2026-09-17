@@ -25,7 +25,7 @@ function StatefulSetsPage() {
     return (
         <ResourceListPage
             icon={BoxesIcon}
-            title="StatefulSets"
+            title="Stateful Sets"
             columns={columns}
             query={sets}
             detailPath={detailPath}

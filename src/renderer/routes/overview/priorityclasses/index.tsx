@@ -39,7 +39,7 @@ function PriorityClassesPage() {
     return (
         <ResourceListPage
             icon={ArrowUpNarrowWideIcon}
-            title="PriorityClasses"
+            title="Priority Classes"
             columns={columns}
             query={classes}
             detailPath={detailPath}

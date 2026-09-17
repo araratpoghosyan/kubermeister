@@ -35,7 +35,7 @@ function ClusterRolesPage() {
     return (
         <ResourceListPage
             icon={ShieldIcon}
-            title="ClusterRoles"
+            title="Cluster Roles"
             columns={columns}
             query={roles}
             detailPath={detailPath}
