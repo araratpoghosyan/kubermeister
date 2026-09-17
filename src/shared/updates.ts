@@ -4,7 +4,7 @@
  * `<next stable>-tip.<build>`, so the prerelease tag is the channel.
  */
 
-export const REPOSITORY_URL = 'https://github.com/araratpoghosyan/kubermeister';
+export const REPOSITORY_URL = 'https://github.com/kubermeister/kubermeister';
 
 export type UpdateChannel = 'stable' | 'tip';
 

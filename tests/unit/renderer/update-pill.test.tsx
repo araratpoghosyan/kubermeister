@@ -74,7 +74,7 @@ describe('UpdatePill', () => {
         expect(popover).toHaveTextContent('Nightly build #51 from abc1234.');
         expect(screen.getByRole('link', { name: /What's new/ })).toHaveAttribute(
             'href',
-            'https://github.com/araratpoghosyan/kubermeister/releases/tag/v0.3.0',
+            'https://github.com/kubermeister/kubermeister/releases/tag/v0.3.0',
         );
         await userEvent.click(screen.getByRole('button', { name: 'Update' }));
         expect(invoke).toHaveBeenCalledWith('update.download', {});
@@ -96,7 +96,7 @@ describe('UpdatePill', () => {
         expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '65');
         expect(screen.getByRole('link', { name: /What's new/ })).toHaveAttribute(
             'href',
-            'https://github.com/araratpoghosyan/kubermeister/releases/tag/tip',
+            'https://github.com/kubermeister/kubermeister/releases/tag/tip',
         );
 
         act(() => push?.({ status: 'downloaded', version: '0.3.0-tip.51' }));
