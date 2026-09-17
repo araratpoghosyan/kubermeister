@@ -5,13 +5,13 @@
   "private": true,
   "license": "MIT",
   "author": "Ararat Poghosyan",
-  "homepage": "https://github.com/araratpoghosyan/kubermeister#readme",
+  "homepage": "https://github.com/kubermeister/kubermeister#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/araratpoghosyan/kubermeister.git"
+    "url": "git+https://github.com/kubermeister/kubermeister.git"
   },
   "bugs": {
-    "url": "https://github.com/araratpoghosyan/kubermeister/issues"
+    "url": "https://github.com/kubermeister/kubermeister/issues"
   },
   "type": "module",
   "main": "./out/main/index.mjs",

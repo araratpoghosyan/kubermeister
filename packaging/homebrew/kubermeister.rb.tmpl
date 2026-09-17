@@ -1,4 +1,4 @@
-# Template for the stable cask in araratpoghosyan/homebrew-tap. The release workflow substitutes
+# Template for the stable cask in kubermeister/homebrew-tap. The release workflow substitutes
 # __VERSION__, __SHA_ARM__ and __SHA_INTEL__ and pushes the result as Casks/kubermeister.rb on
 # every stable release. The dmg URLs depend on the artifactName pattern in electron-builder.yml.
 cask "kubermeister" do
@@ -6,16 +6,16 @@ cask "kubermeister" do
 
   on_arm do
     sha256 "__SHA_ARM__"
-    url "https://github.com/araratpoghosyan/kubermeister/releases/download/v#{version}/Kubermeister-#{version}-mac-arm64.dmg"
+    url "https://github.com/kubermeister/kubermeister/releases/download/v#{version}/Kubermeister-#{version}-mac-arm64.dmg"
   end
   on_intel do
     sha256 "__SHA_INTEL__"
-    url "https://github.com/araratpoghosyan/kubermeister/releases/download/v#{version}/Kubermeister-#{version}-mac-x64.dmg"
+    url "https://github.com/kubermeister/kubermeister/releases/download/v#{version}/Kubermeister-#{version}-mac-x64.dmg"
   end
 
   name "Kubermeister"
   desc "Desktop Kubernetes client"
-  homepage "https://github.com/araratpoghosyan/kubermeister"
+  homepage "https://github.com/kubermeister/kubermeister"
 
   livecheck do
     url :url

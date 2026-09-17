@@ -30,10 +30,10 @@ app's own settings.
 Kubermeister ships in two channels. Both can be installed side by side; they are separate apps
 with separate settings.
 
-| Channel    | App name         | What it is                                                   | Where                                                                           |
-| ---------- | ---------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------- |
-| **Stable** | Kubermeister     | Versioned releases, `vX.Y.Z`                                 | [Releases](https://github.com/araratpoghosyan/kubermeister/releases)            |
-| **Tip**    | Kubermeister Tip | Nightly build, rebuilt on every change to `main`. May break. | [Tip release](https://github.com/araratpoghosyan/kubermeister/releases/tag/tip) |
+| Channel    | App name         | What it is                                                   | Where                                                                        |
+| ---------- | ---------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| **Stable** | Kubermeister     | Versioned releases, `vX.Y.Z`                                 | [Releases](https://github.com/kubermeister/kubermeister/releases)            |
+| **Tip**    | Kubermeister Tip | Nightly build, rebuilt on every change to `main`. May break. | [Tip release](https://github.com/kubermeister/kubermeister/releases/tag/tip) |
 
 ### macOS
 
@@ -45,9 +45,9 @@ Or install with [Homebrew](https://brew.sh). Homebrew 7 requires third-party tap
 once before anything from them can be installed:
 
 ```sh
-brew trust araratpoghosyan/tap
-brew install --cask araratpoghosyan/tap/kubermeister        # stable
-brew install --cask araratpoghosyan/tap/kubermeister@tip    # tip
+brew trust kubermeister/tap
+brew install --cask kubermeister/tap/kubermeister        # stable
+brew install --cask kubermeister/tap/kubermeister@tip    # tip
 ```
 
 ### Windows
