@@ -84,7 +84,7 @@ describe('cluster dashboard', () => {
         expect(rows[0]).toHaveAttribute('data-tone', 'danger');
         expect(rows[0]).toHaveTextContent('CrashLoopBackOff: web-1');
         expect(rows[1]).toHaveTextContent('Scheduling disabled');
-        expect(within(page).getByRole('button', { name: 'Deploy' })).toHaveAttribute('aria-disabled', 'true');
+        expect(within(page).queryByRole('button', { name: 'Deploy' })).toBeNull();
     });
 
     it('shows empty states and a neutral alert badge, and stays healthy without metrics', async () => {
