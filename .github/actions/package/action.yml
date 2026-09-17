@@ -11,6 +11,12 @@ inputs:
   metadata-channel:
     description: electron-updater metadata file prefix ("latest" for stable, "tip" for nightly).
     required: true
+  prune:
+    description: >
+      After the feed names this build, delete this OS's installer assets from earlier builds. Only
+      for a rolling release that accumulates builds under one tag; a versioned release holds one.
+    required: false
+    default: 'false'
   flags:
     description: Extra electron-builder -c overrides, one per line.
     required: false
@@ -74,33 +80,115 @@ runs:
         fi
         npm run package -- "${flags[@]}"
 
-    # Installers first, metadata last: the feed file is what a running app reads, so it must never
-    # name an asset that is still uploading.
+    # The installer names carry the version, so a new build never overwrites the assets a
+    # published feed still points at; the previous build stays whole until the feed has moved.
+    - name: Name this OS's installers
+      id: files
+      shell: bash
+      env:
+        CHANNEL: ${{ inputs.metadata-channel }}
+      run: |
+        shopt -s nullglob
+        case "$RUNNER_OS" in
+          macOS)   files=(release/*.dmg release/*.dmg.blockmap release/*.zip release/*.zip.blockmap); feed="release/${CHANNEL}-mac.yml"; marker='-mac-' ;;
+          Windows) files=(release/*.exe release/*.exe.blockmap); feed="release/${CHANNEL}.yml"; marker='-win-' ;;
+          Linux)   files=(release/*.AppImage release/*.deb); feed="release/${CHANNEL}-linux.yml"; marker='-linux-' ;;
+        esac
+        [ "${#files[@]}" -gt 0 ] || { echo "::error::no installers under release/"; exit 1; }
+        test -f "$feed" || { echo "::error::missing updater metadata $feed"; exit 1; }
+        for f in "${files[@]}"; do case "$f" in *"$marker"*) ;; *) echo "::error::$f does not carry the $marker marker the prune step relies on"; exit 1 ;; esac; done
+        printf 'installers<<EOL\n%s\nEOL\n' "$(printf '%s\n' "${files[@]}")" >> "$GITHUB_OUTPUT"
+        echo "feed=$feed" >> "$GITHUB_OUTPUT"
+        echo "marker=$marker" >> "$GITHUB_OUTPUT"
+
+    # One file per call, retried with backoff: GitHub's upload service fails a large asset now
+    # and then with a 5xx, and one such failure must not cost the whole build. `--clobber` only
+    # ever meets an asset of this same build, left by a failed attempt or an earlier run of it.
     - name: Upload installers
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github-token }}
         TAG: ${{ inputs.release-tag }}
+        INSTALLERS: ${{ steps.files.outputs.installers }}
       run: |
-        shopt -s nullglob
-        case "$RUNNER_OS" in
-          macOS)   files=(release/*.dmg release/*.dmg.blockmap release/*.zip release/*.zip.blockmap) ;;
-          Windows) files=(release/*.exe release/*.exe.blockmap) ;;
-          Linux)   files=(release/*.AppImage release/*.deb) ;;
-        esac
-        gh release upload "$TAG" "${files[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+        retry() {
+          local attempt=1 delay=15
+          until "$@"; do
+            if [ "$attempt" -ge 5 ]; then echo "::error::gave up after $attempt attempts: $*"; return 1; fi
+            echo "::warning::attempt $attempt failed: $*; retrying in ${delay}s"
+            sleep "$delay"; attempt=$((attempt + 1)); delay=$((delay * 2))
+          done
+        }
+        while IFS= read -r f; do
+          [ -n "$f" ] || continue
+          retry gh release upload "$TAG" "$f" --repo "$GITHUB_REPOSITORY" --clobber < /dev/null
+        done <<< "$INSTALLERS"
 
+    # Read every asset back and compare size and checksum before the feed may name it: an upload
+    # that returned success but stored something else must fail here, not on a user's machine.
+    - name: Verify the uploaded installers
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        TAG: ${{ inputs.release-tag }}
+        INSTALLERS: ${{ steps.files.outputs.installers }}
+      run: |
+        sha256() { if command -v sha256sum >/dev/null; then sha256sum "$1"; else shasum -a 256 "$1"; fi | cut -d' ' -f1; }
+        assets=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[] | "\(.name)\t\(.state)\t\(.size)\t\(.digest)"')
+        ok=true
+        while IFS= read -r f; do
+          [ -n "$f" ] || continue
+          name=$(basename "$f")
+          expected=$(printf '%s\t%s\t%s\t%s' "$name" uploaded "$(wc -c < "$f" | tr -d ' ')" "sha256:$(sha256 "$f")")
+          if grep -qxF "$expected" <<< "$assets"; then
+            echo "ok  $name"
+          else
+            echo "::error::$name on the release does not match the packaged file"
+            echo "  expected: $expected"
+            echo "  release:  $(grep -F "$name" <<< "$assets" || echo '<missing>')"
+            ok=false
+          fi
+        done <<< "$INSTALLERS"
+        $ok
+
+    # Metadata last: the feed is what a running app reads, so it names only assets that exist
+    # and have been checked. Overwriting the previous feed is the one in-place write here.
     - name: Upload updater metadata
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github-token }}
         TAG: ${{ inputs.release-tag }}
-        CHANNEL: ${{ inputs.metadata-channel }}
+        FEED: ${{ steps.files.outputs.feed }}
       run: |
-        case "$RUNNER_OS" in
-          macOS)   file="release/${CHANNEL}-mac.yml" ;;
-          Windows) file="release/${CHANNEL}.yml" ;;
-          Linux)   file="release/${CHANNEL}-linux.yml" ;;
-        esac
-        test -f "$file"
-        gh release upload "$TAG" "$file" --repo "$GITHUB_REPOSITORY" --clobber
+        retry() {
+          local attempt=1 delay=15
+          until "$@"; do
+            if [ "$attempt" -ge 5 ]; then echo "::error::gave up after $attempt attempts: $*"; return 1; fi
+            echo "::warning::attempt $attempt failed: $*; retrying in ${delay}s"
+            sleep "$delay"; attempt=$((attempt + 1)); delay=$((delay * 2))
+          done
+        }
+        retry gh release upload "$TAG" "$FEED" --repo "$GITHUB_REPOSITORY" --clobber
+
+    # Only this OS's assets, only once its feed points elsewhere, and best effort: a leftover
+    # asset costs nothing, a deleted one the feed still names costs an update.
+    - name: Prune this OS's earlier builds
+      if: inputs.prune == 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        TAG: ${{ inputs.release-tag }}
+        INSTALLERS: ${{ steps.files.outputs.installers }}
+        MARKER: ${{ steps.files.outputs.marker }}
+      run: |
+        keep=$(while IFS= read -r f; do [ -n "$f" ] && basename "$f"; done <<< "$INSTALLERS")
+        gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' \
+          | while IFS= read -r name; do
+              case "$name" in *.yml) continue ;; *"$MARKER"*) ;; *) continue ;; esac
+              grep -qxF "$name" <<< "$keep" && continue
+              if gh release delete-asset "$TAG" "$name" --repo "$GITHUB_REPOSITORY" --yes < /dev/null; then
+                echo "pruned $name"
+              else
+                echo "::warning::could not prune $name; it stays on the release"
+              fi
+            done
