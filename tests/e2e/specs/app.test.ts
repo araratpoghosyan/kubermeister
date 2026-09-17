@@ -224,13 +224,13 @@ test('lists the seeded deployment and opens its rollout history', async () => {
     await expect(page).toContainText('strategy: RollingUpdate');
     await window.getByRole('tab', { name: /History/ }).click();
     await expect(page.getByTestId('rollout-history')).toContainText('Current');
-    await window.getByRole('tab', { name: /ReplicaSets/ }).click();
+    await window.getByRole('tab', { name: /Replica Sets/ }).click();
     await expect(page.getByTestId('replica-sets').getByRole('row')).toHaveCount(2);
 });
 
 test('lists the seeded job and cron job and opens the job detail', async () => {
     const { window } = launched;
-    // Exact: "Jobs" is a substring of "CronJobs", and both links sit in the sidebar.
+    // Exact: "Jobs" is a substring of "Cron Jobs", and both links sit in the sidebar.
     await window.getByTestId('sidebar').getByRole('link', { name: 'Jobs', exact: true }).click();
     const job = window.getByTestId('jobs-table').locator('[data-job="import"]');
     await expect(job).toContainText('1/1', { timeout: 30_000 });
@@ -329,7 +329,7 @@ test('lists the identity and role screens for the namespace and the cluster', as
     // Every namespace gets a `default` service account, so it needs no seeding.
     await expect(window.getByTestId('serviceaccounts-table').locator('[data-serviceaccount="default"]')).toBeVisible();
 
-    // "Roles" and "RoleBindings" are substrings of the cluster-scoped entries, so match exactly.
+    // "Roles" and "Role Bindings" are substrings of the cluster-scoped entries, so match exactly.
     await sidebar.getByRole('link', { name: 'Roles', exact: true }).click();
     const role = window.getByTestId('roles-table').locator('[data-role="reader"]');
     await expect(role).toContainText('2');
@@ -448,7 +448,7 @@ test('restarts the seeded deployment, which rolls its pods onto a new replica se
 
     // The stamped template makes the controller roll the pods onto a second replica set. How many
     // sets exist at any moment depends on how far the roll has got, so this waits for more than one.
-    await page.getByRole('tab', { name: /ReplicaSets/ }).click();
+    await page.getByRole('tab', { name: /Replica Sets/ }).click();
     const sets = page.getByTestId('replica-sets');
     await expect(sets).toBeVisible({ timeout: 30_000 });
     await expect.poll(() => sets.getByRole('row').count(), { timeout: 30_000 }).toBeGreaterThan(2);
@@ -681,7 +681,7 @@ test('lists the replica set behind the deployment, the budget over it, and the c
 
     // Nothing seeds a replication controller: the screen says so rather than failing to load.
     await sidebar.getByRole('link', { name: 'Replication Controllers' }).click();
-    await expect(window.getByText('No ReplicationControllers found.')).toBeVisible();
+    await expect(window.getByText('No Replication Controllers found.')).toBeVisible();
 
     await sidebar.getByRole('link', { name: 'Disruption Budgets' }).click();
     const budget = window.getByTestId('disruptionbudgets-table').locator('[data-disruptionbudget="web"]');
@@ -727,7 +727,7 @@ test('lists the class kinds and the CSI plumbing behind the volumes', async () =
 
     // k3s registers no CSI driver, so both driver screens show what an empty list looks like.
     await sidebar.getByRole('link', { name: 'CSI Drivers' }).click();
-    await expect(window.getByText('No CSIDrivers found.')).toBeVisible();
+    await expect(window.getByText('No CSI Drivers found.')).toBeVisible();
     await sidebar.getByRole('link', { name: 'CSI Nodes' }).click();
     await expect(window.getByRole('heading', { name: 'CSI Nodes' })).toBeVisible();
 
