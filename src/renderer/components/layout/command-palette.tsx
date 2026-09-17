@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/command';
 import { ALL_DOMAINS } from '@/lib/nav';
 import { useIpcQuery } from '@/lib/query';
-import { selectNamespace, useSwitchContext } from '@/lib/scope';
+import { useSelectNamespace, useSwitchContext } from '@/lib/scope';
 import { checkForUpdates } from '@/lib/updates';
 import { useNavigateTo } from './nav-link';
 
@@ -24,6 +24,7 @@ interface CommandPaletteProps {
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     const navigateTo = useNavigateTo();
     const switchContext = useSwitchContext();
+    const selectNamespace = useSelectNamespace();
     const contexts = useIpcQuery('contexts.list', {}).data ?? [];
     const namespaces = useIpcQuery('namespaces.list', {}).data ?? [];
 

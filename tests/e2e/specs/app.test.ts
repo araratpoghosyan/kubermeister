@@ -101,10 +101,11 @@ test('lists the seeded pod, opens its detail, and rescopes by namespace', async 
     await window.getByRole('tab', { name: 'Network' }).click();
     await expect(page.getByTestId('network')).toContainText('8080/TCP');
 
-    await window.getByTestId('sidebar').getByRole('link', { name: 'Pods' }).click();
+    // Rescoping from the detail closes it back to the list: the pod on screen belongs to the namespace being left.
     await window.getByTestId('namespace-selector').click();
     await window.getByRole('option', { name: 'kube-system' }).click();
     await expect(window.getByTestId('active-namespace')).toContainText('kube-system');
+    await expect(page).toHaveCount(0);
     await expect(window.getByTestId('pods-table').locator('[data-pod^="web-"]')).toHaveCount(0);
     await expect(window.getByTestId('pods-table').locator('[data-pod^="coredns-"]')).toHaveCount(1);
 });

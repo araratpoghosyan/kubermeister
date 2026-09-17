@@ -1,4 +1,4 @@
-import { useRouter } from '@tanstack/react-router';
+import { type AnyRouter, useRouter } from '@tanstack/react-router';
 import { useCallback } from 'react';
 import { invoke } from './ipc';
 import { listPathForSubPage } from './nav';
@@ -17,16 +17,21 @@ export async function switchContext(name: string): Promise<void> {
 }
 
 /**
- * Switch context from a screen. A detail page names an object of the cluster being left, so it
- * is closed first, back to its list: keeping it open would show the same-named object of the new
- * cluster under the old page's live tabs, and its streams are ended by main in any case.
+ * A detail page names one object of the scope being left, so it is closed first, back to its list:
+ * keeping it open would show the same-named object of the new scope under the old page's live tabs.
+ * A list page stays where it is and simply reloads under the new scope.
  */
+async function closeDetail(router: AnyRouter): Promise<void> {
+    const listPath = listPathForSubPage(router.state.location.pathname);
+    if (listPath) await router.navigate({ to: listPath });
+}
+
+/** Switch context from a screen, closing an open detail page first; main ends its streams in any case. */
 export function useSwitchContext(): (name: string) => Promise<void> {
     const router = useRouter();
     return useCallback(
         async (name: string) => {
-            const listPath = listPathForSubPage(router.state.location.pathname);
-            if (listPath) await router.navigate({ to: listPath });
+            await closeDetail(router);
             await switchContext(name);
         },
         [router],
@@ -38,6 +43,18 @@ export async function selectNamespace(namespace: string | null): Promise<void> {
     await invoke('namespace.set', { namespace });
     await queryClient.invalidateQueries({ queryKey: ['namespace.active'] });
     await invalidateClusterQueries();
+}
+
+/** Select a namespace from a screen, closing an open detail page first: its object lives in the namespace being left. */
+export function useSelectNamespace(): (namespace: string | null) => Promise<void> {
+    const router = useRouter();
+    return useCallback(
+        async (namespace: string | null) => {
+            await closeDetail(router);
+            await selectNamespace(namespace);
+        },
+        [router],
+    );
 }
 
 /**

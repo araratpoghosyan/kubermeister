@@ -68,8 +68,18 @@ describe('listPathForSubPage', () => {
         expect(listPathForSubPage('/workloads/pods/team-a/web-1')).toBe('/workloads/pods');
     });
 
+    it('maps a custom-resource instance to the list of its definition, which no nav item names', () => {
+        expect(listPathForSubPage('/addons/instances/certs.example.io/team-a/my-cert')).toBe(
+            '/addons/instances/certs.example.io',
+        );
+        expect(listPathForSubPage('/addons/instances/clusterissuers.example.io/-/prod')).toBe(
+            '/addons/instances/clusterissuers.example.io',
+        );
+    });
+
     it('returns undefined on a list page or outside any list item', () => {
         expect(listPathForSubPage('/workloads/pods')).toBeUndefined();
+        expect(listPathForSubPage('/addons/instances/certs.example.io')).toBeUndefined();
         expect(listPathForSubPage('/overview/summary')).toBeUndefined();
         expect(listPathForSubPage('/nope/nowhere')).toBeUndefined();
     });

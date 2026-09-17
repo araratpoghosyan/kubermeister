@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { renderInRouter, renderRoutes, renderWithQuery } from './helpers';
+import { renderInRouter, renderRoutes } from './helpers';
 
 const invoke = vi.fn();
 const subscribe = vi.fn(() => () => {});
@@ -132,7 +132,7 @@ describe('NamespaceSelector', () => {
     });
 
     it('shows the active namespace with its pod count', async () => {
-        renderWithQuery(<NamespaceSelector />);
+        renderInRouter(<NamespaceSelector />);
         await waitFor(() => expect(screen.getByTestId('active-namespace')).toHaveTextContent('team-a · 1 pods'));
     });
 
@@ -140,7 +140,7 @@ describe('NamespaceSelector', () => {
         invoke.mockImplementation(async (channel: string) =>
             channel === 'namespace.active' ? { name: null, pods: 12, tone: 'accent' } : data[channel],
         );
-        renderWithQuery(<NamespaceSelector />);
+        renderInRouter(<NamespaceSelector />);
         await waitFor(() =>
             expect(screen.getByTestId('active-namespace')).toHaveTextContent('All namespaces · 12 pods'),
         );
@@ -157,7 +157,7 @@ describe('NamespaceSelector', () => {
     });
 
     it('filters the list and selects a namespace through the bridge', async () => {
-        renderWithQuery(<NamespaceSelector />);
+        renderInRouter(<NamespaceSelector />);
         await waitFor(() => expect(screen.getByTestId('active-namespace')).toHaveTextContent('team-a'));
         await userEvent.click(screen.getByTestId('namespace-selector'));
         const list = await screen.findByRole('listbox');
@@ -169,9 +169,29 @@ describe('NamespaceSelector', () => {
         await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
     });
 
-    it('clears the scope with All namespaces and reports an empty filter', async () => {
-        renderWithQuery(<NamespaceSelector />);
+    it('closes a detail page before rescoping, since its object belongs to the namespace being left', async () => {
+        const { router } = renderRoutes(routeTree, '/workloads/pods/team-a/web-1');
+        await waitFor(() => expect(screen.getByTestId('active-namespace')).toHaveTextContent('team-a'));
         await userEvent.click(screen.getByTestId('namespace-selector'));
+        const list = await screen.findByRole('listbox');
+        await userEvent.click(within(list).getByRole('option', { name: /kube-system/ }));
+        await waitFor(() => expect(router.state.location.pathname).toBe('/workloads/pods'));
+        await waitFor(() => expect(invoke).toHaveBeenCalledWith('namespace.set', { namespace: 'kube-system' }));
+    });
+
+    it('stays on a list page when the namespace changes', async () => {
+        const { router } = renderRoutes(routeTree, '/workloads/pods');
+        await waitFor(() => expect(screen.getByTestId('active-namespace')).toHaveTextContent('team-a'));
+        await userEvent.click(screen.getByTestId('namespace-selector'));
+        const list = await screen.findByRole('listbox');
+        await userEvent.click(within(list).getByRole('option', { name: /All namespaces/ }));
+        await waitFor(() => expect(invoke).toHaveBeenCalledWith('namespace.set', { namespace: null }));
+        expect(router.state.location.pathname).toBe('/workloads/pods');
+    });
+
+    it('clears the scope with All namespaces and reports an empty filter', async () => {
+        renderInRouter(<NamespaceSelector />);
+        await userEvent.click(await screen.findByTestId('namespace-selector'));
         const list = await screen.findByRole('listbox');
         await userEvent.type(screen.getByPlaceholderText('Filter namespaces…'), 'zzz');
         expect(await screen.findByText('No namespaces found.')).toBeInTheDocument();
