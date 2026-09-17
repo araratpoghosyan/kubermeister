@@ -190,8 +190,7 @@ aborts if the active context is anything else.
 Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers the setup, the checks
 a change has to pass and the branch and commit conventions; [`CLAUDE.md`](CLAUDE.md) documents the
 architecture and the rules the codebase holds itself to. Security problems go through
-[SECURITY.md](SECURITY.md), never a public issue. [CHANGELOG.md](CHANGELOG.md) records what each
-release changed.
+[SECURITY.md](SECURITY.md), never a public issue.
 
 ## License
 
