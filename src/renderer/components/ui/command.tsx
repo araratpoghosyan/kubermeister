@@ -76,6 +76,16 @@ function CommandEmpty({ ...props }: React.ComponentProps<typeof CommandPrimitive
     return <CommandPrimitive.Empty data-slot="command-empty" className="py-6 text-center text-sm" {...props} />;
 }
 
+function CommandLoading({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.Loading>) {
+    return (
+        <CommandPrimitive.Loading
+            data-slot="command-loading"
+            className={cn('px-2 py-1.5 text-sm text-muted-foreground', className)}
+            {...props}
+        />
+    );
+}
+
 function CommandGroup({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.Group>) {
     return (
         <CommandPrimitive.Group
@@ -128,6 +138,7 @@ export {
     CommandInput,
     CommandList,
     CommandEmpty,
+    CommandLoading,
     CommandGroup,
     CommandItem,
     CommandShortcut,

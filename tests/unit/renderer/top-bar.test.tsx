@@ -131,9 +131,29 @@ describe('NamespaceSelector', () => {
         invoke.mockImplementation(async (channel: string) => data[channel]);
     });
 
+    it('says it is loading until the active namespace and the list have arrived', async () => {
+        const pending = new Promise<never>(() => {});
+        invoke.mockImplementation((channel: string) =>
+            channel === 'namespace.active' || channel === 'namespaces.list' ? pending : Promise.resolve(data[channel]),
+        );
+        renderInRouter(<NamespaceSelector />);
+        const trigger = await screen.findByTestId('namespace-selector');
+        expect(trigger).toHaveAttribute('aria-busy', 'true');
+        expect(screen.getByTestId('active-namespace')).toHaveTextContent('Loading…');
+        expect(screen.getByTestId('active-namespace')).not.toHaveTextContent('All namespaces');
+        await userEvent.click(trigger);
+        const list = await screen.findByRole('listbox');
+        expect(within(list).getByRole('progressbar', { name: 'Loading namespaces' })).toBeInTheDocument();
+        expect(within(list).getAllByRole('option')).toHaveLength(1);
+    });
+
     it('shows the active namespace with its pod count', async () => {
         renderInRouter(<NamespaceSelector />);
         await waitFor(() => expect(screen.getByTestId('active-namespace')).toHaveTextContent('team-a · 1 pods'));
+        expect(screen.getByTestId('namespace-selector')).toHaveAttribute('aria-busy', 'false');
+        await userEvent.click(screen.getByTestId('namespace-selector'));
+        const list = await screen.findByRole('listbox');
+        expect(within(list).queryByRole('progressbar')).not.toBeInTheDocument();
     });
 
     it('shows All namespaces when nothing is selected', async () => {

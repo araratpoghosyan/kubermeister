@@ -1,9 +1,25 @@
 import { Fragment, useState } from 'react';
 import { useRouter, useRouterState } from '@tanstack/react-router';
-import { ArrowLeftIcon, ArrowRightIcon, CheckIcon, ChevronDownIcon, ChevronRightIcon, TagIcon } from 'lucide-react';
+import {
+    ArrowLeftIcon,
+    ArrowRightIcon,
+    CheckIcon,
+    ChevronDownIcon,
+    ChevronRightIcon,
+    Loader2Icon,
+    TagIcon,
+} from 'lucide-react';
 import { StatusDot } from '@/components/data-display/status-dot';
 import { Button } from '@/components/ui/button';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+    CommandLoading,
+} from '@/components/ui/command';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -152,6 +168,8 @@ export function NamespaceSelector() {
     const activeName = active.data?.name ?? undefined;
     const allSelected = active.data?.name === null;
     const selectNamespace = useSelectNamespace();
+    // Every scope switch resets both queries, so this is the state after each switch, not only at launch.
+    const loading = active.isPending || namespaces.isPending;
 
     const select = async (namespace: string | null) => {
         setOpen(false);
@@ -166,11 +184,17 @@ export function NamespaceSelector() {
                     size="sm"
                     className="gap-2 px-2.5 text-text-2"
                     aria-label="Namespace"
+                    aria-busy={loading}
                     data-testid="namespace-selector"
                 >
-                    <TagIcon className="size-3 text-text-muted" />
+                    {loading ? (
+                        <Loader2Icon className="size-3 animate-spin text-text-muted" aria-hidden />
+                    ) : (
+                        <TagIcon className="size-3 text-text-muted" />
+                    )}
                     <span data-testid="active-namespace">
-                        {activeName ?? ALL_NAMESPACES}
+                        {/* Until the selection is known, "All namespaces" would be a claim rather than a label. */}
+                        {active.isPending ? 'Loading…' : (activeName ?? ALL_NAMESPACES)}
                         {active.data && (
                             <>
                                 {' '}
@@ -191,6 +215,15 @@ export function NamespaceSelector() {
                                 <CheckIcon className={cn('size-3 text-primary', !allSelected && 'invisible')} />
                                 <span>{ALL_NAMESPACES}</span>
                             </CommandItem>
+                            {namespaces.isPending && (
+                                <CommandLoading label="Loading namespaces">
+                                    {/* cmdk wraps children in a block div of its own; the row layout must sit inside it. */}
+                                    <span className="flex items-center gap-1.5">
+                                        <Loader2Icon className="size-3 animate-spin" aria-hidden />
+                                        <span>Loading namespaces…</span>
+                                    </span>
+                                </CommandLoading>
+                            )}
                             {(namespaces.data ?? []).map((ns) => (
                                 <CommandItem
                                     key={ns.name}

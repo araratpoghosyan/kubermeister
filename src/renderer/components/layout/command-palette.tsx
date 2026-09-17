@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { PlusIcon, RefreshCwIcon } from 'lucide-react';
+import { Loader2Icon, PlusIcon, RefreshCwIcon } from 'lucide-react';
 import {
     CommandDialog,
     CommandEmpty,
@@ -7,6 +7,7 @@ import {
     CommandInput,
     CommandItem,
     CommandList,
+    CommandLoading,
     CommandSeparator,
 } from '@/components/ui/command';
 import { ALL_DOMAINS } from '@/lib/nav';
@@ -26,7 +27,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     const switchContext = useSwitchContext();
     const selectNamespace = useSelectNamespace();
     const contexts = useIpcQuery('contexts.list', {}).data ?? [];
-    const namespaces = useIpcQuery('namespaces.list', {}).data ?? [];
+    const namespaces = useIpcQuery('namespaces.list', {});
 
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
@@ -77,7 +78,15 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 <CommandSeparator />
 
                 <CommandGroup heading="Namespaces">
-                    {namespaces.map((ns) => (
+                    {namespaces.isPending && (
+                        <CommandLoading label="Loading namespaces">
+                            <span className="flex items-center gap-2">
+                                <Loader2Icon className="size-3.5 animate-spin" aria-hidden />
+                                <span>Loading namespaces…</span>
+                            </span>
+                        </CommandLoading>
+                    )}
+                    {(namespaces.data ?? []).map((ns) => (
                         <CommandItem
                             key={ns.name}
                             value={`namespace ${ns.name}`}
