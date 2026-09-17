@@ -1,5 +1,6 @@
 import { ApiException } from '@kubernetes/client-node';
 import type { IpcError, K8sErrorKind } from '../../shared/k8s/errors.js';
+import { ExecPluginError } from './exec-auth.js';
 
 export type { K8sErrorKind };
 
@@ -35,6 +36,9 @@ function statusOf(error: unknown): number | undefined {
  * errno, TLS and DNS codes (and error names) that mean "could not reach or trust the API server".
  * TLS-trust failures are routine against private cluster CAs, so they read as `unreachable` rather
  * than a mysterious `unknown`. `AbortError` is a name, not a code: a timed-out or aborted read.
+ * The `UND_ERR_*` codes are undici's, which the client library's fetch nests under a bare
+ * `TypeError: fetch failed`; its own 10 s connect timeout fires before the app's read ceiling, so
+ * a server that never answers (VPN down, cluster gone) arrives as `UND_ERR_CONNECT_TIMEOUT`.
  */
 const CONNECTION_CODES = new Set([
     'ECONNREFUSED',
@@ -43,9 +47,14 @@ const CONNECTION_CODES = new Set([
     'EHOSTUNREACH',
     'ENETUNREACH',
     'ECONNRESET',
+    'ECONNABORTED',
     'EPIPE',
     'EAI_AGAIN',
     'AbortError',
+    'UND_ERR_CONNECT_TIMEOUT',
+    'UND_ERR_HEADERS_TIMEOUT',
+    'UND_ERR_BODY_TIMEOUT',
+    'UND_ERR_SOCKET',
     'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
     'DEPTH_ZERO_SELF_SIGNED_CERT',
     'SELF_SIGNED_CERT_IN_CHAIN',
@@ -86,7 +95,14 @@ function detailOf(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
 }
 
-function classify(op: string, error: unknown): K8sError {
+/**
+ * Normalise any failure into a {@link K8sError}. A credential plugin that could not produce a token
+ * is an authentication failure, whatever errno the spawn or the CLI came back with, and its detail
+ * is the sentence the guard composed rather than the CLI's stderr dump.
+ */
+export function toK8sError(op: string, error: unknown): K8sError {
+    if (error instanceof K8sError) return error;
+    if (error instanceof ExecPluginError) return new K8sError('unauthorized', error.detail, op);
     const status = statusOf(error);
     if (status === 403) return new K8sError('forbidden', 'Access denied (RBAC).', op);
     if (status === 401) return new K8sError('unauthorized', 'Not authenticated to the cluster.', op);
@@ -125,7 +141,6 @@ export async function withK8s<T>(op: string, fn: () => Promise<T>, timeoutMs = R
     try {
         return await withTimeout(op, timeoutMs, fn);
     } catch (error) {
-        if (error instanceof K8sError) throw error;
-        throw classify(op, error);
+        throw toK8sError(op, error);
     }
 }

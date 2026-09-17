@@ -14,7 +14,7 @@ vi.mock('@/lib/ipc', async () => ({
 }));
 
 const { routeTree } = await import('@/routeTree.gen');
-const { ContextSelector, NamespaceSelector } = await import('@/components/layout/top-bar');
+const { ConnectionNotice, ContextSelector, NamespaceSelector } = await import('@/components/layout/top-bar');
 
 const contexts = [
     { name: 'alpha', cluster: 'a', user: 'u', current: true },
@@ -28,8 +28,9 @@ const data: Record<string, unknown> = {
     'update.state': { status: 'up-to-date' },
     'contexts.list': contexts,
     'namespaces.list': namespaces,
-    'namespace.active': { name: 'team-a', pods: 1, tone: 'accent' },
+    'namespace.active': { name: 'team-a' },
     'cluster.active': { name: 'alpha', nodes: 1, status: 'Degraded', version: '1.36.4', provider: 'k3s', region: '—' },
+    'context.current': { name: 'alpha', cluster: 'a', user: 'u', current: true },
     'resources.list': { kind: 'Pod', items: [] },
     'resources.get': { kind: 'Pod', item: null },
     'events.recent': [],
@@ -79,6 +80,26 @@ describe('ContextSelector', () => {
     beforeEach(() => {
         invoke.mockReset();
         invoke.mockImplementation(async (channel: string) => data[channel]);
+    });
+
+    it('names the reason on the dot, in danger tone, when the cluster did not answer', async () => {
+        invoke.mockImplementation(async (channel: string) =>
+            channel === 'cluster.active'
+                ? {
+                      ...(data['cluster.active'] as object),
+                      problem: { kind: 'unreachable', detail: 'Timed out after 15s waiting for the cluster.' },
+                  }
+                : data[channel],
+        );
+        renderInRouter(<ContextSelector />);
+        const trigger = await screen.findByTestId('context-selector');
+        await waitFor(() =>
+            expect(trigger.querySelector('[title]')).toHaveAttribute(
+                'title',
+                'Cluster unreachable: Timed out after 15s waiting for the cluster.',
+            ),
+        );
+        expect(trigger.querySelector('[title]')).toHaveClass('bg-danger');
     });
 
     it('shows the current context and a neutral dot until the cluster is known', async () => {
@@ -147,6 +168,30 @@ describe('NamespaceSelector', () => {
         expect(within(list).getAllByRole('option')).toHaveLength(1);
     });
 
+    it('names the selection at once, and without a count, while the namespace list is still loading', async () => {
+        invoke.mockImplementation((channel: string) =>
+            channel === 'namespaces.list' ? new Promise<never>(() => {}) : Promise.resolve(data[channel]),
+        );
+        renderInRouter(<NamespaceSelector />);
+        await waitFor(() => expect(screen.getByTestId('active-namespace')).toHaveTextContent('team-a'));
+        expect(screen.getByTestId('active-namespace')).not.toHaveTextContent('pods');
+        expect(screen.getByTestId('namespace-selector')).toHaveAttribute('aria-busy', 'true');
+    });
+
+    it('keeps naming the selection when the namespace list fails, rather than claiming All namespaces', async () => {
+        const { IpcError } = await vi.importActual<typeof import('@/lib/ipc')>('@/lib/ipc');
+        invoke.mockImplementation(async (channel: string) => {
+            if (channel === 'namespaces.list')
+                throw new IpcError({ kind: 'unreachable', detail: 'down', op: 'namespaces.list' });
+            return data[channel];
+        });
+        renderInRouter(<NamespaceSelector />);
+        await waitFor(() => expect(screen.getByTestId('namespace-selector')).toHaveAttribute('aria-busy', 'false'));
+        expect(screen.getByTestId('active-namespace')).toHaveTextContent('team-a');
+        expect(screen.getByTestId('active-namespace')).not.toHaveTextContent('All namespaces');
+        expect(screen.getByTestId('active-namespace')).not.toHaveTextContent('pods');
+    });
+
     it('shows the active namespace with its pod count', async () => {
         renderInRouter(<NamespaceSelector />);
         await waitFor(() => expect(screen.getByTestId('active-namespace')).toHaveTextContent('team-a · 1 pods'));
@@ -158,11 +203,12 @@ describe('NamespaceSelector', () => {
 
     it('shows All namespaces when nothing is selected', async () => {
         invoke.mockImplementation(async (channel: string) =>
-            channel === 'namespace.active' ? { name: null, pods: 12, tone: 'accent' } : data[channel],
+            channel === 'namespace.active' ? { name: null } : data[channel],
         );
         renderInRouter(<NamespaceSelector />);
+        // The count under All namespaces is the list's total, since the selection carries none.
         await waitFor(() =>
-            expect(screen.getByTestId('active-namespace')).toHaveTextContent('All namespaces · 12 pods'),
+            expect(screen.getByTestId('active-namespace')).toHaveTextContent('All namespaces · 10 pods'),
         );
         // The check mark sits on the All namespaces entry, not on any real namespace.
         await userEvent.click(screen.getByTestId('namespace-selector'));
@@ -218,5 +264,43 @@ describe('NamespaceSelector', () => {
         await userEvent.clear(screen.getByPlaceholderText('Filter namespaces…'));
         await userEvent.click(within(list).getByRole('option', { name: /All namespaces/ }));
         await waitFor(() => expect(invoke).toHaveBeenCalledWith('namespace.set', { namespace: null }));
+    });
+});
+
+describe('ConnectionNotice', () => {
+    beforeEach(() => {
+        invoke.mockReset();
+        invoke.mockImplementation(async (channel: string) => data[channel]);
+    });
+
+    it('renders nothing while the cluster answers', async () => {
+        renderInRouter(
+            <>
+                <ContextSelector />
+                <ConnectionNotice />
+            </>,
+        );
+        await screen.findByText('alpha');
+        expect(screen.queryByTestId('connection-notice')).not.toBeInTheDocument();
+    });
+
+    it('names the classified reason once the probe reports a problem, and clears when it recovers', async () => {
+        let down = true;
+        invoke.mockImplementation(async (channel: string) =>
+            channel === 'cluster.active' && down
+                ? {
+                      ...(data['cluster.active'] as object),
+                      problem: { kind: 'unauthorized', detail: 'The credential plugin "aws" failed: SSO expired' },
+                  }
+                : data[channel],
+        );
+        renderRoutes(routeTree, '/overview/summary');
+        const notice = await screen.findByTestId('connection-notice');
+        expect(notice).toHaveTextContent('Not authenticated');
+        expect(notice).toHaveTextContent('The credential plugin "aws" failed: SSO expired');
+        expect(notice).toHaveAttribute('role', 'status');
+        down = false;
+        await userEvent.click(within(screen.getByTestId('cluster-summary')).getByRole('button', { name: /Refresh/ }));
+        await waitFor(() => expect(screen.queryByTestId('connection-notice')).not.toBeInTheDocument());
     });
 });

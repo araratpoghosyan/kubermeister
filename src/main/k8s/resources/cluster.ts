@@ -3,7 +3,7 @@ import type { KubeContext } from '../../../shared/k8s/contexts.js';
 import type { ActiveNamespace, Cluster, Namespace, NamespaceTone } from '../../../shared/k8s/cluster.js';
 import { apis, getActiveNamespace } from '../client.js';
 import { getCurrentContext, listContexts } from '../context.js';
-import { withK8s } from '../errors.js';
+import { toK8sError, withK8s } from '../errors.js';
 
 /*
  * Pure transforms from Kubernetes objects to view models are exported and unit tested on their
@@ -93,37 +93,32 @@ export function listNamespaces(): Promise<Namespace[]> {
 }
 
 /**
- * The active namespace with its pod count, or a null name with the all-namespaces total when none
- * is selected. The renderer labels the null case; main never hands out a label as a name.
+ * The active namespace, or a null name when none is selected. This is the app's own memory, not a
+ * cluster read, so it answers at once and still answers while the cluster is unreachable. The
+ * renderer labels the null case; main never hands out a label as a name.
  */
 export function getActiveNamespaceInfo(): Promise<ActiveNamespace | null> {
-    return withK8s('namespace.active', async () => {
-        const active = getActiveNamespace();
-        const podCounts = await podsPerNamespace();
-        if (!active) {
-            const total = [...podCounts.values()].reduce((sum, n) => sum + n, 0);
-            return { name: null, pods: total, tone: 'accent' };
-        }
-        return { name: active, pods: podCounts.get(active) ?? 0, tone: 'accent' };
-    });
+    return withK8s('namespace.active', async () => ({ name: getActiveNamespace() }));
 }
 
 /**
  * Live facts about the active context's cluster. When the API server cannot be reached the
- * context is still reported, from the kubeconfig, marked Degraded, so the UI shows where it is
- * pointed rather than an error.
+ * context is still reported, from the kubeconfig, marked Degraded and carrying the classified
+ * reason, so the UI shows where it is pointed and why nothing loads rather than a bare error.
+ * The probe runs under its own read ceiling: a hang counts as a problem like any other.
  */
-export function getActiveCluster(): Promise<Cluster | null> {
-    return withK8s('cluster.active', async () => {
-        const context = getCurrentContext();
-        if (!context) return null;
-        try {
-            const [nodes, version] = await Promise.all([apis().core.listNode(), apis().version.getCode()]);
-            return toCluster(context, nodes.items, version.gitVersion);
-        } catch {
-            return minimalCluster(context, 'Degraded');
-        }
-    });
+export async function getActiveCluster(): Promise<Cluster | null> {
+    const context = await withK8s('cluster.active', async () => getCurrentContext());
+    if (!context) return null;
+    try {
+        const [nodes, version] = await withK8s('cluster.active', () =>
+            Promise.all([apis().core.listNode(), apis().version.getCode()]),
+        );
+        return toCluster(context, nodes.items, version.gitVersion);
+    } catch (error) {
+        const { kind, detail } = toK8sError('cluster.active', error);
+        return { ...minimalCluster(context, 'Degraded'), problem: { kind, detail } };
+    }
 }
 
 /** One entry per kube-context; only the active one carries live facts. Always populates offline. */

@@ -65,9 +65,13 @@ function DashboardPage() {
     const avgMem = memHealth.length ? Math.round(memHealth.reduce((a, b) => a + b, 0) / memHealth.length) : 0;
     const peakMem = memHealth.length ? Math.max(...memHealth) : 0;
     const alertTone = alerts.some((a) => a.tone === 'danger') ? 'danger' : alerts.length ? 'warn' : 'neutral';
-    const clusterMeta = cluster
-        ? `${cluster.provider} · v${cluster.version} · ${cluster.region}`
-        : 'No cluster connected';
+    // Until the probe answers, the header claims nothing either way about a cluster.
+    const clusterMeta = clusterQuery.isPending
+        ? 'Connecting…'
+        : cluster
+          ? `${cluster.provider} · v${cluster.version} · ${cluster.region}`
+          : 'No cluster connected';
+    const failure = failedQuery ? describeError(failedQuery.error) : null;
 
     return (
         <div className="h-full overflow-auto bg-background p-4" data-testid="cluster-summary">
@@ -89,8 +93,11 @@ function DashboardPage() {
                     data-testid="dashboard-error"
                 >
                     <div className="flex flex-col items-center gap-1 text-body text-text-muted">
-                        <span className="font-medium text-foreground">{describeError(failedQuery.error).title}</span>
+                        <span className="font-medium text-foreground">{failure?.title}</span>
                         <span>Couldn't load the cluster overview.</span>
+                        {failure && failure.detail !== failure.title && (
+                            <span className="max-w-xl text-meta text-text-dim">{failure.detail}</span>
+                        )}
                     </div>
                     <Button variant="outline" size="sm" onClick={retry}>
                         Retry

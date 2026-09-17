@@ -73,7 +73,7 @@ describe('useWatchedList', () => {
         onMessage = undefined;
         invoke.mockImplementation(async (channel: string) => {
             if (channel === 'resources.list') return list('a');
-            if (channel === 'namespace.active') return { name: 'team-a', pods: 1, tone: 'accent' };
+            if (channel === 'namespace.active') return { name: 'team-a' };
             if (channel === 'context.current') return { name: 'alpha', cluster: 'c', user: 'u', current: true };
             return undefined;
         });
@@ -113,7 +113,7 @@ describe('useWatchedList', () => {
         let namespace = 'team-a';
         invoke.mockImplementation(async (channel: string) => {
             if (channel === 'resources.list') return list('a');
-            if (channel === 'namespace.active') return { name: namespace, pods: 1, tone: 'accent' };
+            if (channel === 'namespace.active') return { name: namespace };
             if (channel === 'context.current') return { name: 'alpha', cluster: 'c', user: 'u', current: true };
             return undefined;
         });

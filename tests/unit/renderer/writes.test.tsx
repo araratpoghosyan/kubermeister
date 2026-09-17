@@ -51,7 +51,7 @@ const data: Record<string, unknown> = {
     'contexts.list': [{ name: 'alpha', cluster: 'a', user: 'u', current: true }],
     'context.current': { name: 'alpha', cluster: 'a', user: 'u', current: true },
     'namespaces.list': [{ name: 'team-a', pods: 1, tone: 'accent' }],
-    'namespace.active': { name: 'team-a', pods: 1, tone: 'accent' },
+    'namespace.active': { name: 'team-a' },
     'cluster.active': null,
     'events.forObject': [],
     'configMaps.entries': [],
@@ -419,7 +419,7 @@ describe('create screen', () => {
 
     it('says that each manifest must name its namespace when none is selected', async () => {
         invoke.mockImplementation(async (channel: string) =>
-            channel === 'namespace.active' ? { name: null, pods: 3, tone: 'accent' } : data[channel],
+            channel === 'namespace.active' ? { name: null } : data[channel],
         );
         renderRoutes(routeTree, '/create');
         const page = await screen.findByTestId('create-page');

@@ -357,6 +357,12 @@ export function ResourceListPage<T>({
                                 <span>
                                     {parsedError ? listErrorBody(parsedError.kind, noun) : `Failed to load ${noun}.`}
                                 </span>
+                                {/* The classified reason, when it says more than the kind already did. */}
+                                {parsedError &&
+                                    parsedError.detail !== parsedError.title &&
+                                    parsedError.detail !== listErrorBody(parsedError.kind, noun) && (
+                                        <span className="max-w-xl text-meta text-text-dim">{parsedError.detail}</span>
+                                    )}
                             </div>
                             {retry && (
                                 <Button variant="outline" size="sm" onClick={() => void retry()}>

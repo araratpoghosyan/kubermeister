@@ -53,7 +53,7 @@ const data: Record<string, unknown> = {
     'contexts.list': [{ name: 'alpha', cluster: 'a', user: 'u', current: true }],
     'context.current': { name: 'alpha', cluster: 'a', user: 'u', current: true },
     'namespaces.list': [{ name: 'team-a', pods: 2, tone: 'accent' }],
-    'namespace.active': { name: 'team-a', pods: 2, tone: 'accent' },
+    'namespace.active': { name: 'team-a' },
     'cluster.active': null,
     'events.forObject': [],
     'namespaces.detail': detail,

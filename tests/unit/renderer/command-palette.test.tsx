@@ -33,7 +33,7 @@ const data: Record<string, unknown> = {
         { name: 'team-a', pods: 4, tone: 'accent' },
         { name: 'kube-system', pods: 9, tone: 'ok' },
     ],
-    'namespace.active': { name: 'team-a', pods: 4, tone: 'accent' },
+    'namespace.active': { name: 'team-a' },
     'cluster.active': null,
     'nodes.list': [],
     'namespaces.list_': [],

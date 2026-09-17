@@ -326,7 +326,20 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
 - **Kubernetes access** lives in `src/main/k8s`. The kubeconfig is read-only: switching context
   or namespace changes memory and the app's own settings, never the file. Every cluster call goes
   through `withK8s` (timeout plus `[kind]`-prefixed `K8sError`). No `kubectl` dependency; the
-  client library handles exec credential plugins itself.
+  client library handles exec credential plugins itself. Two things make that work outside a
+  terminal: main adopts the login shell's PATH at startup (`src/main/shell-path.ts`), because a
+  Finder or Dock launch inherits launchd's `/usr/bin:/bin:/usr/sbin:/sbin` and a kubeconfig written
+  by `aws eks update-kubeconfig` names its plugin by bare command; and every loaded `KubeConfig`
+  has its authenticators wrapped (`src/main/k8s/exec-auth.ts`) so a plugin that is missing or exits
+  non-zero surfaces as `unauthorized` with a sentence naming the plugin, not as the CLI's stderr
+  under "Something went wrong". The client's fetch fails as a bare `TypeError: fetch failed` with
+  undici's code (`UND_ERR_CONNECT_TIMEOUT` after its own 10 s connect timeout) nested in `cause`;
+  the classifier walks the whole cause chain and knows those codes, so a server that never answers
+  reads `unreachable`. `cluster.active` never fails on an unreachable server: it answers the
+  kubeconfig's facts marked Degraded with a `problem` (kind and detail) that the top bar shows as a
+  connection notice and the health dot carries in its tooltip. `namespace.active` is answered from
+  memory, without a cluster call, so the selection is known at once and stays known while the
+  cluster is down; the pill's pod count comes from `namespaces.list`.
 - **Settings** (`src/shared/settings.ts`, `src/main/settings/store.ts`) are a versioned JSON file
   in Electron's `userData`, so the stable and tip apps never share state. The settings screen at
   `/settings` edits them through `settings.set`; the application menu (`src/main/menu.ts`) opens it

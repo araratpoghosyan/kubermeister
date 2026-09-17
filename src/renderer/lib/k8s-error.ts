@@ -17,6 +17,11 @@ const TITLES: Record<K8sErrorKind, string> = {
     unknown: 'Something went wrong',
 };
 
+/** The short title for a classified kind, for places that carry the kind without an error object. */
+export function titleForKind(kind: K8sErrorKind): string {
+    return TITLES[kind];
+}
+
 /** Title and detail for any failure: structured for an {@link IpcError}, best effort otherwise. */
 export function describeError(error: unknown): DescribedError {
     if (error instanceof IpcError) {

@@ -29,11 +29,13 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { titleForKind } from '@/lib/k8s-error';
 import { breadcrumbsForPath } from '@/lib/nav';
 import { useIpcQuery } from '@/lib/query';
 import { useSelectNamespace, useSwitchContext } from '@/lib/scope';
 import { useRefreshIntervalMs } from '@/lib/settings';
 import { CLUSTER_TONE, type StatusTone } from '@/lib/status';
+import type { K8sErrorKind } from '../../../shared/k8s/errors';
 import { cn } from '@/lib/utils';
 import { NavLink } from './nav-link';
 import { ForwardManager } from './forward-manager';
@@ -58,8 +60,13 @@ export function TopBar() {
             <div className="h-4 w-px bg-border" />
             <ContextSelector />
             <NamespaceSelector />
+            <ConnectionNotice />
             {crumbs.length > 0 && <div className="ml-1 h-4 w-px bg-border" />}
-            <nav aria-label="Breadcrumb" className="flex items-center gap-2.5 text-body" data-testid="breadcrumbs">
+            <nav
+                aria-label="Breadcrumb"
+                className="flex shrink-0 items-center gap-2.5 text-body whitespace-nowrap"
+                data-testid="breadcrumbs"
+            >
                 {crumbs.map((crumb, i) => {
                     const Icon = crumb.icon;
                     const last = i === crumbs.length - 1;
@@ -99,14 +106,47 @@ const HEALTH_TITLE = {
     Degraded: 'Cluster unreachable or nodes not ready',
 } as const;
 
+/** The dot's tone and tooltip: a cluster that did not answer names its reason instead of "not ready". */
+function healthOf(cluster: { status: 'Healthy' | 'Degraded'; problem?: { kind: K8sErrorKind; detail: string } }) {
+    if (cluster.problem) {
+        return {
+            tone: 'danger' as StatusTone,
+            title: `${titleForKind(cluster.problem.kind)}: ${cluster.problem.detail}`,
+        };
+    }
+    return { tone: CLUSTER_TONE[cluster.status], title: HEALTH_TITLE[cluster.status] };
+}
+
+/**
+ * Why the active cluster is not answering, next to the scope it concerns. Every screen would
+ * otherwise sit on skeletons for the length of the read ceiling and then say only that it failed;
+ * this names the cause once, from the same probe the health dot reads, and disappears with it.
+ */
+export function ConnectionNotice() {
+    const cluster = useIpcQuery('cluster.active', {}, { refetchInterval: useRefreshIntervalMs() });
+    const problem = cluster.data?.problem;
+    if (!problem) return null;
+    return (
+        <div
+            role="status"
+            data-testid="connection-notice"
+            className="flex max-w-[30rem] min-w-0 shrink items-center gap-1.5 rounded-md border border-danger/40 bg-danger-bg px-2 py-1 text-meta whitespace-nowrap"
+        >
+            <StatusDot tone="danger" className="shrink-0" />
+            <span className="shrink-0 font-medium text-danger">{titleForKind(problem.kind)}</span>
+            <span className="min-w-0 truncate text-text-muted" title={problem.detail}>
+                {problem.detail}
+            </span>
+        </div>
+    );
+}
+
 /** Switch kube-context; the dot carries the active cluster's health. */
 export function ContextSelector() {
     const contexts = useIpcQuery('contexts.list', {});
     const cluster = useIpcQuery('cluster.active', {}, { refetchInterval: useRefreshIntervalMs() });
     const current = contexts.data?.find((c) => c.current);
-    const health = cluster.data
-        ? { tone: CLUSTER_TONE[cluster.data.status], title: HEALTH_TITLE[cluster.data.status] }
-        : NO_CLUSTER;
+    const health = cluster.data ? healthOf(cluster.data) : NO_CLUSTER;
     const [switching, setSwitching] = useState(false);
     const switchContext = useSwitchContext();
 
@@ -168,8 +208,14 @@ export function NamespaceSelector() {
     const activeName = active.data?.name ?? undefined;
     const allSelected = active.data?.name === null;
     const selectNamespace = useSelectNamespace();
-    // Every scope switch resets both queries, so this is the state after each switch, not only at launch.
+    // The selection is the app's own memory and arrives at once; the list is a cluster read, so the
+    // pill is busy while it loads and simply carries no count when it failed.
     const loading = active.isPending || namespaces.isPending;
+    const podCount = namespaces.data
+        ? allSelected
+            ? namespaces.data.reduce((sum, ns) => sum + ns.pods, 0)
+            : namespaces.data.find((ns) => ns.name === activeName)?.pods
+        : undefined;
 
     const select = async (namespace: string | null) => {
         setOpen(false);
@@ -195,10 +241,10 @@ export function NamespaceSelector() {
                     <span data-testid="active-namespace">
                         {/* Until the selection is known, "All namespaces" would be a claim rather than a label. */}
                         {active.isPending ? 'Loading…' : (activeName ?? ALL_NAMESPACES)}
-                        {active.data && (
+                        {podCount !== undefined && (
                             <>
                                 {' '}
-                                <span className="font-mono text-caption text-text-dim">· {active.data.pods} pods</span>
+                                <span className="font-mono text-caption text-text-dim">· {podCount} pods</span>
                             </>
                         )}
                     </span>

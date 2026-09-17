@@ -1,6 +1,7 @@
 import { ApiException } from '@kubernetes/client-node';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { K8sError, withK8s } from '../../../src/main/k8s/errors';
+import { K8sError, toK8sError, withK8s } from '../../../src/main/k8s/errors';
+import { ExecPluginError } from '../../../src/main/k8s/exec-auth';
 
 async function failWith(error: unknown): Promise<K8sError> {
     try {
@@ -61,6 +62,31 @@ describe('withK8s', () => {
         expect((await failWith(tls)).kind).toBe('unreachable');
         const aborted = Object.assign(new Error('aborted'), { name: 'AbortError' });
         expect((await failWith(aborted)).kind).toBe('unreachable');
+    });
+
+    it('reads undici codes nested under a bare "fetch failed", as the client library throws them', async () => {
+        const connectTimeout = Object.assign(new Error('Connect Timeout Error (attempted address: 10.0.0.1:6443)'), {
+            name: 'ConnectTimeoutError',
+            code: 'UND_ERR_CONNECT_TIMEOUT',
+        });
+        const fetchFailed = new TypeError('fetch failed', { cause: connectTimeout });
+        const error = await failWith(fetchFailed);
+        expect(error.kind).toBe('unreachable');
+        expect(error.detail).toBe('The cluster API server is unreachable.');
+        const socket = new TypeError('fetch failed', { cause: { code: 'UND_ERR_SOCKET' } });
+        expect((await failWith(socket)).kind).toBe('unreachable');
+        const aborted = new TypeError('fetch failed', { cause: { code: 'ECONNABORTED' } });
+        expect((await failWith(aborted)).kind).toBe('unreachable');
+    });
+
+    it('reports a credential plugin failure as unauthorized with the guard sentence as detail', async () => {
+        const plugin = new ExecPluginError('aws', 'The credential plugin "aws" failed: SSO session expired', null);
+        const error = await failWith(plugin);
+        expect(error.kind).toBe('unauthorized');
+        expect(error.detail).toBe('The credential plugin "aws" failed: SSO session expired');
+        expect(toK8sError('op', plugin)).toMatchObject({ kind: 'unauthorized', op: 'op' });
+        const existing = new K8sError('forbidden', 'nope', 'inner');
+        expect(toK8sError('op', existing)).toBe(existing);
     });
 
     it('finds connection codes inside AggregateError branches and survives cycles', async () => {

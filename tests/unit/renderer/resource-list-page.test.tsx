@@ -21,9 +21,7 @@ import { IpcError } from '@/lib/ipc';
 vi.mock('@/lib/ipc', async () => ({
     ...(await vi.importActual<typeof import('@/lib/ipc')>('@/lib/ipc')),
     invoke: vi.fn(async (channel: string) =>
-        channel === 'context.current'
-            ? { name: 'alpha', cluster: 'a', user: 'u', current: true }
-            : { name: 'team-a', pods: 1, tone: 'accent' },
+        channel === 'context.current' ? { name: 'alpha', cluster: 'a', user: 'u', current: true } : { name: 'team-a' },
     ),
 }));
 import type { StatusTone } from '@/lib/status';
@@ -119,6 +117,34 @@ describe('ResourceListPage', () => {
         await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
         expect(refetch).toHaveBeenCalledOnce();
         void first;
+    });
+
+    it('adds the classified reason when it says more than the kind, and not when it repeats it', async () => {
+        const failing = (kind: string, detail: string) =>
+            ({
+                data: undefined,
+                isPending: false,
+                isError: true,
+                refetch: vi.fn(),
+                error: new IpcError({ kind, detail, op: 'x' }),
+            }) as Props['query'];
+        renderPage({ query: failing('unreachable', 'Timed out after 15s waiting for the cluster.') });
+        expect(await screen.findByText('The cluster API server is unreachable.')).toBeInTheDocument();
+        expect(screen.getByText('Timed out after 15s waiting for the cluster.')).toBeInTheDocument();
+    });
+
+    it('hides a reason that only repeats the generic sentence or the title', async () => {
+        renderPage({
+            query: {
+                data: undefined,
+                isPending: false,
+                isError: true,
+                refetch: vi.fn(),
+                error: new IpcError({ kind: 'unreachable', detail: 'The cluster API server is unreachable.', op: 'x' }),
+            } as Props['query'],
+        });
+        expect(await screen.findAllByText('The cluster API server is unreachable.')).toHaveLength(1);
+        expect(screen.getAllByText('Cluster unreachable')).toHaveLength(1);
     });
 
     it.each([

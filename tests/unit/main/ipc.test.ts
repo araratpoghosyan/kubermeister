@@ -349,13 +349,13 @@ describe('registerHandlers', () => {
             instanceType: '—',
         };
         resources.listNamespaces.mockResolvedValue([namespace]);
-        resources.getActiveNamespaceInfo.mockResolvedValue(namespace);
+        resources.getActiveNamespaceInfo.mockResolvedValue({ name: namespace.name });
         resources.getActiveCluster.mockResolvedValue(clusterInfo);
         resources.listClusters.mockResolvedValue([clusterInfo]);
         nodesMod.listNodes.mockResolvedValue([nodeRow]);
         nodesMod.getNode.mockResolvedValue(null);
         await expect(invoke('namespaces.list', {})).resolves.toEqual([namespace]);
-        await expect(invoke('namespace.active', {})).resolves.toEqual(namespace);
+        await expect(invoke('namespace.active', {})).resolves.toEqual({ name: namespace.name });
         await expect(invoke('cluster.active', {})).resolves.toEqual(clusterInfo);
         await expect(invoke('clusters.list', {})).resolves.toEqual([clusterInfo]);
         await expect(invoke('nodes.list', {})).resolves.toEqual([nodeRow]);

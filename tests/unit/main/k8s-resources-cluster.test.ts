@@ -7,6 +7,7 @@ vi.mock('../../../src/main/k8s/client.js', () => client);
 vi.mock('../../../src/main/k8s/context.js', () => context);
 
 const cluster = await import('../../../src/main/k8s/resources/cluster.js');
+const { READ_TIMEOUT_MS } = await import('../../../src/main/k8s/errors.js');
 
 const alpha = { name: 'alpha', cluster: 'alpha-cluster', user: 'u', namespace: 'team-a', current: true };
 const beta = { name: 'beta', cluster: 'beta-cluster', user: 'u', current: false };
@@ -132,12 +133,13 @@ describe('readers', () => {
         ]);
     });
 
-    it('describes the active namespace, or all namespaces with the total', async () => {
-        mockApis({ pods: [pod('team-a'), pod('kube-system')] });
-        await expect(cluster.getActiveNamespaceInfo()).resolves.toEqual({ name: 'team-a', pods: 1, tone: 'accent' });
+    it('answers the active namespace from memory, without asking the cluster', async () => {
+        mockApis({ fail: true });
+        await expect(cluster.getActiveNamespaceInfo()).resolves.toEqual({ name: 'team-a' });
         client.getActiveNamespace.mockReturnValue(null);
         // No label stands in for the name: the renderer says "All namespaces", main says null.
-        await expect(cluster.getActiveNamespaceInfo()).resolves.toEqual({ name: null, pods: 2, tone: 'accent' });
+        await expect(cluster.getActiveNamespaceInfo()).resolves.toEqual({ name: null });
+        expect(client.apis).not.toHaveBeenCalled();
     });
 
     it('returns live cluster facts for the active context', async () => {
@@ -152,7 +154,7 @@ describe('readers', () => {
         });
     });
 
-    it('falls back to kubeconfig facts marked Degraded when the API server is unreachable', async () => {
+    it('falls back to kubeconfig facts marked Degraded, with the classified reason, when the API server is unreachable', async () => {
         mockApis({ fail: true });
         await expect(cluster.getActiveCluster()).resolves.toEqual({
             name: 'alpha',
@@ -161,7 +163,35 @@ describe('readers', () => {
             version: '—',
             provider: 'alpha-cluster',
             region: '—',
+            problem: { kind: 'unreachable', detail: 'The cluster API server is unreachable.' },
         });
+    });
+
+    it('carries an authentication failure as the problem rather than hiding it behind Degraded', async () => {
+        const denied = () => Promise.reject(Object.assign(new Error('x'), { code: 401 }));
+        client.apis.mockReturnValue({ core: { listNode: denied }, version: { getCode: denied } });
+        await expect(cluster.getActiveCluster()).resolves.toMatchObject({
+            status: 'Degraded',
+            problem: { kind: 'unauthorized', detail: 'Not authenticated to the cluster.' },
+        });
+    });
+
+    it('treats a probe that outlives the read ceiling as a problem instead of failing the call', async () => {
+        vi.useFakeTimers();
+        try {
+            client.apis.mockReturnValue({
+                core: { listNode: () => new Promise(() => {}) },
+                version: { getCode: () => new Promise(() => {}) },
+            });
+            const pending = cluster.getActiveCluster();
+            await vi.advanceTimersByTimeAsync(READ_TIMEOUT_MS);
+            await expect(pending).resolves.toMatchObject({
+                status: 'Degraded',
+                problem: { kind: 'unreachable', detail: expect.stringMatching(/^Timed out after/) },
+            });
+        } finally {
+            vi.useRealTimers();
+        }
     });
 
     it('returns null without a current context', async () => {

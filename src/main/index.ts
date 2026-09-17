@@ -7,6 +7,7 @@ import { installApplicationMenu } from './menu.js';
 import { isExternalWebUrl, isInternalNavigation } from './security.js';
 import { getSettings, updateSettings } from './settings/store.js';
 import { startUpdater } from './updater.js';
+import { adoptLoginShellPath } from './shell-path.js';
 import { usableBounds } from './window-bounds.js';
 
 // Tests redirect all per-user state (settings, caches) into a throwaway directory so the real
@@ -17,6 +18,11 @@ if (process.env.KUBERMEISTER_USER_DATA) app.setPath('userData', process.env.KUBE
 // "Kubermeister Tip"), which also separates their settings folders. Only development, which runs
 // from Electron's own bundle, needs the name set by hand.
 if (!app.isPackaged) app.setName('Kubermeister');
+
+// Credential plugins named by bare command in a kubeconfig need the login shell's PATH, which a
+// Finder or Dock launch does not inherit. The lookup overlaps Electron's own start-up and is
+// awaited before any IPC handler can reach the cluster.
+const shellPathReady = adoptLoginShellPath();
 
 function createWindow(): BrowserWindow {
     // Reading the screen needs the app to be ready, which it is by the time a window is created.
@@ -64,7 +70,8 @@ function createWindow(): BrowserWindow {
     return window;
 }
 
-void app.whenReady().then(() => {
+void app.whenReady().then(async () => {
+    await shellPathReady;
     installApplicationMenu();
     registerHandlers();
     registerStreamHandlers();

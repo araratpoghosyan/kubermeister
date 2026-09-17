@@ -44,7 +44,7 @@ const node = {
 const data: Record<string, unknown> = {
     'update.state': { status: 'up-to-date' },
     'contexts.list': [{ name: 'alpha', cluster: 'a', user: 'u', current: true }],
-    'namespace.active': { name: 'team-a', pods: 4, tone: 'accent' },
+    'namespace.active': { name: 'team-a' },
     'cluster.active': { name: 'alpha', nodes: 1, status: 'Healthy', version: '1.36.4', provider: 'k3s', region: '—' },
     'nodes.list': [node],
     'nodes.get': node,

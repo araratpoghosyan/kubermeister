@@ -18,7 +18,7 @@ const { routeTree } = await import('@/routeTree.gen');
 const data: Record<string, unknown> = {
     'update.state': { status: 'up-to-date' },
     'contexts.list': [{ name: 'alpha', cluster: 'a', user: 'u', current: true }],
-    'namespace.active': { name: 'team-a', pods: 4, tone: 'accent' },
+    'namespace.active': { name: 'team-a' },
     'cluster.active': { name: 'alpha', nodes: 3, status: 'Degraded', version: '1.36.4', provider: 'k3s', region: 'eu' },
     'namespaces.list': [
         { name: 'team-a', pods: 4, tone: 'accent' },
@@ -129,9 +129,34 @@ describe('cluster dashboard', () => {
         const error = await screen.findByTestId('dashboard-error');
         expect(error).toHaveTextContent('Access denied');
         expect(error).toHaveTextContent("Couldn't load the cluster overview.");
+        // The classified reason travels with the card; a user should never have to guess at it.
+        expect(error).toHaveTextContent('events denied');
         fail = false;
         await userEvent.click(within(error).getByRole('button', { name: 'Retry' }));
         expect(await screen.findByTestId('dashboard-metrics')).toBeInTheDocument();
+    });
+
+    it('says it is connecting, not that no cluster is connected, until the probe answers', async () => {
+        invoke.mockImplementation((channel: string) =>
+            channel === 'cluster.active' ? new Promise<never>(() => {}) : Promise.resolve(data[channel]),
+        );
+        renderRoutes(routeTree, '/overview/summary');
+        const page = await screen.findByTestId('cluster-summary');
+        await waitFor(() => expect(page).toHaveTextContent('Connecting…'));
+        expect(page).not.toHaveTextContent('No cluster connected');
+    });
+
+    it('shows the reason and hides a detail that only repeats the title', async () => {
+        const { IpcError } = await vi.importActual<typeof import('@/lib/ipc')>('@/lib/ipc');
+        invoke.mockImplementation(async (channel: string) => {
+            if (channel === 'namespaces.list')
+                throw new IpcError({ kind: 'unreachable', detail: '', op: 'namespaces.list' });
+            return data[channel];
+        });
+        renderRoutes(routeTree, '/overview/summary');
+        const error = await screen.findByTestId('dashboard-error');
+        expect(error).toHaveTextContent('Cluster unreachable');
+        expect(within(error).getAllByText('Cluster unreachable')).toHaveLength(1);
     });
 
     it('renders the no-cluster header when no context is active', async () => {
