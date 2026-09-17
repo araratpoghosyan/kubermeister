@@ -1,13 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { Area, AreaChart, CartesianGrid } from 'recharts';
-import { PlusIcon, TriangleAlertIcon } from 'lucide-react';
+import { TriangleAlertIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ChartContainer, type ChartConfig } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ComingSoonButton } from '@/components/coming-soon-button';
 import { EventsList } from '@/components/data-display/events-list';
 import { MetricCard } from '@/components/data-display/metric-card';
 import { StatusBadge } from '@/components/data-display/status-badge';
@@ -81,13 +80,7 @@ function DashboardPage() {
                     </div>
                     <div className="mt-1 font-mono text-cell text-text-muted">{clusterMeta}</div>
                 </div>
-                <div className="flex gap-2">
-                    <RefreshButton label="Refresh" queryKeys={DASHBOARD_KEYS} />
-                    <ComingSoonButton size="sm" tip="Creating resources arrives with the Create screen">
-                        <PlusIcon />
-                        Deploy
-                    </ComingSoonButton>
-                </div>
+                <RefreshButton label="Refresh" queryKeys={DASHBOARD_KEYS} />
             </div>
 
             {failedQuery ? (
