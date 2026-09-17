@@ -75,7 +75,7 @@ describe('access lists', () => {
         const roles = await screen.findByTestId('roles-table');
         expect(roles.querySelector('[data-role="reader"]')).toHaveTextContent('2');
 
-        await userEvent.click(screen.getByRole('link', { name: 'RoleBindings' }));
+        await userEvent.click(screen.getByRole('link', { name: 'Role Bindings' }));
         const bindings = await screen.findByTestId('rolebindings-table');
         expect(bindings.querySelector('[data-rolebinding="reader-binding"]')).toHaveTextContent('Role/reader');
     });
@@ -92,7 +92,7 @@ describe('access lists', () => {
         expect(adminRow).toHaveTextContent('—');
         expect(roles.querySelector('[data-clusterrole="view"]')).toHaveTextContent('aggregated');
 
-        await userEvent.click(screen.getByRole('link', { name: 'ClusterRoleBindings' }));
+        await userEvent.click(screen.getByRole('link', { name: 'Cluster Role Bindings' }));
         const bindings = await screen.findByTestId('clusterrolebindings-table');
         expect(bindings.querySelector('[data-clusterrolebinding="admins"]')).toHaveTextContent(
             'ClusterRole/cluster-admin',

@@ -38,7 +38,7 @@ function IngressClassesPage() {
     return (
         <ResourceListPage
             icon={LayersIcon}
-            title="IngressClasses"
+            title="Ingress Classes"
             columns={columns}
             query={classes}
             detailPath={detailPath}

@@ -24,8 +24,8 @@ function AdmissionPoliciesPage() {
     return (
         <ResourceListPage
             icon={ScaleIcon}
-            title="AdmissionPolicies"
-            nounPlural="ValidatingAdmissionPolicies"
+            title="Admission Policies"
+            nounPlural="Validating Admission Policies"
             columns={columns}
             query={policies}
             detailPath={detailPath}

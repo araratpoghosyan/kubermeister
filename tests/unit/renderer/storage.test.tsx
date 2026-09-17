@@ -99,7 +99,7 @@ describe('storage lists', () => {
         const claims = await screen.findByTestId('claims-table');
         expect(within(claims).getByText('Pending')).toHaveAttribute('data-tone', 'warn');
 
-        await userEvent.click(screen.getByRole('link', { name: 'StorageClasses' }));
+        await userEvent.click(screen.getByRole('link', { name: 'Storage Classes' }));
         const classes = await screen.findByTestId('storageclasses-table');
         expect(classes.querySelector('[data-storageclass="local-path"]')).toHaveTextContent('default');
         expect(classes.querySelector('[data-storageclass="slow"]')).toHaveTextContent('—');

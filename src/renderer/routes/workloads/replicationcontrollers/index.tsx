@@ -26,7 +26,7 @@ function ReplicationControllersPage() {
     return (
         <ResourceListPage
             icon={CopyIcon}
-            title="ReplicationControllers"
+            title="Replication Controllers"
             columns={columns}
             query={controllers}
             detailPath={detailPath}

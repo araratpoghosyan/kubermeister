@@ -23,7 +23,7 @@ function ServiceAccountsPage() {
     return (
         <ResourceListPage
             icon={UserIcon}
-            title="ServiceAccounts"
+            title="Service Accounts"
             columns={columns}
             query={accounts}
             detailPath={detailPath}

@@ -453,7 +453,7 @@ describe('bulk delete', () => {
         const dialog = await screen.findByRole('alertdialog');
         expect(dialog).toHaveTextContent('app-config, other-config');
         await userEvent.click(within(dialog).getByRole('button', { name: 'Delete 2' }));
-        await waitFor(() => expect(toasts.success).toHaveBeenCalledWith('2 ConfigMaps deleted'));
+        await waitFor(() => expect(toasts.success).toHaveBeenCalledWith('2 Config Maps deleted'));
         expect(invoke).toHaveBeenCalledWith('resources.delete', {
             context: 'alpha',
             kind: 'ConfigMap',

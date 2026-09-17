@@ -26,7 +26,7 @@ function ReplicaSetsPage() {
     return (
         <ResourceListPage
             icon={CopyIcon}
-            title="ReplicaSets"
+            title="Replica Sets"
             columns={columns}
             query={sets}
             detailPath={detailPath}

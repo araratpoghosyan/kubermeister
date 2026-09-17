@@ -28,7 +28,7 @@ function DisruptionBudgetsPage() {
     return (
         <ResourceListPage
             icon={ShieldCheckIcon}
-            title="DisruptionBudgets"
+            title="Disruption Budgets"
             columns={columns}
             query={budgets}
             detailPath={detailPath}

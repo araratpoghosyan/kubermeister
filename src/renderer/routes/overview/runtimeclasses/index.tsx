@@ -24,7 +24,7 @@ function RuntimeClassesPage() {
     return (
         <ResourceListPage
             icon={CpuIcon}
-            title="RuntimeClasses"
+            title="Runtime Classes"
             columns={columns}
             query={classes}
             detailPath={detailPath}

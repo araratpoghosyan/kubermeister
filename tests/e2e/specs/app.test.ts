@@ -224,13 +224,13 @@ test('lists the seeded deployment and opens its rollout history', async () => {
     await expect(page).toContainText('strategy: RollingUpdate');
     await window.getByRole('tab', { name: /History/ }).click();
     await expect(page.getByTestId('rollout-history')).toContainText('Current');
-    await window.getByRole('tab', { name: /ReplicaSets/ }).click();
+    await window.getByRole('tab', { name: /Replica Sets/ }).click();
     await expect(page.getByTestId('replica-sets').getByRole('row')).toHaveCount(2);
 });
 
 test('lists the seeded job and cron job and opens the job detail', async () => {
     const { window } = launched;
-    // Exact: "Jobs" is a substring of "CronJobs", and both links sit in the sidebar.
+    // Exact: "Jobs" is a substring of "Cron Jobs", and both links sit in the sidebar.
     await window.getByTestId('sidebar').getByRole('link', { name: 'Jobs', exact: true }).click();
     const job = window.getByTestId('jobs-table').locator('[data-job="import"]');
     await expect(job).toContainText('1/1', { timeout: 30_000 });
@@ -240,7 +240,7 @@ test('lists the seeded job and cron job and opens the job detail', async () => {
     await expect(page).toContainText('completions: 1/1');
     await expect(page).toContainText('Completions');
 
-    await window.getByTestId('sidebar').getByRole('link', { name: 'CronJobs' }).click();
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Cron Jobs' }).click();
     const cron = window.getByTestId('cronjobs-table').locator('[data-cronjob="nightly"]');
     await expect(cron).toContainText('0 2 * * *');
     await expect(cron).toContainText('true');
@@ -248,7 +248,7 @@ test('lists the seeded job and cron job and opens the job detail', async () => {
 
 test('shows config map entries and masks secret values', async () => {
     const { window } = launched;
-    await window.getByTestId('sidebar').getByRole('link', { name: 'ConfigMaps' }).click();
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Config Maps' }).click();
     await window.getByTestId('configmaps-table').locator('[data-configmap="app-config"]').getByRole('link').click();
     const configMap = window.getByTestId('configmap-page');
     await expect(configMap).toContainText('keys: 2');
@@ -306,7 +306,7 @@ test('lists the seeded service and opens its ports and endpoints', async () => {
 
 test('lists the default storage class and the seeded claim', async () => {
     const { window } = launched;
-    await window.getByTestId('sidebar').getByRole('link', { name: 'StorageClasses' }).click();
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Storage Classes' }).click();
     const classes = window.getByTestId('storageclasses-table');
     await expect(classes.locator('[data-storageclass="local-path"]')).toContainText('default');
     await expect(classes).toContainText('rancher.io/local-path');
@@ -325,29 +325,29 @@ test('lists the default storage class and the seeded claim', async () => {
 test('lists the identity and role screens for the namespace and the cluster', async () => {
     const { window } = launched;
     const sidebar = window.getByTestId('sidebar');
-    await sidebar.getByRole('link', { name: 'ServiceAccounts' }).click();
+    await sidebar.getByRole('link', { name: 'Service Accounts' }).click();
     // Every namespace gets a `default` service account, so it needs no seeding.
     await expect(window.getByTestId('serviceaccounts-table').locator('[data-serviceaccount="default"]')).toBeVisible();
 
-    // "Roles" and "RoleBindings" are substrings of the cluster-scoped entries, so match exactly.
+    // "Roles" and "Role Bindings" are substrings of the cluster-scoped entries, so match exactly.
     await sidebar.getByRole('link', { name: 'Roles', exact: true }).click();
     const role = window.getByTestId('roles-table').locator('[data-role="reader"]');
     await expect(role).toContainText('2');
     await role.getByRole('link').click();
     await expect(window.getByTestId('role-page')).toContainText('rules: 2');
 
-    await sidebar.getByRole('link', { name: 'RoleBindings', exact: true }).click();
+    await sidebar.getByRole('link', { name: 'Role Bindings', exact: true }).click();
     const binding = window.getByTestId('rolebindings-table').locator('[data-rolebinding="reader-binding"]');
     await expect(binding).toContainText('Role/reader');
 
-    await sidebar.getByRole('link', { name: 'ClusterRoles', exact: true }).click();
+    await sidebar.getByRole('link', { name: 'Cluster Roles', exact: true }).click();
     const clusterRole = window.getByTestId('clusterroles-table').locator('[data-clusterrole="cluster-admin"]');
     await clusterRole.getByRole('link').click();
     const page = window.getByTestId('clusterrole-page');
     // The rule count of the built-in role is the cluster's business; assert only that it has some.
     await expect(page).toContainText(/rules: [1-9]/);
 
-    await sidebar.getByRole('link', { name: 'ClusterRoleBindings', exact: true }).click();
+    await sidebar.getByRole('link', { name: 'Cluster Role Bindings', exact: true }).click();
     await expect(
         window.getByTestId('clusterrolebindings-table').locator('[data-clusterrolebinding="cluster-admin"]'),
     ).toContainText('ClusterRole/cluster-admin');
@@ -391,7 +391,7 @@ test('shows the live manifest of a pod and of a cluster-scoped object', async ()
     await expect(manifest).toContainText('resourceVersion');
     await expect(manifest).not.toContainText('managedFields');
 
-    await window.getByTestId('sidebar').getByRole('link', { name: 'StorageClasses' }).click();
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Storage Classes' }).click();
     await window
         .getByTestId('storageclasses-table')
         .locator('[data-storageclass="local-path"]')
@@ -426,7 +426,7 @@ test('creates a config map from the editor, scales the deployment, then deletes 
     await expect(web).toContainText('2', { timeout: 30_000 });
     await web.getByRole('button', { name: 'Scale down' }).click();
 
-    await window.getByTestId('sidebar').getByRole('link', { name: 'ConfigMaps' }).click();
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Config Maps' }).click();
     await window.getByTestId('configmaps-table').locator('[data-configmap="my-config"]').getByRole('link').click();
     await window.getByTestId('configmap-page').getByRole('button', { name: 'Delete' }).click();
     const dialog = window.getByRole('alertdialog');
@@ -448,7 +448,7 @@ test('restarts the seeded deployment, which rolls its pods onto a new replica se
 
     // The stamped template makes the controller roll the pods onto a second replica set. How many
     // sets exist at any moment depends on how far the roll has got, so this waits for more than one.
-    await page.getByRole('tab', { name: /ReplicaSets/ }).click();
+    await page.getByRole('tab', { name: /Replica Sets/ }).click();
     const sets = page.getByTestId('replica-sets');
     await expect(sets).toBeVisible({ timeout: 30_000 });
     await expect.poll(() => sets.getByRole('row').count(), { timeout: 30_000 }).toBeGreaterThan(2);
@@ -510,7 +510,7 @@ test('cordons the node, reads what a drain would move, and uncordons it again', 
 test('rolls the seeded release back to its first revision, then uninstalls it', async () => {
     const { window } = launched;
     // Revision 2 rendered an extra ConfigMap; revision 1 never had it.
-    await window.getByTestId('sidebar').getByRole('link', { name: 'ConfigMaps' }).click();
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Config Maps' }).click();
     await expect(window.getByTestId('configmaps-table').locator('[data-configmap="demo-extra"]')).toBeVisible();
 
     await window.getByTestId('sidebar').getByRole('link', { name: 'Releases' }).click();
@@ -526,7 +526,7 @@ test('rolls the seeded release back to its first revision, then uninstalls it', 
 
     // Helm numbers forward: the rollback lands as revision 3, running revision 1's manifest.
     await expect(history.locator('[data-revision="3"]')).toContainText('Deployed', { timeout: 30_000 });
-    await window.getByTestId('sidebar').getByRole('link', { name: 'ConfigMaps' }).click();
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Config Maps' }).click();
     await expect(window.getByTestId('configmaps-table').locator('[data-configmap="demo-extra"]')).toHaveCount(0, {
         timeout: 30_000,
     });
@@ -565,7 +565,7 @@ test('links a pod to the workload that runs it, and lists that workload’s pods
 
 test('runs the seeded cron job now, suspends its schedule, and evicts a pod', async () => {
     const { window } = launched;
-    await window.getByTestId('sidebar').getByRole('link', { name: 'CronJobs' }).click();
+    await window.getByTestId('sidebar').getByRole('link', { name: 'Cron Jobs' }).click();
     await window.getByTestId('cronjobs-table').locator('[data-cronjob="nightly"]').getByRole('link').click();
     const page = window.getByTestId('cronjob-page');
 
@@ -671,7 +671,7 @@ test('lists the replica set behind the deployment, the budget over it, and the c
     const { window } = launched;
     const sidebar = window.getByTestId('sidebar');
 
-    await sidebar.getByRole('link', { name: 'ReplicaSets' }).click();
+    await sidebar.getByRole('link', { name: 'Replica Sets' }).click();
     const sets = window.getByTestId('replicasets-table');
     // The deployment's own replica set is named by its hash, so it is found by its owner instead.
     const set = sets.locator('tbody tr', { hasText: 'Deployment/web' }).first();
@@ -680,10 +680,10 @@ test('lists the replica set behind the deployment, the budget over it, and the c
     await expect(window.getByTestId('replicaset-page')).toContainText('owner: Deployment/web');
 
     // Nothing seeds a replication controller: the screen says so rather than failing to load.
-    await sidebar.getByRole('link', { name: 'ReplicationControllers' }).click();
-    await expect(window.getByText('No ReplicationControllers found.')).toBeVisible();
+    await sidebar.getByRole('link', { name: 'Replication Controllers' }).click();
+    await expect(window.getByText('No Replication Controllers found.')).toBeVisible();
 
-    await sidebar.getByRole('link', { name: 'DisruptionBudgets' }).click();
+    await sidebar.getByRole('link', { name: 'Disruption Budgets' }).click();
     const budget = window.getByTestId('disruptionbudgets-table').locator('[data-disruptionbudget="web"]');
     await expect(budget).toContainText('min available 2');
     // Nothing healthy matches its selector, so it allows no disruption at all.
@@ -691,7 +691,7 @@ test('lists the replica set behind the deployment, the budget over it, and the c
     await budget.getByRole('link').click();
     await expect(window.getByTestId('disruptionbudget-page')).toContainText('allowed: 0');
 
-    await sidebar.getByRole('link', { name: 'PriorityClasses' }).click();
+    await sidebar.getByRole('link', { name: 'Priority Classes' }).click();
     const priority = window.getByTestId('priorityclasses-table').locator('[data-priorityclass="km-e2e-high"]');
     await expect(priority).toContainText('1000');
     await priority.getByRole('link').click();
@@ -712,13 +712,13 @@ test('lists the class kinds and the CSI plumbing behind the volumes', async () =
     const { window } = launched;
     const sidebar = window.getByTestId('sidebar');
 
-    await sidebar.getByRole('link', { name: 'RuntimeClasses' }).click();
+    await sidebar.getByRole('link', { name: 'Runtime Classes' }).click();
     const runtime = window.getByTestId('runtimeclasses-table').locator('[data-runtimeclass="km-e2e-runtime"]');
     await expect(runtime).toContainText('runc');
     await runtime.getByRole('link').click();
     await expect(window.getByTestId('runtimeclass-page')).toContainText('handler: runc');
 
-    await sidebar.getByRole('link', { name: 'IngressClasses' }).click();
+    await sidebar.getByRole('link', { name: 'Ingress Classes' }).click();
     const ingress = window.getByTestId('ingressclasses-table').locator('[data-ingressclass="km-e2e-ingress"]');
     await expect(ingress).toContainText('example.com/km-e2e');
     await expect(ingress).toContainText('default');
@@ -726,12 +726,12 @@ test('lists the class kinds and the CSI plumbing behind the volumes', async () =
     await expect(window.getByTestId('ingressclass-page')).toContainText('controller: example.com/km-e2e');
 
     // k3s registers no CSI driver, so both driver screens show what an empty list looks like.
-    await sidebar.getByRole('link', { name: 'CSIDrivers' }).click();
-    await expect(window.getByText('No CSIDrivers found.')).toBeVisible();
-    await sidebar.getByRole('link', { name: 'CSINodes' }).click();
-    await expect(window.getByRole('heading', { name: 'CSINodes' })).toBeVisible();
+    await sidebar.getByRole('link', { name: 'CSI Drivers' }).click();
+    await expect(window.getByText('No CSI Drivers found.')).toBeVisible();
+    await sidebar.getByRole('link', { name: 'CSI Nodes' }).click();
+    await expect(window.getByRole('heading', { name: 'CSI Nodes' })).toBeVisible();
 
-    await sidebar.getByRole('link', { name: 'StorageCapacity' }).click();
+    await sidebar.getByRole('link', { name: 'Storage Capacity' }).click();
     const capacity = window.getByTestId('capacity-table').locator('[data-capacity="km-e2e-capacity"]');
     await expect(capacity).toContainText('local-path');
     await expect(capacity).toContainText('10Gi');
@@ -746,7 +746,7 @@ test('lists what stands between a write and the cluster, and the API server’s 
     const { window } = launched;
     const sidebar = window.getByTestId('sidebar');
 
-    await sidebar.getByRole('link', { name: 'MutatingWebhooks' }).click();
+    await sidebar.getByRole('link', { name: 'Mutating Webhooks' }).click();
     const mutating = window.getByTestId('mutatingwebhooks-table').locator('[data-mutatingwebhook="km-e2e-mutating"]');
     await expect(mutating).toContainText('mutate.km-e2e.test');
     // The seeded hooks fail open, so they are reported as harmless rather than as a dependency.
@@ -754,25 +754,25 @@ test('lists what stands between a write and the cluster, and the API server’s 
     await mutating.getByRole('link').click();
     await expect(window.getByTestId('mutatingwebhook-page')).toContainText('webhooks: 1');
 
-    await sidebar.getByRole('link', { name: 'ValidatingWebhooks' }).click();
+    await sidebar.getByRole('link', { name: 'Validating Webhooks' }).click();
     const validating = window
         .getByTestId('validatingwebhooks-table')
         .locator('[data-validatingwebhook="km-e2e-validating"]');
     await expect(validating).toContainText('Ignore');
 
-    await sidebar.getByRole('link', { name: 'AdmissionPolicies' }).click();
+    await sidebar.getByRole('link', { name: 'Admission Policies' }).click();
     const policy = window.getByTestId('admissionpolicies-table').locator('[data-admissionpolicy="km-e2e-policy"]');
     await expect(policy).toContainText('apps/deployments');
     await policy.getByRole('link').click();
     await expect(window.getByTestId('admissionpolicy-page')).toContainText('validations: 1');
 
     // These two need no seeding: every API server serves its own core API and its own flow schemas.
-    await sidebar.getByRole('link', { name: 'APIServices' }).click();
+    await sidebar.getByRole('link', { name: 'API Services' }).click();
     const core = window.getByTestId('apiservices-table').locator('[data-apiservice="v1."]');
     await expect(core).toContainText('Local');
     await expect(core).toContainText('Available');
 
-    await sidebar.getByRole('link', { name: 'FlowSchemas' }).click();
+    await sidebar.getByRole('link', { name: 'Flow Schemas' }).click();
     await expect(window.getByTestId('flowschemas-table').locator('[data-flowschema="exempt"]')).toBeVisible();
 
     // Leave the app on a list, since the specs after this one start from wherever this one stopped.

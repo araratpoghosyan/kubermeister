@@ -26,7 +26,7 @@ function MutatingWebhooksPage() {
     return (
         <ResourceListPage
             icon={PencilIcon}
-            title="MutatingWebhooks"
+            title="Mutating Webhooks"
             columns={columns}
             query={configurations}
             detailPath={detailPath}

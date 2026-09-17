@@ -25,8 +25,8 @@ function StorageCapacityPage() {
     return (
         <ResourceListPage
             icon={GaugeIcon}
-            title="StorageCapacity"
-            nounPlural="CSIStorageCapacity objects"
+            title="Storage Capacity"
+            nounPlural="CSI Storage Capacity objects"
             columns={columns}
             query={capacities}
             detailPath={detailPath}

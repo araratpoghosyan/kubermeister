@@ -24,7 +24,7 @@ function RoleBindingsPage() {
     return (
         <ResourceListPage
             icon={ShieldCheckIcon}
-            title="RoleBindings"
+            title="Role Bindings"
             columns={columns}
             query={bindings}
             detailPath={detailPath}

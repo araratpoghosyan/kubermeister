@@ -23,7 +23,7 @@ function ClusterRoleBindingsPage() {
     return (
         <ResourceListPage
             icon={ShieldCheckIcon}
-            title="ClusterRoleBindings"
+            title="Cluster Role Bindings"
             columns={columns}
             query={bindings}
             detailPath={detailPath}

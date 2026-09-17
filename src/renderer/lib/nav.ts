@@ -75,14 +75,14 @@ export const DOMAINS: Domain[] = [
                     { id: 'limits', label: 'Limits', path: '/overview/limits', icon: GaugeIcon },
                     {
                         id: 'priorityclasses',
-                        label: 'PriorityClasses',
+                        label: 'Priority Classes',
                         path: '/overview/priorityclasses',
                         icon: ArrowUpNarrowWideIcon,
                     },
                     { id: 'leases', label: 'Leases', path: '/overview/leases', icon: KeyRoundIcon },
                     {
                         id: 'runtimeclasses',
-                        label: 'RuntimeClasses',
+                        label: 'Runtime Classes',
                         path: '/overview/runtimeclasses',
                         icon: CpuIcon,
                     },
@@ -101,12 +101,12 @@ export const DOMAINS: Domain[] = [
                 items: [
                     { id: 'pods', label: 'Pods', path: '/workloads/pods', icon: BoxIcon },
                     { id: 'deployments', label: 'Deployments', path: '/workloads/deployments', icon: BoxesIcon },
-                    { id: 'statefulsets', label: 'StatefulSets', path: '/workloads/statefulsets', icon: BoxesIcon },
-                    { id: 'daemonsets', label: 'DaemonSets', path: '/workloads/daemonsets', icon: BoxesIcon },
-                    { id: 'replicasets', label: 'ReplicaSets', path: '/workloads/replicasets', icon: CopyIcon },
+                    { id: 'statefulsets', label: 'Stateful Sets', path: '/workloads/statefulsets', icon: BoxesIcon },
+                    { id: 'daemonsets', label: 'Daemon Sets', path: '/workloads/daemonsets', icon: BoxesIcon },
+                    { id: 'replicasets', label: 'Replica Sets', path: '/workloads/replicasets', icon: CopyIcon },
                     {
                         id: 'replicationcontrollers',
-                        label: 'ReplicationControllers',
+                        label: 'Replication Controllers',
                         path: '/workloads/replicationcontrollers',
                         icon: CopyIcon,
                     },
@@ -116,18 +116,18 @@ export const DOMAINS: Domain[] = [
                 label: 'BATCH',
                 items: [
                     { id: 'jobs', label: 'Jobs', path: '/workloads/jobs', icon: PlayIcon },
-                    { id: 'cronjobs', label: 'CronJobs', path: '/workloads/cronjobs', icon: TimerIcon },
+                    { id: 'cronjobs', label: 'Cron Jobs', path: '/workloads/cronjobs', icon: TimerIcon },
                 ],
             },
             {
                 label: 'CONFIG',
                 items: [
-                    { id: 'configmaps', label: 'ConfigMaps', path: '/workloads/configmaps', icon: FileTextIcon },
+                    { id: 'configmaps', label: 'Config Maps', path: '/workloads/configmaps', icon: FileTextIcon },
                     { id: 'secrets', label: 'Secrets', path: '/workloads/secrets', icon: LockIcon },
                     { id: 'autoscalers', label: 'Autoscalers', path: '/workloads/autoscalers', icon: TrendingUpIcon },
                     {
                         id: 'disruptionbudgets',
-                        label: 'DisruptionBudgets',
+                        label: 'Disruption Budgets',
                         path: '/workloads/disruptionbudgets',
                         icon: ShieldCheckIcon,
                     },
@@ -149,7 +149,7 @@ export const DOMAINS: Domain[] = [
                     { id: 'endpoints', label: 'Endpoints', path: '/network/endpoints', icon: WaypointsIcon },
                     {
                         id: 'ingressclasses',
-                        label: 'IngressClasses',
+                        label: 'Ingress Classes',
                         path: '/network/ingressclasses',
                         icon: LayersIcon,
                     },
@@ -160,7 +160,7 @@ export const DOMAINS: Domain[] = [
                 items: [
                     {
                         id: 'networkpolicies',
-                        label: 'NetworkPolicies',
+                        label: 'Network Policies',
                         path: '/network/networkpolicies',
                         icon: ShieldIcon,
                     },
@@ -181,7 +181,7 @@ export const DOMAINS: Domain[] = [
                     { id: 'claims', label: 'Claims', path: '/storage/claims', icon: HardDriveIcon },
                     {
                         id: 'storageclasses',
-                        label: 'StorageClasses',
+                        label: 'Storage Classes',
                         path: '/storage/storageclasses',
                         icon: LayersIcon,
                     },
@@ -191,9 +191,9 @@ export const DOMAINS: Domain[] = [
             {
                 label: 'CSI',
                 items: [
-                    { id: 'csidrivers', label: 'CSIDrivers', path: '/storage/csidrivers', icon: PlugIcon },
-                    { id: 'csinodes', label: 'CSINodes', path: '/storage/csinodes', icon: ServerIcon },
-                    { id: 'capacity', label: 'StorageCapacity', path: '/storage/capacity', icon: GaugeIcon },
+                    { id: 'csidrivers', label: 'CSI Drivers', path: '/storage/csidrivers', icon: PlugIcon },
+                    { id: 'csinodes', label: 'CSI Nodes', path: '/storage/csinodes', icon: ServerIcon },
+                    { id: 'capacity', label: 'Storage Capacity', path: '/storage/capacity', icon: GaugeIcon },
                 ],
             },
         ],
@@ -209,7 +209,7 @@ export const DOMAINS: Domain[] = [
                 items: [
                     {
                         id: 'serviceaccounts',
-                        label: 'ServiceAccounts',
+                        label: 'Service Accounts',
                         path: '/access/serviceaccounts',
                         icon: UserIcon,
                     },
@@ -221,14 +221,14 @@ export const DOMAINS: Domain[] = [
                     { id: 'roles', label: 'Roles', path: '/access/roles', icon: ShieldIcon },
                     {
                         id: 'rolebindings',
-                        label: 'RoleBindings',
+                        label: 'Role Bindings',
                         path: '/access/rolebindings',
                         icon: ShieldCheckIcon,
                     },
-                    { id: 'clusterroles', label: 'ClusterRoles', path: '/access/clusterroles', icon: ShieldIcon },
+                    { id: 'clusterroles', label: 'Cluster Roles', path: '/access/clusterroles', icon: ShieldIcon },
                     {
                         id: 'clusterrolebindings',
-                        label: 'ClusterRoleBindings',
+                        label: 'Cluster Role Bindings',
                         path: '/access/clusterrolebindings',
                         icon: ShieldCheckIcon,
                     },
@@ -255,19 +255,19 @@ export const DOMAINS: Domain[] = [
                 items: [
                     {
                         id: 'mutatingwebhooks',
-                        label: 'MutatingWebhooks',
+                        label: 'Mutating Webhooks',
                         path: '/addons/mutatingwebhooks',
                         icon: PencilIcon,
                     },
                     {
                         id: 'validatingwebhooks',
-                        label: 'ValidatingWebhooks',
+                        label: 'Validating Webhooks',
                         path: '/addons/validatingwebhooks',
                         icon: ShieldIcon,
                     },
                     {
                         id: 'admissionpolicies',
-                        label: 'AdmissionPolicies',
+                        label: 'Admission Policies',
                         path: '/addons/admissionpolicies',
                         icon: ScaleIcon,
                     },
@@ -276,8 +276,8 @@ export const DOMAINS: Domain[] = [
             {
                 label: 'API SERVER',
                 items: [
-                    { id: 'apiservices', label: 'APIServices', path: '/addons/apiservices', icon: PlugIcon },
-                    { id: 'flowschemas', label: 'FlowSchemas', path: '/addons/flowschemas', icon: WavesIcon },
+                    { id: 'apiservices', label: 'API Services', path: '/addons/apiservices', icon: PlugIcon },
+                    { id: 'flowschemas', label: 'Flow Schemas', path: '/addons/flowschemas', icon: WavesIcon },
                 ],
             },
         ],

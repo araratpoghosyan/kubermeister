@@ -26,7 +26,7 @@ function ValidatingWebhooksPage() {
     return (
         <ResourceListPage
             icon={ShieldIcon}
-            title="ValidatingWebhooks"
+            title="Validating Webhooks"
             columns={columns}
             query={configurations}
             detailPath={detailPath}

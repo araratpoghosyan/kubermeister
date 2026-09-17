@@ -23,7 +23,7 @@ function FlowSchemasPage() {
     return (
         <ResourceListPage
             icon={WavesIcon}
-            title="FlowSchemas"
+            title="Flow Schemas"
             columns={columns}
             query={schemas}
             detailPath={detailPath}

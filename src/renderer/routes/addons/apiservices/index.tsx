@@ -24,7 +24,7 @@ function ApiServicesPage() {
     return (
         <ResourceListPage
             icon={PlugIcon}
-            title="APIServices"
+            title="API Services"
             columns={columns}
             query={services}
             detailPath={detailPath}

@@ -145,11 +145,11 @@ function DeploymentDetailPage() {
                 },
                 {
                     id: 'replicasets',
-                    label: 'ReplicaSets',
+                    label: 'Replica Sets',
                     icon: LayersIcon,
                     count: replicaSets.length || undefined,
                     content: (
-                        <DetailCard title="ReplicaSets" desc="Generations of this deployment">
+                        <DetailCard title="Replica Sets" desc="Generations of this deployment">
                             <Table data-testid="replica-sets">
                                 <TableHeader>
                                     <TableRow>

@@ -23,7 +23,7 @@ function NetworkPoliciesPage() {
     return (
         <ResourceListPage
             icon={ShieldIcon}
-            title="NetworkPolicies"
+            title="Network Policies"
             columns={columns}
             query={policies}
             detailPath={detailPath}

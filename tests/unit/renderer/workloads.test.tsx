@@ -175,7 +175,7 @@ describe('workload lists', () => {
         expect(db).toHaveTextContent('db-headless');
         expect(db).toHaveTextContent('postgres:16');
 
-        await userEvent.click(screen.getByRole('link', { name: 'DaemonSets' }));
+        await userEvent.click(screen.getByRole('link', { name: 'Daemon Sets' }));
         const daemons = await screen.findByTestId('daemonsets-table');
         const agent = daemons.querySelector('[data-daemonset="agent"]') as HTMLElement;
         expect(within(agent).getByRole('link', { name: 'agent' })).toHaveAttribute(
@@ -238,7 +238,7 @@ describe('workload details', () => {
             'Events',
             'Status',
             'History2',
-            'ReplicaSets2',
+            'Replica Sets2',
             'ManifestYAML',
             'Labels1',
         ]);
@@ -253,7 +253,7 @@ describe('workload details', () => {
         expect(within(superseded).getByRole('button', { name: 'Roll back' })).toBeEnabled();
         expect(invoke).toHaveBeenCalledWith('deployments.rollouts', { name: 'web', namespace: 'team-a' });
 
-        await userEvent.click(within(rail).getByRole('tab', { name: /ReplicaSets/ }));
+        await userEvent.click(within(rail).getByRole('tab', { name: /Replica Sets/ }));
         const sets = within(page).getByTestId('replica-sets');
         expect(within(sets).getAllByRole('row')).toHaveLength(3);
         expect(within(sets).getByText('web-2').closest('tr')?.querySelector('.text-ok')).toHaveTextContent('3');

@@ -63,9 +63,9 @@ interface ResourceListPageProps<T> {
     /** Row → detail path; wired to row-click navigation via `useNavigateTo`. */
     detailPath?: (row: T) => string;
     /**
-     * Plural noun for generated copy, preserving kind casing ("StatefulSets"). Defaults to `title`,
-     * so screens whose title already is the plural kind need not pass it; override when the title
-     * differs from the noun (e.g. title "Persistent Volume Claims", noun "PVCs").
+     * Plural noun for generated copy, spelled as the screen's title is ("Stateful Sets"). Defaults
+     * to `title`, so screens whose title already is the plural kind need not pass it; override when
+     * the title differs from the noun (e.g. title "Persistent Volume Claims", noun "PVCs").
      */
     nounPlural?: string;
     searchPlaceholder?: string;

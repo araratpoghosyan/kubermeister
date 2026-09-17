@@ -23,7 +23,7 @@ function ConfigMapsPage() {
     return (
         <ResourceListPage
             icon={FileTextIcon}
-            title="ConfigMaps"
+            title="Config Maps"
             columns={columns}
             query={configMaps}
             detailPath={detailPath}
