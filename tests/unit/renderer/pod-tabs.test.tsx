@@ -169,23 +169,11 @@ describe('LogViewer', () => {
         onLiveToggle: noop,
         search: NO_SEARCH,
         onSearchChange: noop,
-        minLevel: null,
-        onMinLevelChange: noop,
-        tailLines: 500,
-        onTailLinesChange: noop,
         timestamps: true,
-        onTimestampsToggle: noop,
-        wrap: false,
-        onWrapToggle: noop,
-        previous: false,
-        onPreviousToggle: noop,
         onDownload: noop,
     };
-    /** The viewer renders what the caller already filtered, each line marked or not. */
-    const shown = (...items: ReturnType<typeof line>[]) => items.map((one) => ({ line: one, match: false }));
-
     it('renders numbered lines with level colors and a snapshot footer', () => {
-        renderWithQuery(<LogViewer {...props} lines={shown(line('boom', 'ERROR'), line('fine'))} filtered />);
+        renderWithQuery(<LogViewer {...props} lines={[line('boom', 'ERROR'), line('fine')]} filtered />);
         const list = screen.getByRole('list', { name: 'Log lines' });
         const rows = within(list).getAllByRole('listitem');
         expect(rows).toHaveLength(2);
@@ -241,7 +229,6 @@ describe('LogsTab', () => {
             container: 'web',
             sinceSeconds: 300,
             tailLines: 500,
-            previous: undefined,
         });
         expect(streams.usePodLogStream).toHaveBeenLastCalledWith(null, 2000);
 
@@ -259,7 +246,6 @@ describe('LogsTab', () => {
                 container: 'web',
                 sinceSeconds: 300,
                 tailLines: 500,
-                previous: undefined,
             },
             // The buffer size comes from settings, so a live follow keeps what the user asked for.
             2000,
@@ -300,7 +286,6 @@ describe('LogsTab', () => {
                 namespace: 'team-a',
                 container: 'web',
                 sinceSeconds: 300,
-                previous: undefined,
             }),
         );
         expect(download).toHaveBeenCalledWith('web-1-web.log', 'every line ever\n');
@@ -322,36 +307,16 @@ describe('LogsTab', () => {
         expect(screen.getByRole('button', { name: 'Container' })).toBeDisabled();
     });
 
-    it('narrows by level, marks matches without hiding, and follows the previous run', async () => {
-        invoke.mockImplementation(
-            answering([line('all good'), line('boom', 'ERROR')], {
-                'pods.logDownload': { text: '', truncated: false },
-            }),
-        );
+    it('keeps the lines the search matched and brings the rest back when it is cleared', async () => {
+        invoke.mockImplementation(answering([line('all good'), line('boom', 'ERROR')]));
         renderWithQuery(<LogsTab name="web-1" namespace="team-a" pod={pod} />);
         await screen.findByText('all good');
 
-        // A level floor hides everything below it.
-        await userEvent.click(screen.getByRole('button', { name: 'Level' }));
-        await userEvent.click(await screen.findByRole('menuitem', { name: 'ERROR' }));
-        await waitFor(() => expect(screen.queryByText('all good')).not.toBeInTheDocument());
-        await userEvent.click(screen.getByRole('button', { name: 'Level' }));
-        await userEvent.click(await screen.findByRole('menuitem', { name: 'All levels' }));
-        await screen.findByText('all good');
-
-        // Highlight-only keeps every line and marks the ones that matched.
-        await userEvent.click(screen.getByRole('button', { name: 'Mark' }));
         await userEvent.type(screen.getByRole('textbox', { name: 'Filter log lines' }), 'boom');
-        await waitFor(() =>
-            expect(screen.getByRole('list', { name: 'Log lines' }).querySelectorAll('[data-match]')).toHaveLength(1),
-        );
-        expect(screen.getByText('all good')).toBeInTheDocument();
-
-        // Reading the previous run asks the cluster for it.
-        await userEvent.click(screen.getByRole('button', { name: 'Previous' }));
-        await waitFor(() =>
-            expect(invoke).toHaveBeenCalledWith('pods.logSnapshot', expect.objectContaining({ previous: true })),
-        );
+        await waitFor(() => expect(screen.queryByText('all good')).not.toBeInTheDocument());
+        expect(screen.getByRole('list', { name: 'Log lines' }).querySelectorAll('[role="listitem"]')).toHaveLength(1);
+        await userEvent.clear(screen.getByRole('textbox', { name: 'Filter log lines' }));
+        await screen.findByText('all good');
     });
 
     it('matches case only when asked, and says when a download was cut short', async () => {
@@ -379,33 +344,18 @@ describe('LogsTab', () => {
         await screen.findByText('connection refused');
         await userEvent.click(screen.getByRole('button', { name: '.*' }));
         await userEvent.type(screen.getByRole('textbox', { name: 'Filter log lines' }), 'refused(');
-        await waitFor(() => expect(screen.getByTestId('log-options')).toHaveTextContent('Not a valid pattern yet'));
+        await waitFor(() => expect(screen.getByText('Not a valid pattern yet')).toBeInTheDocument());
         // The line is still there: an unfinished pattern filters nothing.
         expect(screen.getByText('connection refused')).toBeInTheDocument();
     });
 
-    it('hides timestamps and wraps long lines on request', async () => {
+    it('stamps every line with its time and keeps each one on a single row', async () => {
         invoke.mockImplementation(answering([line('a very long line')]));
         renderWithQuery(<LogsTab name="web-1" namespace="team-a" pod={pod} />);
         await screen.findByText('a very long line');
         expect(screen.getByText('2026-09-15T12:00:00Z')).toBeInTheDocument();
-        await userEvent.click(screen.getByRole('button', { name: 'Timestamps' }));
-        await waitFor(() => expect(screen.queryByText('2026-09-15T12:00:00Z')).not.toBeInTheDocument());
-
-        const row = () => screen.getByRole('list', { name: 'Log lines' }).querySelector('[role="listitem"]');
-        expect(row()).toHaveClass('whitespace-nowrap');
-        await userEvent.click(screen.getByRole('button', { name: 'Wrap' }));
-        await waitFor(() => expect(row()).toHaveClass('whitespace-pre-wrap'));
-    });
-
-    it('reads a shorter tail when asked for one', async () => {
-        invoke.mockImplementation(answering([line('recent')]));
-        renderWithQuery(<LogsTab name="web-1" namespace="team-a" pod={pod} />);
-        await screen.findByText('recent');
-        await userEvent.click(screen.getByRole('button', { name: 'Tail' }));
-        await userEvent.click(await screen.findByRole('menuitem', { name: '100' }));
-        await waitFor(() =>
-            expect(invoke).toHaveBeenCalledWith('pods.logSnapshot', expect.objectContaining({ tailLines: 100 })),
+        expect(screen.getByRole('list', { name: 'Log lines' }).querySelector('[role="listitem"]')).toHaveClass(
+            'whitespace-nowrap',
         );
     });
 });

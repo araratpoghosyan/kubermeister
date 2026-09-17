@@ -1,14 +1,16 @@
 import { useDeferredValue, useMemo, useState } from 'react';
 import { ScrollTextIcon } from 'lucide-react';
-import type { LogLevel } from '../../../shared/k8s/logs';
 import type { PodOwnerKind } from '../../../shared/k8s/owners';
-import { LogViewer, SINCE_OPTIONS, TAIL_OPTIONS, type SinceOption } from '@/components/data-display/log-viewer';
+import { LogViewer, SINCE_OPTIONS, type SinceOption } from '@/components/data-display/log-viewer';
 import type { DetailTab } from '@/components/templates/resource-detail';
 import { downloadTextFile } from '@/lib/download';
 import { isBrokenPattern, visibleLines, NO_SEARCH, type LogSearch } from '@/lib/log-filter';
 import { podColors, useMultiPodLogStream } from '@/lib/multi-pod-logs';
 import { useIpcQuery } from '@/lib/query';
 import { useLogBufferLines, useRefreshIntervalMs } from '@/lib/settings';
+
+/** Per pod, not in total: this view follows every pod of the workload at once. */
+const TAIL_LINES_PER_POD = 100;
 
 interface WorkloadLogsProps {
     kind: PodOwnerKind;
@@ -31,24 +33,20 @@ export function WorkloadLogs({ kind, name, namespace }: WorkloadLogsProps) {
     const [since, setSince] = useState<SinceOption>(SINCE_OPTIONS[0]!);
     const [live, setLive] = useState(false);
     const [search, setSearch] = useState<LogSearch>(NO_SEARCH);
-    const [minLevel, setMinLevel] = useState<LogLevel | null>(null);
-    const [tailLines, setTailLines] = useState<number>(TAIL_OPTIONS[0]);
-    const [timestamps, setTimestamps] = useState(false);
-    const [wrap, setWrap] = useState(false);
 
     const follow = useMultiPodLogStream(
         live ? names : [],
-        live ? { namespace, sinceSeconds: since.seconds, tailLines } : null,
+        live ? { namespace, sinceSeconds: since.seconds, tailLines: TAIL_LINES_PER_POD } : null,
         useLogBufferLines(),
     );
     const deferred = useDeferredValue(search);
-    const lines = visibleLines(follow.lines, deferred, minLevel);
+    const lines = visibleLines(follow.lines, deferred);
     const failures = Object.entries(follow.failures);
 
     const download = () =>
         downloadTextFile(
             `${name}-pods.log`,
-            lines.map(({ line }) => `${line.pod} ${line.timestamp} ${line.level} ${line.message}`).join('\n'),
+            lines.map((line) => `${line.pod} ${line.timestamp} ${line.level} ${line.message}`).join('\n'),
         );
 
     return (
@@ -65,16 +63,8 @@ export function WorkloadLogs({ kind, name, namespace }: WorkloadLogsProps) {
             onLiveToggle={() => setLive((v) => !v)}
             search={search}
             onSearchChange={setSearch}
-            minLevel={minLevel}
-            onMinLevelChange={setMinLevel}
-            tailLines={tailLines}
-            onTailLinesChange={setTailLines}
-            timestamps={timestamps}
-            onTimestampsToggle={() => setTimestamps((v) => !v)}
-            wrap={wrap}
-            onWrapToggle={() => setWrap((v) => !v)}
-            previous={false}
-            onPreviousToggle={() => {}}
+            // Each line already names its pod, so the timestamp would crowd the row out.
+            timestamps={false}
             onDownload={download}
             error={failures.length > 0 ? `${failures[0]![0]}: ${failures[0]![1]}` : null}
             filtered={lines.length !== follow.lines.length}

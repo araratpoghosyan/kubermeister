@@ -48,24 +48,14 @@ describe('searching logs', () => {
 });
 
 describe('what the console shows', () => {
-    it('hides what does not match, and marks it instead in highlight-only mode', () => {
-        const hidden = visibleLines(lines, { ...NO_SEARCH, query: 'refused' }, null);
-        expect(hidden.map((v) => v.line.message)).toEqual(['connection refused']);
-
-        const marked = visibleLines(lines, { ...NO_SEARCH, query: 'refused', highlightOnly: true }, null);
-        expect(marked).toHaveLength(4);
-        expect(marked.filter((v) => v.match).map((v) => v.line.message)).toEqual(['connection refused']);
+    it('keeps only what the search matched', () => {
+        expect(visibleLines(lines, { ...NO_SEARCH, query: 'refused' }).map((l) => l.message)).toEqual([
+            'connection refused',
+        ]);
     });
 
-    it('hides everything below the chosen level, search or no search', () => {
-        expect(visibleLines(lines, NO_SEARCH, 'WARN').map((v) => v.line.level)).toEqual(['ERROR', 'WARN']);
-        expect(visibleLines(lines, NO_SEARCH, null)).toHaveLength(4);
-        // The level floor applies before the search, so both narrow together.
-        expect(visibleLines(lines, { ...NO_SEARCH, query: 'cache' }, 'WARN')).toEqual([]);
-    });
-
-    it('marks nothing when there is no search, so no line looks picked out', () => {
-        expect(visibleLines(lines, NO_SEARCH, null).every((v) => v.match === false)).toBe(true);
+    it('shows every line when there is no search', () => {
+        expect(visibleLines(lines, NO_SEARCH)).toEqual(lines);
     });
 });
 

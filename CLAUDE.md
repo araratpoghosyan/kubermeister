@@ -133,9 +133,13 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   next batch on rather than restarting the follow. jsdom lays nothing out, so `tests/setup-renderer.ts`
   stands in for layout with fixed offset sizes and a ResizeObserver that answers once — without
   those, anything virtualised renders nothing under test. The log console's filtering lives in `src/renderer/lib/log-filter.ts`, apart from the component:
-  one pass decides what is shown and what is marked, so hiding and highlighting cannot disagree, and
+  the search narrows the console — a line the search misses is gone, not merely unhighlighted — and
   an unfinished regular expression reads as "no filter yet" rather than emptying the console
-  mid-keystroke. `pods.logDownload` saves the whole log from the API server rather than the buffer
+  mid-keystroke. Marking inside a line (`matchRanges`) is only ever about saying where a shown line
+  matched. The console's controls are the container, the since window, the search and Live: how much
+  tail to read and whether a line carries its timestamp are decisions each screen makes for itself
+  (a pod stamps every line, a workload following many pods does not, since its rows already name
+  one), not controls on the toolbar. `pods.logDownload` saves the whole log from the API server rather than the buffer
   on screen, capped in main and cut on a line boundary. Pod streams (`src/main/k8s/logs.ts`,
   `exec.ts`, `port-forward.ts`) resolve their target through `pod-target.ts` and report a missing
   pod as an error followed by end rather than throwing; the renderer side lives in

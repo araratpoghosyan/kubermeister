@@ -1,8 +1,8 @@
 import { useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronDownIcon, DownloadIcon, SearchIcon } from 'lucide-react';
-import type { LogLevel, LogLine } from '../../../shared/k8s/logs';
-import { matchRanges, type LogSearch, type VisibleLine } from '@/lib/log-filter';
+import type { LogLine } from '../../../shared/k8s/logs';
+import { matchRanges, type LogSearch } from '@/lib/log-filter';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -33,12 +33,6 @@ export const LOG_LEVEL_COLOR: Record<LogLine['level'], string> = {
     INFO: 'text-ok',
 };
 
-/** Tail sizes the console offers; the live buffer's own cap still applies above these. */
-export const TAIL_OPTIONS = [100, 500, 2000] as const;
-
-/** The level floors on offer: no floor, or hide everything below this level. */
-export const LEVEL_OPTIONS: (LogLevel | null)[] = [null, 'INFO', 'WARN', 'ERROR'];
-
 /** Height of one unwrapped row, which is what the virtualiser starts from before measuring. */
 const ROW_HEIGHT = 18;
 
@@ -68,41 +62,7 @@ function Toggle({
     );
 }
 
-/** A labelled dropdown over a fixed set of options. */
-function Picker<T extends { key: string }>({
-    label,
-    value,
-    options,
-    onSelect,
-}: {
-    label: string;
-    value: string;
-    options: T[];
-    onSelect: (option: T) => void;
-}) {
-    return (
-        <>
-            <span className="text-meta text-text-muted">{label}</span>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="xs" aria-label={label}>
-                        {value}
-                        <ChevronDownIcon />
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                    {options.map((option) => (
-                        <DropdownMenuItem key={option.key} onSelect={() => onSelect(option)}>
-                            {option.key}
-                        </DropdownMenuItem>
-                    ))}
-                </DropdownMenuContent>
-            </DropdownMenu>
-        </>
-    );
-}
-
-/** One message with its matches marked in place, so a search can highlight without hiding. */
+/** One message with the search's hits marked in place, so a long line says where it matched. */
 function highlight(message: string, search: LogSearch) {
     const ranges = matchRanges(message, search);
     if (ranges.length === 0) return message;
@@ -122,8 +82,8 @@ function highlight(message: string, search: LogSearch) {
 }
 
 interface LogViewerProps {
-    /** Already filtered by the caller, each line marked with whether the search matched it. */
-    lines: VisibleLine<LogLine & { pod?: string }>[];
+    /** Already filtered by the caller: the lines the search and the level floor left. */
+    lines: (LogLine & { pod?: string })[];
     /** Colour per pod, for a view following several at once; absent for a single container. */
     podColors?: Map<string, string>;
     containers: string[];
@@ -135,18 +95,8 @@ interface LogViewerProps {
     onLiveToggle: () => void;
     search: LogSearch;
     onSearchChange: (search: LogSearch) => void;
-    /** Hide everything below this level; null shows every line. */
-    minLevel: LogLevel | null;
-    onMinLevelChange: (level: LogLevel | null) => void;
-    tailLines: number;
-    onTailLinesChange: (tail: number) => void;
+    /** Whether each line carries its timestamp; the screen decides, there is no control for it. */
     timestamps: boolean;
-    onTimestampsToggle: () => void;
-    wrap: boolean;
-    onWrapToggle: () => void;
-    /** Follow the previous run of the container: where a crash loop left its reason. */
-    previous: boolean;
-    onPreviousToggle: () => void;
     onDownload: () => void;
     /** Rendered above the rows when the live stream errors. */
     error?: string | null;
@@ -172,24 +122,15 @@ export function LogViewer({
     onLiveToggle,
     search,
     onSearchChange,
-    minLevel,
-    onMinLevelChange,
-    tailLines,
-    onTailLinesChange,
     timestamps,
-    onTimestampsToggle,
-    wrap,
-    onWrapToggle,
-    previous,
-    onPreviousToggle,
     onDownload,
     error,
     filtered,
     brokenPattern,
 }: LogViewerProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
-    // Wrapped lines have no single height, so each is measured; unwrapped ones all match the
-    // estimate and the measurement costs nothing.
+    // Every row is one unwrapped line, so they all match the estimate; each is still measured so
+    // the estimate need not track the font.
     const virtualizer = useVirtualizer({
         count: lines.length,
         getScrollElement: () => scrollRef.current,
@@ -240,6 +181,7 @@ export function LogViewer({
                     </DropdownMenuContent>
                 </DropdownMenu>
                 <div className="flex-1" />
+                {brokenPattern && <span className="text-label text-danger">Not a valid pattern yet</span>}
                 <div className="relative w-[200px]">
                     <SearchIcon className="absolute top-1/2 left-2.5 size-3 -translate-y-1/2 text-text-dim" />
                     <Input
@@ -262,12 +204,6 @@ export function LogViewer({
                     label="Aa"
                     title="Match case"
                 />
-                <Toggle
-                    pressed={search.highlightOnly}
-                    onToggle={() => onSearchChange({ ...search, highlightOnly: !search.highlightOnly })}
-                    label="Mark"
-                    title="Mark matches instead of hiding what does not match"
-                />
                 <Button variant={live ? 'default' : 'outline'} size="xs" onClick={onLiveToggle} aria-pressed={live}>
                     <span className={cn('size-1.5 rounded-full', live ? 'animate-pulse bg-ok' : 'bg-text-dim')} />
                     Live
@@ -275,32 +211,6 @@ export function LogViewer({
                 <Button variant="ghost" size="icon-xs" aria-label="Download logs" onClick={onDownload}>
                     <DownloadIcon />
                 </Button>
-            </div>
-            <div
-                className="flex flex-wrap items-center gap-2 border-b border-border px-3.5 py-1.5"
-                data-testid="log-options"
-            >
-                <Picker
-                    label="Level"
-                    value={minLevel ?? 'All levels'}
-                    options={LEVEL_OPTIONS.map((level) => ({ key: level ?? 'All levels', level }))}
-                    onSelect={(option) => onMinLevelChange(option.level)}
-                />
-                <Picker
-                    label="Tail"
-                    value={String(tailLines)}
-                    options={TAIL_OPTIONS.map((tail) => ({ key: String(tail), tail }))}
-                    onSelect={(option) => onTailLinesChange(option.tail)}
-                />
-                <Toggle pressed={timestamps} onToggle={onTimestampsToggle} label="Timestamps" />
-                <Toggle pressed={wrap} onToggle={onWrapToggle} label="Wrap" />
-                <Toggle
-                    pressed={previous}
-                    onToggle={onPreviousToggle}
-                    label="Previous"
-                    title="Read the previous run of this container"
-                />
-                {brokenPattern && <span className="text-label text-danger">Not a valid pattern yet</span>}
             </div>
             {/* Only the rows in view are mounted: the buffer can be tens of thousands of lines, and
                 every one of them in the DOM is what makes a log console crawl. */}
@@ -318,19 +228,14 @@ export function LogViewer({
                 )}
                 <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
                     {virtualizer.getVirtualItems().map((item) => {
-                        const { line: log, match } = lines[item.index]!;
+                        const log = lines[item.index]!;
                         return (
                             <div
                                 key={item.key}
                                 ref={virtualizer.measureElement}
                                 data-index={item.index}
                                 role="listitem"
-                                data-match={match ? 'true' : undefined}
-                                className={cn(
-                                    'absolute top-0 left-0 flex w-full gap-3 px-3.5 py-px text-text-2',
-                                    wrap ? 'whitespace-pre-wrap' : 'whitespace-nowrap',
-                                    match && 'bg-elev-3',
-                                )}
+                                className="absolute top-0 left-0 flex w-full gap-3 px-3.5 py-px whitespace-nowrap text-text-2"
                                 style={{ transform: `translateY(${item.start}px)` }}
                             >
                                 <span className="w-7 shrink-0 text-right text-text-dim">{item.index + 1}</span>

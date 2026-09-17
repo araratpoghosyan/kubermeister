@@ -1,9 +1,8 @@
-import type { LogLevel, LogLine } from '../../shared/k8s/logs';
+import type { LogLine } from '../../shared/k8s/logs';
 
 /**
  * What the log console shows and how. Kept apart from the component because this is the part worth
- * testing: a search that is a regular expression, a level floor, and whether a non-matching line is
- * hidden or merely left unhighlighted.
+ * testing: a search that can be a regular expression, and where it matched inside a line.
  */
 
 export interface LogSearch {
@@ -11,14 +10,9 @@ export interface LogSearch {
     /** Treat the query as a regular expression rather than as text to find. */
     regex: boolean;
     caseSensitive: boolean;
-    /** Keep every line and mark the matches, instead of hiding what does not match. */
-    highlightOnly: boolean;
 }
 
-export const NO_SEARCH: LogSearch = { query: '', regex: false, caseSensitive: false, highlightOnly: false };
-
-/** Least important level to show; a filter set to WARN hides INFO and DEBUG. */
-export const LEVEL_ORDER: Record<LogLevel, number> = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
+export const NO_SEARCH: LogSearch = { query: '', regex: false, caseSensitive: false };
 
 /**
  * The matcher for one search, or null when the search is empty or its expression is not valid. An
@@ -52,31 +46,10 @@ export function isBrokenPattern(search: LogSearch): boolean {
     }
 }
 
-export interface VisibleLine<T extends LogLine> {
-    line: T;
-    /** True when the search matched this line; every line matches when there is no search. */
-    match: boolean;
-}
-
-/**
- * The lines to render, in order, each marked with whether the search matched it. Hiding and
- * highlighting are the same pass so the two can never disagree about what matched.
- */
-export function visibleLines<T extends LogLine>(
-    lines: T[],
-    search: LogSearch,
-    minLevel: LogLevel | null,
-): VisibleLine<T>[] {
+/** The lines to render, in order: the ones the search matched, or all of them when there is none. */
+export function visibleLines<T extends LogLine>(lines: T[], search: LogSearch): T[] {
     const matches = matcherFor(search);
-    const floor = minLevel ? LEVEL_ORDER[minLevel] : null;
-    const out: VisibleLine<T>[] = [];
-    for (const line of lines) {
-        if (floor !== null && LEVEL_ORDER[line.level] < floor) continue;
-        const match = matches ? matches(line) : true;
-        if (!match && !search.highlightOnly) continue;
-        out.push({ line, match: matches ? match : false });
-    }
-    return out;
+    return matches ? lines.filter(matches) : lines;
 }
 
 /** Where a search matched inside one message, for marking it in place. */
