@@ -2,7 +2,7 @@ import { type AnyRouter, useRouter } from '@tanstack/react-router';
 import { useCallback } from 'react';
 import { invoke } from './ipc';
 import { listPathForSubPage } from './nav';
-import { invalidateClusterQueries, queryClient, useIpcQuery } from './query';
+import { invalidateClusterQueries, useIpcQuery } from './query';
 import { stopAllForwards } from './port-forwards';
 
 /**
@@ -38,10 +38,13 @@ export function useSwitchContext(): (name: string) => Promise<void> {
     );
 }
 
-/** Scope namespaced reads to one namespace, or all with `null`, and refetch. */
+/**
+ * Scope namespaced reads to one namespace, or all with `null`, and start over. The reset happens the
+ * moment main has switched: it covers `namespace.active` too, and waiting on that read first would
+ * hold every list on the old rows until the cluster-wide pod count behind it had come back.
+ */
 export async function selectNamespace(namespace: string | null): Promise<void> {
     await invoke('namespace.set', { namespace });
-    await queryClient.invalidateQueries({ queryKey: ['namespace.active'] });
     await invalidateClusterQueries();
 }
 

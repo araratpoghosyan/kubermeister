@@ -1,0 +1,76 @@
+import { QueryObserver } from '@tanstack/react-query';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const invoke = vi.fn();
+vi.mock('@/lib/ipc', async () => ({
+    ...(await vi.importActual<typeof import('@/lib/ipc')>('@/lib/ipc')),
+    invoke,
+}));
+
+const { queryClient, ipcQueryKey } = await import('@/lib/query');
+const { selectNamespace, switchContext } = await import('@/lib/scope');
+
+const listKey = ipcQueryKey('resources.list', { kind: 'Pod' });
+const activeKey = ipcQueryKey('namespace.active', {});
+const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+describe('selectNamespace', () => {
+    afterEach(async () => {
+        // A reset refetches what is mounted; cancel it so a read left pending cannot leak into the next test.
+        await queryClient.cancelQueries();
+        queryClient.clear();
+    });
+
+    beforeEach(() => {
+        invoke.mockReset();
+        queryClient.clear();
+        queryClient.setQueryData(listKey, { kind: 'Pod', items: [{ name: 'web-1', namespace: 'team-a' }] });
+        queryClient.setQueryData(activeKey, { name: 'team-a', pods: 1, tone: 'accent' });
+    });
+
+    it('drops every cluster query as soon as main has switched, without waiting for the pod count', async () => {
+        // The active-namespace read counts pods across the whole cluster, which takes seconds on a
+        // real one; the lists must go back to loading before that answer, not after it.
+        const neverAnswers = new Promise<never>(() => {});
+        invoke.mockImplementation((channel: string) =>
+            channel === 'namespace.set' ? Promise.resolve({ namespace: 'kube-system' }) : neverAnswers,
+        );
+        // The top bar keeps that read mounted, which is what makes an awaited invalidation wait.
+        const observer = new QueryObserver(queryClient, {
+            queryKey: activeKey,
+            queryFn: () => invoke('namespace.active', {}),
+        });
+        const unsubscribe = observer.subscribe(() => {});
+        const done = selectNamespace('kube-system');
+        await flush();
+        expect(invoke).toHaveBeenCalledWith('namespace.set', { namespace: 'kube-system' });
+        expect(queryClient.getQueryData(listKey)).toBeUndefined();
+        expect(queryClient.getQueryData(activeKey)).toBeUndefined();
+        unsubscribe();
+        await queryClient.cancelQueries();
+        await done;
+    });
+
+    it('keeps the rows until main has actually switched, so a failed switch leaves the old scope on screen', async () => {
+        let settle: (() => void) | undefined;
+        invoke.mockImplementation(() => new Promise<void>((resolve) => (settle = resolve)));
+        const done = selectNamespace('kube-system');
+        await flush();
+        expect(queryClient.getQueryData(listKey)).toBeDefined();
+        settle?.();
+        await done;
+        expect(queryClient.getQueryData(listKey)).toBeUndefined();
+    });
+});
+
+describe('switchContext', () => {
+    it('resets cluster queries once the context has changed', async () => {
+        invoke.mockReset();
+        invoke.mockResolvedValue(undefined);
+        queryClient.clear();
+        queryClient.setQueryData(listKey, { kind: 'Pod', items: [] });
+        await switchContext('beta');
+        expect(invoke).toHaveBeenCalledWith('context.set', { name: 'beta' });
+        expect(queryClient.getQueryData(listKey)).toBeUndefined();
+    });
+});
