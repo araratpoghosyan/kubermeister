@@ -79,9 +79,11 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
                 <CommandGroup heading="Namespaces">
                     {namespaces.isPending && (
-                        <CommandLoading label="Loading namespaces" className="flex items-center gap-2">
-                            <Loader2Icon className="size-3.5 animate-spin" aria-hidden />
-                            <span>Loading namespaces…</span>
+                        <CommandLoading label="Loading namespaces">
+                            <span className="flex items-center gap-2">
+                                <Loader2Icon className="size-3.5 animate-spin" aria-hidden />
+                                <span>Loading namespaces…</span>
+                            </span>
                         </CommandLoading>
                     )}
                     {(namespaces.data ?? []).map((ns) => (

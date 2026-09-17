@@ -216,9 +216,12 @@ export function NamespaceSelector() {
                                 <span>{ALL_NAMESPACES}</span>
                             </CommandItem>
                             {namespaces.isPending && (
-                                <CommandLoading label="Loading namespaces" className="flex items-center gap-1.5">
-                                    <Loader2Icon className="size-3 animate-spin" aria-hidden />
-                                    <span>Loading namespaces…</span>
+                                <CommandLoading label="Loading namespaces">
+                                    {/* cmdk wraps children in a block div of its own; the row layout must sit inside it. */}
+                                    <span className="flex items-center gap-1.5">
+                                        <Loader2Icon className="size-3 animate-spin" aria-hidden />
+                                        <span>Loading namespaces…</span>
+                                    </span>
                                 </CommandLoading>
                             )}
                             {(namespaces.data ?? []).map((ns) => (
