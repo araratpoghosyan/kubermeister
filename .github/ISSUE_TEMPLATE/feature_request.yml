@@ -1,0 +1,29 @@
+name: Feature request
+description: Something the app should do that it does not.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The app is deliberately opinionated: it never runs anything inside the cluster, never writes
+        the kubeconfig, and never acts on a cluster other than the one on screen. A request that
+        fits those lines has a good chance; one that crosses them needs a strong case.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you are trying to do
+      description: The task, not the button. What do you reach for `kubectl` for today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What the app could do
+      description: Where it would live (which screen, which tab) and what it would show or change.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do instead today
+      description: Commands, other tools, or workarounds. Optional, but it sharpens the request.
