@@ -187,11 +187,11 @@ aborts if the active context is anything else.
 
 ## Contributing
 
-Issues and pull requests are welcome. Before opening a PR, run the lint, typecheck, format and test
-commands above; CI runs the same set plus the end-to-end suite. Commit messages follow
-[Conventional Commits](https://www.conventionalcommits.org/) and every change lands as a squash-merged
-PR, so the PR title is the commit header. [`CLAUDE.md`](CLAUDE.md) documents the architecture and the
-rules the codebase holds itself to; it is the place to start reading.
+Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers the setup, the checks
+a change has to pass and the branch and commit conventions; [`CLAUDE.md`](CLAUDE.md) documents the
+architecture and the rules the codebase holds itself to. Security problems go through
+[SECURITY.md](SECURITY.md), never a public issue. [CHANGELOG.md](CHANGELOG.md) records what each
+release changed.
 
 ## License
 
