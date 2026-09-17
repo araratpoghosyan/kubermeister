@@ -135,6 +135,17 @@ describe('command palette', () => {
         await waitFor(() => expect(invoke).toHaveBeenCalledWith('context.set', { name: 'beta' }));
     });
 
+    it('marks the namespaces group as loading until the list arrives', async () => {
+        invoke.mockImplementation((channel: string) =>
+            channel === 'namespaces.list' ? new Promise<never>(() => {}) : Promise.resolve(data[channel]),
+        );
+        renderRoutes(routeTree, '/overview/summary');
+        await userEvent.keyboard('{Control>}k{/Control}');
+        const dialog = await screen.findByRole('dialog', { name: 'Quick actions' });
+        expect(await within(dialog).findByRole('progressbar', { name: 'Loading namespaces' })).toBeInTheDocument();
+        expect(within(dialog).queryByRole('option', { name: /kube-system/ })).not.toBeInTheDocument();
+    });
+
     it('filters and navigates to a screen', async () => {
         const { router } = renderRoutes(routeTree, '/overview/summary');
         await userEvent.keyboard('{Control>}k{/Control}');
