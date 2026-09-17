@@ -29,7 +29,7 @@ export function isolationViolation(
     const foreign = names.filter((name) => name !== options.contextName);
     if (foreign.length > 0) return `kubeconfig names entries other than the test context: ${foreign.join(', ')}`;
 
-    const servers = [...kubeconfigText.matchAll(/^\s*server:\s*(\S+)/gm)].map((m) => m[1]);
+    const servers = [...kubeconfigText.matchAll(/^\s*server:\s*(\S+)/gm)].flatMap((m) => (m[1] ? [m[1]] : []));
     if (servers.length === 0) return 'kubeconfig has no server entry';
     for (const server of servers) {
         let host: string;

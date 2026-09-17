@@ -70,8 +70,9 @@ test('keeps all per-user state inside the throwaway data directory', async () =>
 });
 
 test('reads the cluster node list through the bridge', async () => {
-    const { window } = launched;
-    const result = await window.evaluate(() => window.km.invoke('nodes.list', {}));
+    // Named `page` so that `window` inside the callback is the renderer's global, not the Playwright Page.
+    const { window: page } = launched;
+    const result = await page.evaluate(() => window.km.invoke('nodes.list', {}));
     expect(result).toMatchObject({ ok: true });
     const nodes = (result as { data: Array<{ status: string; role: string }> }).data;
     expect(nodes).toHaveLength(1);
