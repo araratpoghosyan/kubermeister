@@ -8,6 +8,5 @@ Replace this comment with the pull request body. It becomes the commit body on m
   period, 66 characters or fewer.
 
 Before asking for review: `npm run lint`, `npm run typecheck`, `npm run format` and `npm run test`
-pass, tests cover the change including its error paths, and CHANGELOG.md has a line under
-Unreleased if a user would notice the change.
+pass, and tests cover the change including its error paths.
 -->

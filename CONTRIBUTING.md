@@ -96,6 +96,6 @@ questions in a review are questions, not verdicts.
 ## Releases
 
 Releases are cut by the maintainer. Every push to `main` ships as the rolling **Tip** build; a
-`vX.Y.Z` tag ships a stable release once its `chore(release): X.Y.Z` PR has merged. The
-[CHANGELOG](CHANGELOG.md) has an Unreleased section: when your change is worth a line there, add it
-in the same pull request.
+`vX.Y.Z` tag ships a stable release once its `chore(release): X.Y.Z` PR has merged. Release notes
+are generated from the merged pull request titles, which is one more reason the title has to read
+well on its own.
