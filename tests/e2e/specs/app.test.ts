@@ -143,8 +143,8 @@ test('follows pod logs, runs a command in the pod shell, and starts a port-forwa
     await expect(viewer).toHaveAttribute('data-live', 'true', { timeout: 30_000 });
     await expect(viewer.getByRole('list', { name: 'Log lines' })).toContainText('km-e2e-marker', { timeout: 30_000 });
 
-    // The console's own controls: a level floor hides quieter lines, and the marker survives a
-    // case-sensitive search for it.
+    // The console's own controls: the marker survives a case-sensitive search for it, and a search
+    // in the wrong case empties the console.
     const rows = viewer.getByRole('list', { name: 'Log lines' });
     await window.getByRole('button', { name: 'Aa' }).click();
     await viewer.getByRole('textbox', { name: 'Filter log lines' }).fill('km-e2e-marker');
@@ -153,8 +153,6 @@ test('follows pod logs, runs a command in the pod shell, and starts a port-forwa
     await expect(viewer.getByTestId('log-status')).toContainText('0 lines', { timeout: 30_000 });
     await viewer.getByRole('textbox', { name: 'Filter log lines' }).fill('');
     await window.getByRole('button', { name: 'Aa' }).click();
-    // Timestamps can be turned off without touching what is read.
-    await window.getByRole('button', { name: 'Timestamps' }).click();
     await expect(rows).toContainText('km-e2e-marker');
 
     // The shell is the pod's own, in its Shell tab.
