@@ -15,7 +15,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { breadcrumbsForPath } from '@/lib/nav';
 import { useIpcQuery } from '@/lib/query';
-import { selectNamespace, useSwitchContext } from '@/lib/scope';
+import { useSelectNamespace, useSwitchContext } from '@/lib/scope';
 import { useRefreshIntervalMs } from '@/lib/settings';
 import { CLUSTER_TONE, type StatusTone } from '@/lib/status';
 import { cn } from '@/lib/utils';
@@ -151,6 +151,7 @@ export function NamespaceSelector() {
     // A null name is the all-namespaces selection; undefined means the selection is not known yet.
     const activeName = active.data?.name ?? undefined;
     const allSelected = active.data?.name === null;
+    const selectNamespace = useSelectNamespace();
 
     const select = async (namespace: string | null) => {
         setOpen(false);

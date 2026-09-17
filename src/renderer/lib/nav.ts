@@ -324,8 +324,18 @@ export function navItemForPath(pathname: string): { domain: Domain; item: NavIte
     return undefined;
 }
 
-/** For a sub-page beneath a list item (a detail), the list path; otherwise undefined. */
+/** Instances of a definition are listed under its name; no nav item names them, since the app cannot know the kinds. */
+const INSTANCES_PREFIX = '/addons/instances/';
+
+/**
+ * For a sub-page beneath a list item (a detail), the list path; otherwise undefined. A custom-resource
+ * instance's list is the one for its definition, `/addons/instances/<crd>`.
+ */
 export function listPathForSubPage(pathname: string): string | undefined {
+    if (pathname.startsWith(INSTANCES_PREFIX)) {
+        const [crd, ...rest] = pathname.slice(INSTANCES_PREFIX.length).split('/');
+        return crd && rest.length > 0 ? INSTANCES_PREFIX + crd : undefined;
+    }
     const match = navItemForPath(pathname);
     return match && pathname !== match.item.path ? match.item.path : undefined;
 }

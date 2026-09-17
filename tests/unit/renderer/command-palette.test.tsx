@@ -115,6 +115,26 @@ describe('command palette', () => {
         await waitFor(() => expect(invoke).toHaveBeenCalledWith('namespace.set', { namespace: 'kube-system' }));
     });
 
+    it('closes a detail page back to its list when the context or namespace changes', async () => {
+        const { router } = renderRoutes(routeTree, '/workloads/pods/team-a/web-1');
+        await userEvent.keyboard('{Control>}k{/Control}');
+        const dialog = await screen.findByRole('dialog', { name: 'Quick actions' });
+        await userEvent.click(await within(dialog).findByRole('option', { name: /kube-system/ }));
+        await waitFor(() => expect(router.state.location.pathname).toBe('/workloads/pods'));
+        await waitFor(() => expect(invoke).toHaveBeenCalledWith('namespace.set', { namespace: 'kube-system' }));
+
+        await router.navigate({
+            to: '/workloads/pods/$namespace/$name',
+            params: { namespace: 'team-a', name: 'web-1' },
+        });
+        await waitFor(() => expect(router.state.location.pathname).toBe('/workloads/pods/team-a/web-1'));
+        await userEvent.keyboard('{Control>}k{/Control}');
+        const again = await screen.findByRole('dialog', { name: 'Quick actions' });
+        await userEvent.click(await within(again).findByRole('option', { name: /beta/ }));
+        await waitFor(() => expect(router.state.location.pathname).toBe('/workloads/pods'));
+        await waitFor(() => expect(invoke).toHaveBeenCalledWith('context.set', { name: 'beta' }));
+    });
+
     it('filters and navigates to a screen', async () => {
         const { router } = renderRoutes(routeTree, '/overview/summary');
         await userEvent.keyboard('{Control>}k{/Control}');
