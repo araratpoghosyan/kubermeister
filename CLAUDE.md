@@ -344,7 +344,9 @@ Two channels, two apps that install side by side:
   `<package.json>-tip.<build number>`). The `tip` tag is force-moved and the build's assets,
   named `Kubermeister-<version>-<os>-<arch>.<ext>` like stable's, join the single rolling
   pre-release; the previous build's are pruned only after the feed names the new one. Its update
-  feed is the generic URL of that release.
+  feed is the generic URL of that release. Moving the tag is best effort: `GITHUB_TOKEN` cannot
+  move a ref across a workflow change, so the `TIP_TAG_TOKEN` secret (a token with workflow
+  permission) is what keeps the tag on the latest commit; without it the build still publishes.
 - **Stable** (`.github/workflows/release.yml`): a `vX.Y.Z` tag whose version matches package.json.
   Draft release, package on three OSes, upload installers plus electron-updater metadata
   (`latest*.yml`, blockmaps), publish as latest. Cutting a release: merge a

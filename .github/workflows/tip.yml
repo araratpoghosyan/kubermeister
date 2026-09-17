@@ -34,10 +34,20 @@ jobs:
         with:
           fetch-depth: 0
       # Lightweight tag: an annotated one needs a committer identity the runner does not have.
+      # GITHUB_TOKEN may not move a ref across a commit that changes a workflow file, and once a
+      # merge under .github/workflows sits between the tag and main every later move crosses it
+      # too. The move is therefore best effort so the build still publishes: TIP_TAG_TOKEN, a
+      # token with workflow permission, makes it exact; without one the tag stays put and the
+      # release notes and the feed still name the commit a build came from.
       - name: Move the tip tag to this commit
+        env:
+          TOKEN: ${{ secrets.TIP_TAG_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           git tag -f tip "$GITHUB_SHA"
-          git push --force origin tip
+          if git push --force "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" tip; then
+            exit 0
+          fi
+          echo "::warning::could not move the tip tag to ${GITHUB_SHA::7}; set TIP_TAG_TOKEN to a token with workflow permission"
       - name: Create or update the tip pre-release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
