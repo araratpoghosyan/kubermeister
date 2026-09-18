@@ -35,6 +35,9 @@ function statusOf(error: unknown): number | undefined {
  * errno, TLS and DNS codes (and error names) that mean "could not reach or trust the API server".
  * TLS-trust failures are routine against private cluster CAs, so they read as `unreachable` rather
  * than a mysterious `unknown`. `AbortError` is a name, not a code: a timed-out or aborted read.
+ * The `UND_ERR_*` codes are undici's, which the client library's fetch nests under a bare
+ * `TypeError: fetch failed`; its own 10 s connect timeout fires before the app's read ceiling, so
+ * a server that never answers (VPN down, cluster gone) arrives as `UND_ERR_CONNECT_TIMEOUT`.
  */
 const CONNECTION_CODES = new Set([
     'ECONNREFUSED',
@@ -43,9 +46,14 @@ const CONNECTION_CODES = new Set([
     'EHOSTUNREACH',
     'ENETUNREACH',
     'ECONNRESET',
+    'ECONNABORTED',
     'EPIPE',
     'EAI_AGAIN',
     'AbortError',
+    'UND_ERR_CONNECT_TIMEOUT',
+    'UND_ERR_HEADERS_TIMEOUT',
+    'UND_ERR_BODY_TIMEOUT',
+    'UND_ERR_SOCKET',
     'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
     'DEPTH_ZERO_SELF_SIGNED_CERT',
     'SELF_SIGNED_CERT_IN_CHAIN',

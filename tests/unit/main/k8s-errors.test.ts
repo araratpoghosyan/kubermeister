@@ -63,6 +63,21 @@ describe('withK8s', () => {
         expect((await failWith(aborted)).kind).toBe('unreachable');
     });
 
+    it('reads undici codes nested under a bare "fetch failed", as the client library throws them', async () => {
+        const connectTimeout = Object.assign(new Error('Connect Timeout Error (attempted address: 10.0.0.1:6443)'), {
+            name: 'ConnectTimeoutError',
+            code: 'UND_ERR_CONNECT_TIMEOUT',
+        });
+        const fetchFailed = new TypeError('fetch failed', { cause: connectTimeout });
+        const error = await failWith(fetchFailed);
+        expect(error.kind).toBe('unreachable');
+        expect(error.detail).toBe('The cluster API server is unreachable.');
+        const socket = new TypeError('fetch failed', { cause: { code: 'UND_ERR_SOCKET' } });
+        expect((await failWith(socket)).kind).toBe('unreachable');
+        const aborted = new TypeError('fetch failed', { cause: { code: 'ECONNABORTED' } });
+        expect((await failWith(aborted)).kind).toBe('unreachable');
+    });
+
     it('finds connection codes inside AggregateError branches and survives cycles', async () => {
         const branch = Object.assign(new Error('v6'), { code: 'EHOSTUNREACH' });
         const aggregate = new AggregateError([new Error('v4'), branch], 'connect failed');
