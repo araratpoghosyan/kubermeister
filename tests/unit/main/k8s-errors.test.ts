@@ -1,6 +1,6 @@
 import { ApiException } from '@kubernetes/client-node';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { K8sError, withK8s } from '../../../src/main/k8s/errors';
+import { K8sError, timeoutDetail, withK8s } from '../../../src/main/k8s/errors';
 
 async function failWith(error: unknown): Promise<K8sError> {
     try {
@@ -104,11 +104,18 @@ describe('withK8s timeout', () => {
     beforeEach(() => vi.useFakeTimers());
     afterEach(() => vi.useRealTimers());
 
-    it('rejects as unreachable when the call outlives the timeout', async () => {
+    it('rejects as a timeout, naming the ceiling, when the call outlives it', async () => {
         const pending = withK8s('slow', () => new Promise<never>(() => {}), 1_000);
-        const assertion = expect(pending).rejects.toMatchObject({ kind: 'unreachable', op: 'slow' });
+        const assertion = expect(pending).rejects.toMatchObject({
+            kind: 'timeout',
+            op: 'slow',
+            detail: 'The cluster did not answer within 1 s. It may be busy, or the connection slow.',
+        });
         await vi.advanceTimersByTimeAsync(1_000);
         await assertion;
+        expect(timeoutDetail(15_000)).toBe(
+            'The cluster did not answer within 15 s. It may be busy, or the connection slow.',
+        );
     });
 
     it('does not fire the timeout after a fast call', async () => {

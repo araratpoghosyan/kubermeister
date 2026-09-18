@@ -50,6 +50,7 @@ function DashboardPage() {
     const coreQueries = [clusterQuery, namespacesQuery, eventsQuery, alertsQuery];
     const loading = coreQueries.some((q) => q.isPending);
     const failedQuery = coreQueries.find((q) => q.isError);
+    const failure = failedQuery ? describeError(failedQuery.error) : null;
     const retry = () => {
         for (const queryKey of DASHBOARD_KEYS) void queryClient.invalidateQueries({ queryKey });
     };
@@ -89,8 +90,12 @@ function DashboardPage() {
                     data-testid="dashboard-error"
                 >
                     <div className="flex flex-col items-center gap-1 text-body text-text-muted">
-                        <span className="font-medium text-foreground">{describeError(failedQuery.error).title}</span>
+                        <span className="font-medium text-foreground">{failure?.title}</span>
                         <span>Couldn't load the cluster overview.</span>
+                        {/* The classified reason, so a timeout names its ceiling and a plugin its message. */}
+                        {failure && failure.detail !== failure.title && (
+                            <span className="max-w-xl text-meta text-text-dim">{failure.detail}</span>
+                        )}
                     </div>
                     <Button variant="outline" size="sm" onClick={retry}>
                         Retry

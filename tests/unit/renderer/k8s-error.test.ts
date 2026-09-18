@@ -7,6 +7,7 @@ describe('describeError', () => {
         const cases: Array<[Parameters<typeof IpcError.prototype.constructor>[0]['kind'], string]> = [
             ['forbidden', 'Access denied'],
             ['unreachable', 'Cluster unreachable'],
+            ['timeout', 'Cluster timed out'],
             ['unauthorized', 'Not authenticated'],
             ['notFound', 'Not found'],
             ['conflict', 'Conflict'],

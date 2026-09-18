@@ -129,9 +129,40 @@ describe('cluster dashboard', () => {
         const error = await screen.findByTestId('dashboard-error');
         expect(error).toHaveTextContent('Access denied');
         expect(error).toHaveTextContent("Couldn't load the cluster overview.");
+        // The classified reason travels with the card; a user should never have to guess at it.
+        expect(error).toHaveTextContent('events denied');
         fail = false;
         await userEvent.click(within(error).getByRole('button', { name: 'Retry' }));
         expect(await screen.findByTestId('dashboard-metrics')).toBeInTheDocument();
+    });
+
+    it('names the ceiling when a core read timed out', async () => {
+        const { IpcError } = await vi.importActual<typeof import('@/lib/ipc')>('@/lib/ipc');
+        invoke.mockImplementation(async (channel: string) => {
+            if (channel === 'events.recent')
+                throw new IpcError({
+                    kind: 'timeout',
+                    detail: 'The cluster did not answer within 15 s. It may be busy, or the connection slow.',
+                    op: 'events.recent',
+                });
+            return data[channel];
+        });
+        renderRoutes(routeTree, '/overview/summary');
+        const error = await screen.findByTestId('dashboard-error');
+        expect(error).toHaveTextContent('Cluster timed out');
+        expect(error).toHaveTextContent('did not answer within 15 s');
+    });
+
+    it('hides a detail that only repeats the title', async () => {
+        const { IpcError } = await vi.importActual<typeof import('@/lib/ipc')>('@/lib/ipc');
+        invoke.mockImplementation(async (channel: string) => {
+            if (channel === 'events.recent')
+                throw new IpcError({ kind: 'unreachable', detail: '', op: 'events.recent' });
+            return data[channel];
+        });
+        renderRoutes(routeTree, '/overview/summary');
+        const error = await screen.findByTestId('dashboard-error');
+        expect(within(error).getAllByText('Cluster unreachable')).toHaveLength(1);
     });
 
     it('renders the no-cluster header when no context is active', async () => {

@@ -108,18 +108,22 @@ function classify(op: string, error: unknown): K8sError {
 }
 
 /**
- * Ceiling on a single cluster read. Without it an unreachable context waits out the OS TCP timeout
- * (60 to 75 s), hanging the UI. On expiry the read rejects as `unreachable`.
+ * Ceiling on a single cluster read. Without it a call that never returns hangs the UI. On expiry the
+ * read rejects as `timeout`, not `unreachable`: connectivity is judged sooner and separately (undici
+ * gives up connecting after 10 s), so a call that reaches the ceiling did reach a server that was
+ * merely slow to answer, which the message must say.
  */
 export const READ_TIMEOUT_MS = 15_000;
+
+/** The sentence a timed-out read carries; the ceiling is named so the user can judge it. */
+export function timeoutDetail(ms: number): string {
+    return `The cluster did not answer within ${ms / 1000} s. It may be busy, or the connection slow.`;
+}
 
 async function withTimeout<T>(op: string, ms: number, fn: () => Promise<T>): Promise<T> {
     let timer: NodeJS.Timeout | undefined;
     const timeout = new Promise<never>((_resolve, reject) => {
-        timer = setTimeout(
-            () => reject(new K8sError('unreachable', `Timed out after ${ms / 1000}s waiting for the cluster.`, op)),
-            ms,
-        );
+        timer = setTimeout(() => reject(new K8sError('timeout', timeoutDetail(ms), op)), ms);
     });
     try {
         return await Promise.race([fn(), timeout]);
