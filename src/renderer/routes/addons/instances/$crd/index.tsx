@@ -45,7 +45,7 @@ function InstancesPage() {
     const shape = useIpcQuery(
         'customResources.list',
         { crd },
-        { select: (data) => ({ kind: data.kind, columns: data.columns }) },
+        { select: (data) => ({ kind: data.kind, namespaced: data.namespaced, columns: data.columns }) },
     );
     const declared = shape.data?.columns;
     const columns = useMemo(() => columnsFor(crd, declared ?? []), [crd, declared]);
@@ -57,6 +57,7 @@ function InstancesPage() {
             nounPlural={shape.data?.kind ? `${shape.data.kind} objects` : 'objects'}
             columns={columns}
             query={query}
+            clusterScoped={shape.data?.namespaced === false}
             detailPath={(row) => detailPath(crd, row)}
             rowProps={(row) => ({ 'data-instance': row.name })}
             testId="instances-table"

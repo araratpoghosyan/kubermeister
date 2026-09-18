@@ -23,6 +23,7 @@ function AdmissionPoliciesPage() {
     const policies = useWatchedList('ValidatingAdmissionPolicy');
     return (
         <ResourceListPage
+            clusterScoped
             icon={ScaleIcon}
             title="Admission Policies"
             nounPlural="Validating Admission Policies"

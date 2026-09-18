@@ -37,6 +37,7 @@ function IngressClassesPage() {
     const classes = useWatchedList('IngressClass');
     return (
         <ResourceListPage
+            clusterScoped
             icon={LayersIcon}
             title="Ingress Classes"
             columns={columns}

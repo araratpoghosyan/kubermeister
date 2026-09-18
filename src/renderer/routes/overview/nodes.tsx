@@ -45,6 +45,7 @@ function NodesPage() {
     const nodes = useIpcQuery('nodes.list', {}, { refetchInterval: useRefreshIntervalMs() });
     return (
         <ResourceListPage
+            clusterScoped
             icon={ServerIcon}
             title="Nodes"
             columns={columns}

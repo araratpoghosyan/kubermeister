@@ -38,6 +38,7 @@ function StorageClassesPage() {
     const classes = useWatchedList('StorageClass');
     return (
         <ResourceListPage
+            clusterScoped
             icon={LayersIcon}
             title="Storage Classes"
             columns={columns}

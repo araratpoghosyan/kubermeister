@@ -23,6 +23,7 @@ function RuntimeClassesPage() {
     const classes = useWatchedList('RuntimeClass');
     return (
         <ResourceListPage
+            clusterScoped
             icon={CpuIcon}
             title="Runtime Classes"
             columns={columns}

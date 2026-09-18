@@ -25,6 +25,7 @@ function ValidatingWebhooksPage() {
     const configurations = useWatchedList('ValidatingWebhookConfiguration');
     return (
         <ResourceListPage
+            clusterScoped
             icon={ShieldIcon}
             title="Validating Webhooks"
             columns={columns}

@@ -22,6 +22,7 @@ function ClusterRoleBindingsPage() {
     const bindings = useWatchedList('ClusterRoleBinding');
     return (
         <ResourceListPage
+            clusterScoped
             icon={ShieldCheckIcon}
             title="Cluster Role Bindings"
             columns={columns}

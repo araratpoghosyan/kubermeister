@@ -11,11 +11,11 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LayersIcon } from 'lucide-react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ageColumn, nameColumn, statusColumn, textColumn } from '@/components/templates/list-columns';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { ThemeProvider } from '@/components/theme-provider';
-import { IpcError } from '@/lib/ipc';
+import { invoke, IpcError } from '@/lib/ipc';
 
 // The page reads the active scope to bucket row selection; nothing here depends on the values.
 vi.mock('@/lib/ipc', async () => ({
@@ -154,6 +154,67 @@ describe('ResourceListPage', () => {
         });
         expect(await screen.findAllByText('The cluster API server is unreachable.')).toHaveLength(1);
         expect(screen.getAllByText('Cluster unreachable')).toHaveLength(1);
+    });
+
+    describe('a timeout under All namespaces', () => {
+        const HINT = /viewing all namespaces/;
+        const timedOut = () =>
+            ({
+                data: undefined,
+                isPending: false,
+                isError: true,
+                refetch: vi.fn(),
+                error: new IpcError({ kind: 'timeout', detail: 'The cluster did not answer within 60 s.', op: 'x' }),
+            }) as Props['query'];
+        const scoped = (namespace: string | null) =>
+            vi
+                .mocked(invoke)
+                .mockImplementation(async (channel: string) =>
+                    channel === 'context.current'
+                        ? { name: 'alpha', cluster: 'a', user: 'u', current: true }
+                        : { name: namespace },
+                );
+        afterEach(() => {
+            scoped('team-a');
+        });
+
+        it('says that narrowing to one namespace would ask the cluster for less', async () => {
+            scoped(null);
+            renderPage({ query: timedOut() });
+            expect(await screen.findByText('Cluster timed out')).toBeInTheDocument();
+            const hint = await screen.findByTestId('all-namespaces-hint');
+            expect(hint).toHaveTextContent(HINT);
+            expect(hint).toHaveTextContent('Selecting a namespace in the top bar');
+        });
+
+        it('says nothing about namespaces when one is already selected', async () => {
+            scoped('team-a');
+            renderPage({ query: timedOut() });
+            expect(await screen.findByText('Cluster timed out')).toBeInTheDocument();
+            expect(screen.queryByTestId('all-namespaces-hint')).not.toBeInTheDocument();
+        });
+
+        it('says nothing for a cluster-scoped kind, where a namespace would change nothing', async () => {
+            scoped(null);
+            renderPage({ query: timedOut(), clusterScoped: true });
+            expect(await screen.findByText('Cluster timed out')).toBeInTheDocument();
+            expect(screen.queryByTestId('all-namespaces-hint')).not.toBeInTheDocument();
+        });
+
+        it('is a hint about timeouts only, not about every failure', async () => {
+            scoped(null);
+            renderPage({
+                query: {
+                    data: undefined,
+                    isPending: false,
+                    isError: true,
+                    refetch: vi.fn(),
+                    error: new IpcError({ kind: 'forbidden', detail: 'denied', op: 'x' }),
+                } as Props['query'],
+            });
+            expect(await screen.findByText('Access denied')).toBeInTheDocument();
+            expect(screen.queryByTestId('all-namespaces-hint')).not.toBeInTheDocument();
+        });
     });
 
     it.each([

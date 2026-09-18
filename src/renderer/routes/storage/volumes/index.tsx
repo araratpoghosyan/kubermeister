@@ -26,6 +26,7 @@ function VolumesPage() {
     const volumes = useWatchedList('PersistentVolume');
     return (
         <ResourceListPage
+            clusterScoped
             icon={DatabaseIcon}
             title="Volumes"
             columns={columns}
