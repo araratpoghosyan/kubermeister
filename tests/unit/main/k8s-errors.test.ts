@@ -1,6 +1,6 @@
 import { ApiException } from '@kubernetes/client-node';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { K8sError, timeoutDetail, withK8s } from '../../../src/main/k8s/errors';
+import { K8sError, readTimeoutMs, setReadTimeoutSec, timeoutDetail, withK8s } from '../../../src/main/k8s/errors';
 
 async function failWith(error: unknown): Promise<K8sError> {
     try {
@@ -116,6 +116,20 @@ describe('withK8s timeout', () => {
         expect(timeoutDetail(15_000)).toBe(
             'The cluster did not answer within 15 s. It may be busy, or the connection slow.',
         );
+    });
+
+    it('takes its default ceiling from the read-timeout setting, sixty seconds until one is applied', async () => {
+        expect(readTimeoutMs()).toBe(60_000);
+        setReadTimeoutSec(2);
+        try {
+            expect(readTimeoutMs()).toBe(2_000);
+            const pending = withK8s('slow', () => new Promise<never>(() => {}));
+            await vi.advanceTimersByTimeAsync(2_000);
+            await expect(pending).rejects.toMatchObject({ kind: 'timeout', detail: timeoutDetail(2_000) });
+        } finally {
+            setReadTimeoutSec(60);
+        }
+        expect(readTimeoutMs()).toBe(60_000);
     });
 
     it('does not fire the timeout after a fast call', async () => {

@@ -13,7 +13,13 @@ describe('parseSettings', () => {
             version: 1,
             session: { lastContext: 'prod', lastNamespace: 'default', restoreOnLaunch: true },
             connection: { kubeconfigPath: '/tmp/kubeconfig' },
-            data: { refreshIntervalSec: 30, logBufferLines: 2000, terminalFontSize: 12, forwards: [] },
+            data: {
+                refreshIntervalSec: 30,
+                readTimeoutSec: 120,
+                logBufferLines: 2000,
+                terminalFontSize: 12,
+                forwards: [],
+            },
             updates: { mode: 'download' },
             window: { bounds: { x: 0, y: 0, width: 1200, height: 800 } },
         };
@@ -48,7 +54,13 @@ describe('parseSettings', () => {
             version: 1,
             session: { lastContext: 'staging', lastNamespace: null, restoreOnLaunch: true },
             connection: { kubeconfigPath: null },
-            data: { refreshIntervalSec: 12, logBufferLines: 2000, terminalFontSize: 12, forwards: [] },
+            data: {
+                refreshIntervalSec: 12,
+                readTimeoutSec: 60,
+                logBufferLines: 2000,
+                terminalFontSize: 12,
+                forwards: [],
+            },
             updates: { mode: 'check' },
             window: { bounds: null },
         });
@@ -72,12 +84,14 @@ describe('parseSettings', () => {
         // The section is parsed as a whole, so one bad field takes the section's defaults with it.
         const defaults = {
             refreshIntervalSec: 12,
+            readTimeoutSec: 60,
             logBufferLines: 2000,
             terminalFontSize: 12,
             forwards: [],
         };
         const good = {
             refreshIntervalSec: 30,
+            readTimeoutSec: 300,
             logBufferLines: 10_000,
             terminalFontSize: 14,
             forwards: [],
@@ -85,6 +99,10 @@ describe('parseSettings', () => {
         expect(parseSettings({ version: 1, data: { refreshIntervalSec: 'soon' } }).data).toEqual(defaults);
         expect(parseSettings({ version: 1, data: { ...good, refreshIntervalSec: 0 } }).data).toEqual(defaults);
         expect(parseSettings({ version: 1, data: { ...good, logBufferLines: 0 } }).data).toEqual(defaults);
+        // A read ceiling under five seconds cuts every real cluster short; over ten minutes is a hang.
+        expect(parseSettings({ version: 1, data: { ...good, readTimeoutSec: 1 } }).data).toEqual(defaults);
+        expect(parseSettings({ version: 1, data: { ...good, readTimeoutSec: 601 } }).data).toEqual(defaults);
+        expect(parseSettings({ version: 1, data: { ...good, readTimeoutSec: 5 } }).data.readTimeoutSec).toBe(5);
         expect(parseSettings({ version: 1, data: { ...good, terminalFontSize: 99 } }).data).toEqual(defaults);
         expect(parseSettings({ version: 1, data: good }).data).toEqual(good);
     });

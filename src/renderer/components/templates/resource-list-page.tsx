@@ -1,5 +1,6 @@
 import type { ManifestKind } from '../../../shared/k8s/manifest';
 import { BulkDeleteBar } from '@/components/templates/bulk-delete-bar';
+import { ReadErrorHints } from '@/components/templates/read-error-hints';
 import { bulkRowId } from '@/lib/bulk-delete';
 import { useScope } from '@/lib/scope';
 import { useDeferredValue, useMemo, useState } from 'react';
@@ -372,17 +373,12 @@ export function ResourceListPage<T>({
                                     parsedError.detail !== listErrorBody(parsedError.kind, noun) && (
                                         <span className="max-w-xl text-meta text-text-dim">{parsedError.detail}</span>
                                     )}
-                                {/* Under All namespaces a list is the whole cluster's, which is what most
-                                    timeouts are; one namespace is a fraction of it. Nothing to gain for a
-                                    kind that ignores the namespace, so those say nothing. */}
-                                {parsedError?.kind === 'timeout' && allNamespaces && !clusterScoped && (
-                                    <span
-                                        className="mt-1 max-w-xl text-meta text-text-2"
-                                        data-testid="all-namespaces-hint"
-                                    >
-                                        You are viewing all namespaces, so the cluster is asked for {noun} from every
-                                        one of them at once. Selecting a namespace in the top bar asks for far less.
-                                    </span>
+                                {parsedError && (
+                                    <ReadErrorHints
+                                        kind={parsedError.kind}
+                                        noun={noun}
+                                        narrowable={allNamespaces && !clusterScoped}
+                                    />
                                 )}
                             </div>
                             {retry && (

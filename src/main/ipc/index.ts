@@ -4,7 +4,7 @@ import { ipcSchemas } from '../../shared/ipc.js';
 import { channelOfVersion } from '../../shared/updates.js';
 import { reloadKubeConfig } from '../k8s/client.js';
 import { getCurrentContext, listContexts, setContext, setNamespace } from '../k8s/context.js';
-import { K8sError } from '../k8s/errors.js';
+import { K8sError, setReadTimeoutSec } from '../k8s/errors.js';
 import { listAlerts } from '../k8s/alerts.js';
 import { resetHistory } from '../k8s/sampler.js';
 import { endAllStreams } from './streams.js';
@@ -129,7 +129,11 @@ const handlers: Handlers = {
     },
     'namespace.set': async ({ namespace }) => setNamespace(namespace),
     'settings.get': async () => getSettings(),
-    'settings.set': async (patch) => updateSettings(patch),
+    'settings.set': async (patch) => {
+        const settings = updateSettings(patch);
+        setReadTimeoutSec(settings.data.readTimeoutSec);
+        return settings;
+    },
     'kubeconfig.pick': async () => ({ path: await pickKubeconfig() }),
     'namespaces.list': () => listNamespaces(),
     'namespace.active': () => getActiveNamespaceInfo(),

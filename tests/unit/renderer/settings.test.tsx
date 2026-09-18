@@ -21,7 +21,7 @@ const settings = {
     version: 1,
     session: { lastContext: 'alpha', lastNamespace: 'team-a', restoreOnLaunch: true },
     connection: { kubeconfigPath: null },
-    data: { refreshIntervalSec: 12 },
+    data: { refreshIntervalSec: 12, readTimeoutSec: 45 },
     updates: { mode: 'check' },
 };
 const data: Record<string, unknown> = {
@@ -95,6 +95,18 @@ describe('settings screen', () => {
         await userEvent.click(await screen.findByRole('option', { name: '10k lines' }));
         await waitFor(() => expect(invoke).toHaveBeenCalledWith('settings.set', { data: { logBufferLines: 10000 } }));
         expect(screen.getByRole('combobox', { name: 'Buffered lines' })).toHaveTextContent('10k lines');
+    });
+
+    it('persists the read timeout through the bridge and offers the presets plus the current value', async () => {
+        renderRoutes(routeTree, '/settings');
+        await screen.findByTestId('settings-page');
+        await userEvent.click(screen.getByRole('combobox', { name: 'Read timeout' }));
+        const options = (await screen.findAllByRole('option')).map((o) => o.textContent);
+        // 45 is the persisted, non-preset value; it must still be selectable.
+        expect(options).toEqual(['15 seconds', '30 seconds', '45 seconds', '60 seconds', '120 seconds', '300 seconds']);
+        await userEvent.click(screen.getByRole('option', { name: '120 seconds' }));
+        await waitFor(() => expect(invoke).toHaveBeenCalledWith('settings.set', { data: { readTimeoutSec: 120 } }));
+        expect(screen.getByRole('combobox', { name: 'Read timeout' })).toHaveTextContent('120 seconds');
     });
 
     it('offers the preset intervals plus the current non-preset value', async () => {

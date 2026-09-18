@@ -1,6 +1,7 @@
 import { app, BrowserWindow, screen, shell } from 'electron';
 import { join } from 'node:path';
 import { registerHandlers } from './ipc/index.js';
+import { setReadTimeoutSec } from './k8s/errors.js';
 import { registerStreamHandlers, stopAllStreams } from './ipc/streams.js';
 import { stopSampler } from './k8s/sampler.js';
 import { installApplicationMenu } from './menu.js';
@@ -65,6 +66,8 @@ function createWindow(): BrowserWindow {
 }
 
 void app.whenReady().then(() => {
+    // The read ceiling is a setting; apply the saved one before the first cluster call can run.
+    setReadTimeoutSec(getSettings().data.readTimeoutSec);
     installApplicationMenu();
     registerHandlers();
     registerStreamHandlers();
