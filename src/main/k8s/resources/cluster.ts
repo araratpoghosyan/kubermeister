@@ -1,4 +1,4 @@
-import type { V1Namespace, V1Node, V1Pod } from '@kubernetes/client-node';
+import type { V1Namespace, V1Node } from '@kubernetes/client-node';
 import type { KubeContext } from '../../../shared/k8s/contexts.js';
 import type { ActiveNamespace, Cluster, Namespace, NamespaceTone } from '../../../shared/k8s/cluster.js';
 import { apis, getActiveNamespace } from '../client.js';
@@ -42,24 +42,13 @@ export function nodeReady(node: V1Node): boolean {
     return node.status?.conditions?.some((c) => c.type === 'Ready' && c.status === 'True') ?? false;
 }
 
-/** Count pods per namespace (or any other key) from a cluster-wide pod list. */
-export function countBy(pods: V1Pod[], key: (pod: V1Pod) => string | undefined): Map<string, number> {
-    const counts = new Map<string, number>();
-    for (const pod of pods) {
-        const k = key(pod);
-        if (k) counts.set(k, (counts.get(k) ?? 0) + 1);
-    }
-    return counts;
-}
-
 export function namespaceTone(ns: V1Namespace, active: string | null): NamespaceTone {
     if (ns.metadata?.name === active) return 'accent';
     return ns.status?.phase === 'Active' ? 'ok' : 'warn';
 }
 
-export function toNamespace(ns: V1Namespace, podCounts: Map<string, number>, active: string | null): Namespace {
-    const name = ns.metadata?.name ?? '';
-    return { name, pods: podCounts.get(name) ?? 0, tone: namespaceTone(ns, active) };
+export function toNamespace(ns: V1Namespace, active: string | null): Namespace {
+    return { name: ns.metadata?.name ?? '', tone: namespaceTone(ns, active) };
 }
 
 export function toCluster(context: KubeContext, nodes: V1Node[], gitVersion: string): Cluster {
@@ -79,33 +68,26 @@ export function minimalCluster(context: KubeContext, status: Cluster['status'] =
     return { name: context.name, nodes: 0, status, version: '—', provider: context.cluster, region: '—' };
 }
 
-async function podsPerNamespace(): Promise<Map<string, number>> {
-    const res = await apis().core.listPodForAllNamespaces();
-    return countBy(res.items, (pod) => pod.metadata?.namespace);
-}
-
+/**
+ * The namespace objects alone. This list is what the selector and the palette open with, so it
+ * must stay a few kilobytes: counting the pods inside each namespace would mean listing every pod
+ * in the cluster, and that belongs to the screens that show pods.
+ */
 export function listNamespaces(): Promise<Namespace[]> {
     return withK8s('namespaces.list', async () => {
         const active = getActiveNamespace();
-        const [res, podCounts] = await Promise.all([apis().core.listNamespace(), podsPerNamespace()]);
-        return res.items.map((ns) => toNamespace(ns, podCounts, active));
+        const res = await apis().core.listNamespace();
+        return res.items.map((ns) => toNamespace(ns, active));
     });
 }
 
 /**
- * The active namespace with its pod count, or a null name with the all-namespaces total when none
- * is selected. The renderer labels the null case; main never hands out a label as a name.
+ * The active namespace, or a null name when none is selected. This is the app's own memory, not a
+ * cluster read, so it answers at once and still answers while the cluster is unreachable. The
+ * renderer labels the null case; main never hands out a label as a name.
  */
-export function getActiveNamespaceInfo(): Promise<ActiveNamespace | null> {
-    return withK8s('namespace.active', async () => {
-        const active = getActiveNamespace();
-        const podCounts = await podsPerNamespace();
-        if (!active) {
-            const total = [...podCounts.values()].reduce((sum, n) => sum + n, 0);
-            return { name: null, pods: total, tone: 'accent' };
-        }
-        return { name: active, pods: podCounts.get(active) ?? 0, tone: 'accent' };
-    });
+export async function getActiveNamespaceInfo(): Promise<ActiveNamespace> {
+    return { name: getActiveNamespace() };
 }
 
 /**

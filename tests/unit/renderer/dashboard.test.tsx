@@ -18,11 +18,11 @@ const { routeTree } = await import('@/routeTree.gen');
 const data: Record<string, unknown> = {
     'update.state': { status: 'up-to-date' },
     'contexts.list': [{ name: 'alpha', cluster: 'a', user: 'u', current: true }],
-    'namespace.active': { name: 'team-a', pods: 4, tone: 'accent' },
+    'namespace.active': { name: 'team-a' },
     'cluster.active': { name: 'alpha', nodes: 3, status: 'Degraded', version: '1.36.4', provider: 'k3s', region: 'eu' },
     'namespaces.list': [
-        { name: 'team-a', pods: 4, tone: 'accent' },
-        { name: 'kube-system', pods: 9, tone: 'ok' },
+        { name: 'team-a', tone: 'accent' },
+        { name: 'kube-system', tone: 'ok' },
     ],
     'events.recent': [
         {
@@ -62,8 +62,9 @@ describe('cluster dashboard', () => {
 
         const metrics = within(page).getByTestId('dashboard-metrics');
         expect(metrics).toHaveTextContent('Nodes3');
-        expect(metrics).toHaveTextContent('Pods running13');
-        expect(metrics).toHaveTextContent('across 2 namespaces');
+        // No pod figure: counting pods means listing them.
+        expect(metrics).not.toHaveTextContent('Pods');
+        expect(within(metrics).getAllByText(/^(Nodes|CPU usage|Memory)$/)).toHaveLength(3);
         await waitFor(() => expect(metrics).toHaveTextContent('CPU usage42%'));
         expect(metrics).toHaveTextContent('Memory70%');
         expect(metrics.querySelectorAll('svg').length).toBeGreaterThanOrEqual(3);
@@ -92,7 +93,6 @@ describe('cluster dashboard', () => {
             if (channel === 'events.recent' || channel === 'metrics.alerts') return [];
             if (channel === 'metrics.sparklines') return { nodes: [], cpu: [], mem: [] };
             if (channel === 'metrics.workloadHealth') throw new Error('no metrics-server');
-            if (channel === 'namespaces.list') return [{ name: 'only', pods: 1, tone: 'ok' }];
             return data[channel];
         });
         renderRoutes(routeTree, '/overview/summary');
@@ -101,7 +101,6 @@ describe('cluster dashboard', () => {
         expect(within(page).getByText('No active alerts.')).toBeInTheDocument();
         expect(within(page).getByTestId('alert-count')).toHaveTextContent('0');
         expect(within(page).getByTestId('alert-count')).not.toHaveClass('text-danger');
-        expect(within(page).getByTestId('dashboard-metrics')).toHaveTextContent('across 1 namespace');
         expect(within(page).getByTestId('dashboard-metrics')).toHaveTextContent('CPU usage0%');
         expect(within(page).getByTestId('workload-health')).not.toHaveTextContent('mem avg');
         expect(within(page).queryByTestId('dashboard-error')).not.toBeInTheDocument();

@@ -326,7 +326,7 @@ describe('registerHandlers', () => {
     });
 
     it('forwards the cluster, namespace and node channels', async () => {
-        const namespace = { name: 'team-a', pods: 2, tone: 'accent' };
+        const namespace = { name: 'team-a', tone: 'accent' };
         const clusterInfo = {
             name: 'alpha',
             nodes: 1,
@@ -344,18 +344,17 @@ describe('registerHandlers', () => {
             memory: 7.8,
             cpuUsed: 25,
             memUsed: null,
-            pods: 2,
             age: '3d',
             instanceType: '—',
         };
         resources.listNamespaces.mockResolvedValue([namespace]);
-        resources.getActiveNamespaceInfo.mockResolvedValue(namespace);
+        resources.getActiveNamespaceInfo.mockResolvedValue({ name: namespace.name });
         resources.getActiveCluster.mockResolvedValue(clusterInfo);
         resources.listClusters.mockResolvedValue([clusterInfo]);
         nodesMod.listNodes.mockResolvedValue([nodeRow]);
         nodesMod.getNode.mockResolvedValue(null);
         await expect(invoke('namespaces.list', {})).resolves.toEqual([namespace]);
-        await expect(invoke('namespace.active', {})).resolves.toEqual(namespace);
+        await expect(invoke('namespace.active', {})).resolves.toEqual({ name: namespace.name });
         await expect(invoke('cluster.active', {})).resolves.toEqual(clusterInfo);
         await expect(invoke('clusters.list', {})).resolves.toEqual([clusterInfo]);
         await expect(invoke('nodes.list', {})).resolves.toEqual([nodeRow]);

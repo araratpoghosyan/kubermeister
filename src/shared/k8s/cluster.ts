@@ -14,18 +14,19 @@ export const clusterSchema = z.object({
 
 export const namespaceToneSchema = z.enum(['accent', 'ok', 'warn']);
 
+/** A namespace as the selector, palette and Namespaces list know it: a name and a tone, never a pod count. */
 export const namespaceSchema = z.object({
     name: z.string(),
-    pods: z.number().int().nonnegative(),
     /** `accent` marks the active namespace, `ok` an Active one, `warn` anything else (Terminating). */
     tone: namespaceToneSchema,
 });
 
 /**
  * The active selection: `name` is null under "All namespaces", never a display label, so no caller
- * can mistake the label for a namespace and hand it to a cluster call.
+ * can mistake the label for a namespace and hand it to a cluster call. It is answered from the app's
+ * own memory, not from the cluster, so it carries nothing that would need a cluster read.
  */
-export const activeNamespaceSchema = namespaceSchema.extend({ name: z.string().nullable() });
+export const activeNamespaceSchema = z.object({ name: z.string().nullable() });
 
 export type Cluster = z.infer<typeof clusterSchema>;
 export type NamespaceTone = z.infer<typeof namespaceToneSchema>;

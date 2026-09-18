@@ -6,7 +6,7 @@ import type {
     DescribeRow,
     DescribeSection,
 } from '../../../shared/k8s/describe.js';
-import { apis, readOrNull, resolveObjectNamespace } from '../client.js';
+import { apis, isSafeSelectorValue, readOrNull, resolveObjectNamespace } from '../client.js';
 import { K8sError, withK8s } from '../errors.js';
 import { ago, joinSelector } from '../format.js';
 import { eventTimestamp, sortedByTimeDesc } from './events.js';
@@ -222,11 +222,16 @@ export function describeObject(input: DescribeInput): Promise<DescribeDocument> 
     const op = 'resources.describe';
     return withK8s(op, async () => {
         if (input.kind === 'Node') {
-            const { items } = await apis().core.listNode();
-            const node = items.find((one) => one.metadata?.name === input.name);
+            // A node name is DNS-1123; anything else cannot be a node and must not reach a selector.
+            if (!isSafeSelectorValue(input.name)) {
+                throw new K8sError('invalid', `"${input.name}" is not a valid node name.`, op);
+            }
+            const node = await readOrNull(() => apis().core.readNode({ name: input.name }));
             if (!node) throw new K8sError('notFound', `Node "${input.name}" was not found.`, op);
+            // Only this node's pods: the API server filters on spec.nodeName, so the cluster's other
+            // pods never cross the wire for one node's describe.
             const [pods, events] = await Promise.all([
-                apis().core.listPodForAllNamespaces(),
+                apis().core.listPodForAllNamespaces({ fieldSelector: `spec.nodeName=${input.name}` }),
                 eventsFor(input.name, undefined, node.metadata?.uid),
             ]);
             return describeNode(node, pods.items, events);

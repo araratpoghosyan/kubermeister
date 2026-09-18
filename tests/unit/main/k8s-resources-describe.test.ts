@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const core = {
     readNamespacedPod: vi.fn(),
     listNode: vi.fn(),
+    readNode: vi.fn(),
     listPodForAllNamespaces: vi.fn(),
     listNamespacedEvent: vi.fn(),
     listEventForAllNamespaces: vi.fn(),
@@ -12,6 +13,7 @@ const client = {
     apis: () => ({ core }),
     getActiveNamespace: vi.fn<() => string | null>(() => 'team-a'),
     resolveObjectNamespace: (explicit?: string) => explicit ?? client.getActiveNamespace(),
+    isSafeSelectorValue: (value: string) => /^[A-Za-z0-9.-]+$/.test(value),
     readOrNull: async <T>(read: () => Promise<T>) => {
         try {
             return await read();
@@ -267,15 +269,25 @@ describe('reading a description', () => {
         ).rejects.toMatchObject({ kind: 'notFound' });
     });
 
-    it('describes a node by name and reports one that is not there', async () => {
-        core.listNode.mockResolvedValue({ items: [{ metadata: { name: 'node-1', uid: 'n1' }, status: {} }] });
+    it('describes a node by a direct read, listing only the pods scheduled on it', async () => {
+        core.readNode.mockImplementation(async ({ name }: { name: string }) => {
+            if (name === 'node-1') return { metadata: { name: 'node-1', uid: 'n1' }, status: {} };
+            throw new ApiException(404, 'not found', {}, {});
+        });
         await expect(describeMod.describeObject({ kind: 'Node', name: 'node-1' })).resolves.toMatchObject({
             kind: 'Node',
             namespace: null,
         });
+        expect(core.readNode).toHaveBeenCalledWith({ name: 'node-1' });
+        expect(core.listPodForAllNamespaces).toHaveBeenCalledWith({ fieldSelector: 'spec.nodeName=node-1' });
+        expect(core.listNode).not.toHaveBeenCalled();
         await expect(describeMod.describeObject({ kind: 'Node', name: 'ghost' })).rejects.toMatchObject({
             kind: 'notFound',
         });
+        await expect(describeMod.describeObject({ kind: 'Node', name: 'a,b=c' })).rejects.toMatchObject({
+            kind: 'invalid',
+        });
+        expect(core.readNode).not.toHaveBeenCalledWith({ name: 'a,b=c' });
     });
 });
 

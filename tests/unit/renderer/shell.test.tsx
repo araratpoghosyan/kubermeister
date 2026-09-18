@@ -18,7 +18,7 @@ const { routeTree } = await import('@/routeTree.gen');
 const data: Record<string, unknown> = {
     'update.state': { status: 'up-to-date' },
     'contexts.list': [{ name: 'alpha', cluster: 'a', user: 'u', namespace: 'team-a', current: true }],
-    'namespace.active': { name: 'team-a', pods: 4, tone: 'accent' },
+    'namespace.active': { name: 'team-a' },
     'cluster.active': { name: 'alpha', nodes: 1, status: 'Healthy', version: '1.36.4', provider: 'k3s', region: '—' },
     'nodes.list': [
         {
@@ -30,14 +30,13 @@ const data: Record<string, unknown> = {
             memory: 7.8,
             cpuUsed: 25,
             memUsed: null,
-            pods: 4,
             age: '3d',
             instanceType: 'k3s',
         },
     ],
     'namespaces.list': [
-        { name: 'team-a', pods: 4, tone: 'accent' },
-        { name: 'kube-system', pods: 9, tone: 'ok' },
+        { name: 'team-a', tone: 'accent' },
+        { name: 'kube-system', tone: 'ok' },
     ],
     'resources.list': { kind: 'Pod', items: [] },
     'events.recent': [],
@@ -60,7 +59,8 @@ describe('app shell', () => {
         expect(summary).toHaveTextContent('k3s · v1.36.4 · —');
         expect(screen.getByTestId('sidebar')).toHaveTextContent('Kubermeister');
         expect(screen.getByRole('link', { name: 'Cluster summary' })).toHaveAttribute('aria-current', 'page');
-        expect(await screen.findByTestId('active-namespace')).toHaveTextContent('team-a · 4 pods');
+        expect(await screen.findByTestId('active-namespace')).toHaveTextContent('team-a');
+        expect(screen.getByTestId('active-namespace')).not.toHaveTextContent('pods');
         expect(await screen.findByTestId('context-selector')).toHaveTextContent('alpha');
         expect(screen.getByTestId('breadcrumbs')).toHaveTextContent('Cluster summary');
         expect(screen.queryByTestId('update-pill')).not.toBeInTheDocument();
@@ -72,9 +72,12 @@ describe('app shell', () => {
         expect(within(nodes).getAllByRole('row')).toHaveLength(2);
         expect(nodes).toHaveTextContent('control-plane');
         expect(within(nodes).getByText('Ready')).toHaveAttribute('data-tone', 'ok');
+        // Neither list counts pods: that would list every pod in the cluster for one column.
+        expect(within(nodes).queryByRole('columnheader', { name: 'Pods' })).not.toBeInTheDocument();
         await userEvent.click(screen.getByRole('link', { name: 'Namespaces' }));
         const namespaces = await screen.findByTestId('namespaces-table');
         expect(namespaces).toHaveTextContent('kube-system');
+        expect(within(namespaces).queryByRole('columnheader', { name: 'Pods' })).not.toBeInTheDocument();
         expect(within(namespaces).getByText('Active')).toHaveAttribute('data-tone', 'accent');
         expect(namespaces.querySelector('[data-namespace="kube-system"]')).toHaveTextContent('Ready');
         expect(screen.getByRole('link', { name: 'Namespaces' })).toHaveAttribute('aria-current', 'page');

@@ -96,7 +96,6 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                             }}
                         >
                             <span className="flex-1">{ns.name}</span>
-                            <span className="font-mono text-label text-text-muted">{ns.pods} pods</span>
                         </CommandItem>
                     ))}
                 </CommandGroup>

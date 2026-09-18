@@ -1,3 +1,4 @@
+import type { CoreV1Event } from '@kubernetes/client-node';
 import type { Alert } from '../../shared/k8s/metrics.js';
 import { apis } from './client.js';
 import { toPod } from './resources/pods.js';
@@ -19,30 +20,85 @@ async function safe<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
     }
 }
 
-const HIGH_RESTARTS = 5;
+/** A back-off event older than this describes a pod that has since settled or gone. */
+export const RECENT_BACKOFF_MS = 10 * 60_000;
 
-export async function podAlerts(): Promise<Alert[]> {
-    const res = await safe(() => apis().core.listPodForAllNamespaces(), { items: [] });
+function eventTime(event: CoreV1Event): number {
+    const stamp = event.lastTimestamp ?? event.eventTime ?? event.metadata?.creationTimestamp;
+    return stamp ? new Date(stamp).getTime() : 0;
+}
+
+/**
+ * Pod alerts without listing the cluster's pods, which on a busy cluster is megabytes on every
+ * refresh. The API server can select on `status.phase`, so pending and failed pods come back as
+ * exactly the pods in question; a CrashLoopBackOff pod is phase Running and no selector finds it,
+ * so those are read off the Warning `BackOff` events the kubelet emits for them, which name the pod
+ * and say whether it is a container restarting or an image that will not pull. Restart counts of
+ * healthy pods are not read at all, so there is no "high restarts" alert here.
+ */
+export async function podAlerts(now = Date.now()): Promise<Alert[]> {
+    const empty = { items: [] };
+    const [pending, failed, backoffs] = await Promise.all([
+        safe(() => apis().core.listPodForAllNamespaces({ fieldSelector: 'status.phase=Pending' }), empty),
+        safe(() => apis().core.listPodForAllNamespaces({ fieldSelector: 'status.phase=Failed' }), empty),
+        safe(
+            () =>
+                apis().core.listEventForAllNamespaces({
+                    fieldSelector: 'type=Warning,reason=BackOff,involvedObject.kind=Pod',
+                }),
+            empty,
+        ),
+    ]);
     const alerts: Alert[] = [];
-    for (const pod of res.items.map((p) => toPod(p))) {
+    // One alert per pod: a pending pod with a back-off event is one problem, not two.
+    const seen = new Set<string>();
+    const report = (where: string, alert: Alert) => {
+        if (seen.has(where)) return;
+        seen.add(where);
+        alerts.push(alert);
+    };
+    for (const pod of pending.items.map((p) => toPod(p))) {
         const where = `${pod.namespace}/${pod.name}`;
         if (pod.status === 'CrashLoop') {
-            alerts.push({
+            report(where, {
                 tone: 'danger',
                 title: `CrashLoopBackOff: ${pod.name}`,
                 detail: `${pod.restarts} restarts — ${where}`,
             });
         } else if (pod.status === 'Error') {
-            alerts.push({ tone: 'danger', title: `Image pull failure: ${pod.name}`, detail: where });
-        } else if (pod.status === 'Failed') {
-            alerts.push({ tone: 'danger', title: `Pod failed: ${pod.name}`, detail: where });
-        } else if (pod.status === 'Pending') {
-            alerts.push({ tone: 'warn', title: `Pod pending: ${pod.name}`, detail: where });
-        } else if (pod.restarts >= HIGH_RESTARTS) {
-            alerts.push({
-                tone: 'warn',
-                title: `High restarts: ${pod.name}`,
-                detail: `${pod.restarts} restarts — ${where}`,
+            report(where, { tone: 'danger', title: `Image pull failure: ${pod.name}`, detail: where });
+        } else {
+            report(where, { tone: 'warn', title: `Pod pending: ${pod.name}`, detail: where });
+        }
+    }
+    for (const pod of failed.items.map((p) => toPod(p))) {
+        const where = `${pod.namespace}/${pod.name}`;
+        report(where, { tone: 'danger', title: `Pod failed: ${pod.name}`, detail: where });
+    }
+    const recent = backoffs.items.filter((event) => now - eventTime(event) <= RECENT_BACKOFF_MS);
+    const byPod = new Map<string, { event: CoreV1Event; count: number }>();
+    for (const event of recent) {
+        const obj = event.involvedObject;
+        if (!obj?.name) continue;
+        const where = `${obj.namespace ?? ''}/${obj.name}`;
+        const entry = byPod.get(where);
+        const count = event.count ?? 1;
+        // The newest event speaks for the pod; the count sums every back-off in the window.
+        if (!entry || eventTime(event) > eventTime(entry.event)) {
+            byPod.set(where, { event, count: (entry?.count ?? 0) + count });
+        } else {
+            entry.count += count;
+        }
+    }
+    for (const [where, { event, count }] of byPod) {
+        const name = event.involvedObject?.name ?? '';
+        if (/pulling image/i.test(event.message ?? '')) {
+            report(where, { tone: 'danger', title: `Image pull failure: ${name}`, detail: where });
+        } else {
+            report(where, {
+                tone: 'danger',
+                title: `CrashLoopBackOff: ${name}`,
+                detail: `${count} back-off${count === 1 ? '' : 's'} in the last 10 min — ${where}`,
             });
         }
     }

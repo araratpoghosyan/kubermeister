@@ -13,6 +13,8 @@ export const Route = createFileRoute('/overview/nodes')({ component: NodesPage }
 
 const detailPath = (node: Pick<Node, 'name'>) => `/overview/nodes/${encodeURIComponent(node.name)}`;
 
+// No pod count here: that is a whole-cluster pod list for one column. The node's own screen counts
+// the pods scheduled on it.
 const columns: ColumnDef<Node>[] = [
     nameColumn<Node>({ href: detailPath }),
     statusColumn<Node, Node['status']>(NODE_TONE, { size: 110 }),
@@ -35,7 +37,6 @@ const columns: ColumnDef<Node>[] = [
     textColumn<Node>('version', 'Version', { size: 90, mono: true, small: true, numeric: true }),
     meterColumn<Node>('cpuUsed', 'CPU', (n) => n.cpuUsed, { size: 140, emptyLabel: 'no data' }),
     meterColumn<Node>('memUsed', 'Memory', (n) => n.memUsed, { size: 140, emptyLabel: 'no data' }),
-    textColumn<Node>('pods', 'Pods', { size: 70, mono: true, numeric: true }),
     ageColumn<Node>(),
     textColumn<Node>('instanceType', 'Instance type', { size: 140, mono: true, small: true, muted: true }),
 ];
