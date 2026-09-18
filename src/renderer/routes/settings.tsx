@@ -4,6 +4,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { MonitorIcon, MoonIcon, SunIcon, type LucideIcon } from 'lucide-react';
 import {
     LOG_BUFFER_OPTIONS,
+    READ_TIMEOUT_OPTIONS,
     REFRESH_INTERVAL_OPTIONS,
     TERMINAL_FONT_SIZES,
     UPDATE_MODES,
@@ -59,10 +60,14 @@ function SettingsScreen() {
     const kubeconfigPath = settings?.connection.kubeconfigPath ?? null;
     const updateMode = settings?.updates.mode ?? 'check';
     const refreshSec = settings?.data.refreshIntervalSec ?? 12;
+    const readTimeoutSec = settings?.data.readTimeoutSec ?? 60;
     const logBuffer = settings?.data.logBufferLines ?? 2_000;
     const terminalFont = settings?.data.terminalFontSize ?? 12;
     // Fold the current value in so a non-preset interval (the 12 s default) still renders as selected.
     const intervalOptions = Array.from(new Set<number>([...REFRESH_INTERVAL_OPTIONS, refreshSec]))
+        .sort((a, b) => a - b)
+        .map(intervalLabel);
+    const timeoutOptions = Array.from(new Set<number>([...READ_TIMEOUT_OPTIONS, readTimeoutSec]))
         .sort((a, b) => a - b)
         .map(intervalLabel);
 
@@ -103,6 +108,21 @@ function SettingsScreen() {
                             options={intervalOptions}
                             onValueChange={(label) =>
                                 void updateSettings(client, { data: { refreshIntervalSec: parseInt(label, 10) } })
+                            }
+                        />
+                    </Field>
+                </FormCard>
+
+                <FormCard
+                    title="Cluster reads"
+                    desc="How long one request to the API server may take before it is reported as timed out. Large clusters need longer."
+                >
+                    <Field label="Read timeout">
+                        <FormSelect
+                            value={intervalLabel(readTimeoutSec)}
+                            options={timeoutOptions}
+                            onValueChange={(label) =>
+                                void updateSettings(client, { data: { readTimeoutSec: parseInt(label, 10) } })
                             }
                         />
                     </Field>

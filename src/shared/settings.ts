@@ -22,6 +22,12 @@ const connectionSchema = z.object({
 /** Live-refresh cadences offered in Settings, in seconds. */
 export const REFRESH_INTERVAL_OPTIONS = [5, 10, 15, 30, 60] as const;
 
+/**
+ * Read ceilings offered in Settings, in seconds. A ceiling is a judgement about how big a cluster
+ * may be, so it is the user's to make: a list of thousands of pods takes longer than any default.
+ */
+export const READ_TIMEOUT_OPTIONS = [15, 30, 60, 120, 300] as const;
+
 /** Log buffer sizes offered in Settings, in lines. */
 export const LOG_BUFFER_OPTIONS = [2_000, 10_000, 50_000] as const;
 
@@ -41,6 +47,8 @@ export const rememberedForwardSchema = z.object({
 const dataSchema = z.object({
     /** Poll cadence for the live lists, metrics and dashboard queries. */
     refreshIntervalSec: z.number().int().positive(),
+    /** Ceiling on one cluster read before it is reported as timed out. Under 5 s cuts real clusters short. */
+    readTimeoutSec: z.number().int().min(5).max(600),
     /** How many log lines a live follow keeps before dropping the oldest. */
     logBufferLines: z.number().int().positive(),
     /** Font size of the shell terminals, in points. */
@@ -108,7 +116,7 @@ export const DEFAULT_SETTINGS: Settings = {
     version: 1,
     session: { lastContext: null, lastNamespace: null, restoreOnLaunch: true },
     connection: { kubeconfigPath: null },
-    data: { refreshIntervalSec: 12, logBufferLines: 2_000, terminalFontSize: 12, forwards: [] },
+    data: { refreshIntervalSec: 12, readTimeoutSec: 60, logBufferLines: 2_000, terminalFontSize: 12, forwards: [] },
     updates: { mode: 'check' },
     window: { bounds: null },
 };

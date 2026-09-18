@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS, mergeSettings } from '../../../src/shared/settings';
-import { K8sError } from '../../../src/main/k8s/errors';
+import { K8sError, readTimeoutMs, setReadTimeoutSec } from '../../../src/main/k8s/errors';
 
 type Listener = (event: unknown, input: unknown) => Promise<unknown>;
 const registered = new Map<string, Listener>();
@@ -285,6 +285,15 @@ describe('registerHandlers', () => {
         expect(store.updateSettings).toHaveBeenCalledWith({ session: { lastNamespace: 'ns' } });
         await invoke('settings.set', { connection: { kubeconfigPath: '/etc/passwd' } });
         expect(store.updateSettings).toHaveBeenLastCalledWith({});
+    });
+
+    it('applies a new read timeout to every cluster call the moment it is saved', async () => {
+        try {
+            await invoke('settings.set', { data: { readTimeoutSec: 300 } });
+            expect(readTimeoutMs()).toBe(300_000);
+        } finally {
+            setReadTimeoutSec(DEFAULT_SETTINGS.data.readTimeoutSec);
+        }
     });
 
     it('applies a picked kubeconfig path and reloads the client', async () => {

@@ -111,9 +111,20 @@ function classify(op: string, error: unknown): K8sError {
  * Ceiling on a single cluster read. Without it a call that never returns hangs the UI. On expiry the
  * read rejects as `timeout`, not `unreachable`: connectivity is judged sooner and separately (undici
  * gives up connecting after 10 s), so a call that reaches the ceiling did reach a server that was
- * merely slow to answer, which the message must say.
+ * merely slow to answer, which the message must say. The ceiling is the `data.readTimeoutSec`
+ * setting, applied here at startup and on every settings write, because how long a cluster may
+ * take is a fact about that cluster and not one the app can know in advance.
  */
-export const READ_TIMEOUT_MS = 15_000;
+let readTimeout = 60_000;
+
+/** Apply the read ceiling from settings; every later {@link withK8s} without its own ceiling uses it. */
+export function setReadTimeoutSec(seconds: number): void {
+    readTimeout = seconds * 1000;
+}
+
+export function readTimeoutMs(): number {
+    return readTimeout;
+}
 
 /** The sentence a timed-out read carries; the ceiling is named so the user can judge it. */
 export function timeoutDetail(ms: number): string {
@@ -133,7 +144,7 @@ async function withTimeout<T>(op: string, ms: number, fn: () => Promise<T>): Pro
 }
 
 /** Run a cluster call under the read timeout, normalising any failure into a {@link K8sError}. */
-export async function withK8s<T>(op: string, fn: () => Promise<T>, timeoutMs = READ_TIMEOUT_MS): Promise<T> {
+export async function withK8s<T>(op: string, fn: () => Promise<T>, timeoutMs = readTimeoutMs()): Promise<T> {
     try {
         return await withTimeout(op, timeoutMs, fn);
     } catch (error) {

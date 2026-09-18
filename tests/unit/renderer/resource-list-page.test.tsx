@@ -187,6 +187,14 @@ describe('ResourceListPage', () => {
             expect(hint).toHaveTextContent('Selecting a namespace in the top bar');
         });
 
+        it('points at the read-timeout setting whichever scope is selected', async () => {
+            scoped('team-a');
+            renderPage({ query: timedOut() });
+            const hint = await screen.findByTestId('read-timeout-hint');
+            expect(hint).toHaveTextContent('raise the read timeout');
+            expect(within(hint).getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/settings');
+        });
+
         it('says nothing about namespaces when one is already selected', async () => {
             scoped('team-a');
             renderPage({ query: timedOut() });
@@ -214,6 +222,7 @@ describe('ResourceListPage', () => {
             });
             expect(await screen.findByText('Access denied')).toBeInTheDocument();
             expect(screen.queryByTestId('all-namespaces-hint')).not.toBeInTheDocument();
+            expect(screen.queryByTestId('read-timeout-hint')).not.toBeInTheDocument();
         });
     });
 

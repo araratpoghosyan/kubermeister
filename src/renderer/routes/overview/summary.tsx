@@ -11,6 +11,7 @@ import { EventsList } from '@/components/data-display/events-list';
 import { MetricCard } from '@/components/data-display/metric-card';
 import { StatusBadge } from '@/components/data-display/status-badge';
 import { RefreshButton } from '@/components/refresh-button';
+import { ReadErrorHints } from '@/components/templates/read-error-hints';
 import { describeError } from '@/lib/k8s-error';
 import { useIpcQuery } from '@/lib/query';
 import { useRefreshIntervalMs } from '@/lib/settings';
@@ -92,6 +93,8 @@ function DashboardPage() {
                         {failure && failure.detail !== failure.title && (
                             <span className="max-w-xl text-meta text-text-dim">{failure.detail}</span>
                         )}
+                        {/* The summary's reads are cluster-wide by design, so no namespace would narrow them. */}
+                        {failure && <ReadErrorHints kind={failure.kind} noun="the cluster overview" />}
                     </div>
                     <Button variant="outline" size="sm" onClick={retry}>
                         Retry
