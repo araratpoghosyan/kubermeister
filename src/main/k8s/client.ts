@@ -19,6 +19,7 @@ import {
     SchedulingV1Api,
     CoordinationV1Api,
     VersionApi,
+    type ConfigOptions,
 } from '@kubernetes/client-node';
 import { existsSync } from 'node:fs';
 import { isNamespaceName } from '../../shared/k8s/names.js';
@@ -84,11 +85,20 @@ function namespaceOrNull(value: string | null | undefined): string | null {
     return value && isNamespaceName(value) ? value : null;
 }
 
+/**
+ * A cluster, user or context entry missing what identifies it (an empty `cluster:` left behind by
+ * a hand edit or a half-finished `kubectl config set-context`) is dropped rather than failing the
+ * whole file. kubectl loads such a file and lists the entry; refusing it would leave every other
+ * context unusable over one the user never opens. (The library exports the `ActionOnInvalid`
+ * constant as a type only; the value is the literal.)
+ */
+const LOAD_OPTIONS: Partial<ConfigOptions> = { onInvalidEntry: 'filter' };
+
 function loadKubeConfig(): KubeConfig {
     const next = new KubeConfig();
     const { kubeconfigPath } = getSettings().connection;
-    if (kubeconfigPath) next.loadFromFile(kubeconfigPath);
-    else next.loadFromDefault();
+    if (kubeconfigPath) next.loadFromFile(kubeconfigPath, LOAD_OPTIONS);
+    else next.loadFromDefault(LOAD_OPTIONS);
     return next;
 }
 
@@ -113,14 +123,14 @@ export function kubeconfigError(): string | null {
     if (kubeconfigPath) {
         if (!existsSync(kubeconfigPath)) return `No file exists at ${kubeconfigPath}.`;
         try {
-            new KubeConfig().loadFromFile(kubeconfigPath);
+            new KubeConfig().loadFromFile(kubeconfigPath, LOAD_OPTIONS);
             return null;
         } catch {
             return `${kubeconfigPath} could not be parsed as a kubeconfig file.`;
         }
     }
     try {
-        new KubeConfig().loadFromDefault();
+        new KubeConfig().loadFromDefault(LOAD_OPTIONS);
         return null;
     } catch {
         return 'The default kubeconfig ($KUBECONFIG or ~/.kube/config) could not be parsed.';
