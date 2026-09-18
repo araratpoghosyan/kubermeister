@@ -1,5 +1,6 @@
 import { ApiException } from '@kubernetes/client-node';
 import type { IpcError, K8sErrorKind } from '../../shared/k8s/errors.js';
+import { ExecPluginError } from './exec-auth.js';
 
 export type { K8sErrorKind };
 
@@ -94,7 +95,14 @@ function detailOf(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
 }
 
-function classify(op: string, error: unknown): K8sError {
+/**
+ * Normalise any failure into a {@link K8sError}. A credential plugin that could not produce a token
+ * is an authentication failure whatever errno the spawn or the CLI came back with, and its detail is
+ * the sentence the guard composed rather than the CLI's stderr dump.
+ */
+export function toK8sError(op: string, error: unknown): K8sError {
+    if (error instanceof K8sError) return error;
+    if (error instanceof ExecPluginError) return new K8sError('unauthorized', error.detail, op);
     const status = statusOf(error);
     if (status === 403) return new K8sError('forbidden', 'Access denied (RBAC).', op);
     if (status === 401) return new K8sError('unauthorized', 'Not authenticated to the cluster.', op);
@@ -148,7 +156,6 @@ export async function withK8s<T>(op: string, fn: () => Promise<T>, timeoutMs = r
     try {
         return await withTimeout(op, timeoutMs, fn);
     } catch (error) {
-        if (error instanceof K8sError) throw error;
-        throw classify(op, error);
+        throw toK8sError(op, error);
     }
 }

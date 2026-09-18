@@ -22,6 +22,7 @@ import {
     type ConfigOptions,
 } from '@kubernetes/client-node';
 import { existsSync } from 'node:fs';
+import { guardCredentialPlugins } from './exec-auth.js';
 import { isNamespaceName } from '../../shared/k8s/names.js';
 import { getSettings } from '../settings/store.js';
 
@@ -99,6 +100,7 @@ function loadKubeConfig(): KubeConfig {
     const { kubeconfigPath } = getSettings().connection;
     if (kubeconfigPath) next.loadFromFile(kubeconfigPath, LOAD_OPTIONS);
     else next.loadFromDefault(LOAD_OPTIONS);
+    guardCredentialPlugins(next);
     return next;
 }
 

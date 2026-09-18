@@ -344,7 +344,13 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   `data.readTimeoutSec` setting (60 s by default), applied to `errors.ts` at startup and on every
   settings write rather than read per call, so the k8s modules never import the settings store; a
   timed-out list or summary points at Settings, since how long a cluster may take is the user's to say. No `kubectl` dependency; the
-  client library handles exec credential plugins itself.
+  client library handles exec credential plugins itself. Two things make that work outside a
+  terminal: main adopts the login shell's PATH at startup (`src/main/shell-path.ts`), because a
+  Finder or Dock launch inherits launchd's `/usr/bin:/bin:/usr/sbin:/sbin` and a kubeconfig written
+  by `aws eks update-kubeconfig` names its plugin by bare command; and every loaded `KubeConfig`
+  has its authenticators wrapped (`src/main/k8s/exec-auth.ts`) so a plugin that is missing or exits
+  non-zero surfaces as `unauthorized` with a sentence naming the plugin, not as the CLI's stderr
+  under "Something went wrong".
 - **Settings** (`src/shared/settings.ts`, `src/main/settings/store.ts`) are a versioned JSON file
   in Electron's `userData`, so the stable and tip apps never share state. The settings screen at
   `/settings` edits them through `settings.set`; the application menu (`src/main/menu.ts`) opens it
