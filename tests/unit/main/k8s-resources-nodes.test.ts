@@ -1,7 +1,22 @@
+import { ApiException } from '@kubernetes/client-node';
 import type { V1Node, V1Pod } from '@kubernetes/client-node';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const client = { apis: vi.fn(), getActiveNamespace: vi.fn(), activeContextName: vi.fn<() => string>(() => 'alpha') };
+const client = {
+    apis: vi.fn(),
+    getActiveNamespace: vi.fn(),
+    activeContextName: vi.fn<() => string>(() => 'alpha'),
+    // The two pure helpers the reader takes from the client module, as the real module defines them.
+    isSafeSelectorValue: (value: string) => /^[A-Za-z0-9.-]+$/.test(value),
+    readOrNull: async <T>(read: () => Promise<T>) => {
+        try {
+            return await read();
+        } catch (error) {
+            if (error instanceof ApiException && error.code === 404) return undefined;
+            throw error;
+        }
+    },
+};
 vi.mock('../../../src/main/k8s/client.js', () => client);
 const sampler = {
     ensureSampler: vi.fn(),
@@ -71,8 +86,8 @@ describe('node transforms', () => {
         expect(nodes.instanceType(node({ metadata: { labels: {} } }))).toBe('—');
     });
 
-    it('builds the list row with converted capacity, pods and age', () => {
-        expect(nodes.toNode(node(), new Map([['n1', 7]]), NOW)).toEqual({
+    it('builds the list row with converted capacity and age, and no pod count', () => {
+        expect(nodes.toNode(node(), NOW)).toEqual({
             name: 'n1',
             status: 'Ready',
             role: 'control-plane',
@@ -81,7 +96,6 @@ describe('node transforms', () => {
             memory: 7.8,
             cpuUsed: null,
             memUsed: null,
-            pods: 7,
             age: '3d',
             instanceType: 'k3s',
         });
@@ -89,18 +103,18 @@ describe('node transforms', () => {
 
     it('falls back to capacity when allocatable is missing and dashes unknown fields', () => {
         const bare = node({ metadata: { name: 'n2' }, status: { capacity: { cpu: '2', memory: '1Gi' } } });
-        expect(nodes.toNode(bare, new Map(), NOW)).toMatchObject({
+        expect(nodes.toNode(bare, NOW)).toMatchObject({
             cpu: 2,
             memory: 1,
             version: '—',
             age: '—',
-            pods: 0,
             status: 'NotReady',
         });
     });
 
-    it('builds the detail with conditions and system info', () => {
-        const detail = nodes.toNodeDetail(node(), new Map(), NOW);
+    it('builds the detail with its pod count, conditions and system info', () => {
+        const detail = nodes.toNodeDetail(node(), 7, NOW);
+        expect(detail.pods).toBe(7);
         expect(detail.conditions).toEqual([
             { type: 'MemoryPressure', status: 'False', reason: 'KubeletHasSufficientMemory' },
             { type: 'Ready', status: 'True', reason: 'KubeletReady' },
@@ -125,14 +139,14 @@ describe('node transforms', () => {
                         annotations: { note: 'x', 'kubectl.kubernetes.io/last-applied-configuration': '{}' },
                     },
                 }),
-                new Map(),
+                0,
                 NOW,
             ).annotations,
         ).toEqual([['note', 'x']]);
         expect(
             nodes.toNodeDetail(
                 node({ status: { conditions: [{ type: 'Ready', status: 'True', reason: '' }] } }),
-                new Map(),
+                0,
                 NOW,
             ).conditions[0]?.reason,
         ).toBeUndefined();
@@ -140,43 +154,73 @@ describe('node transforms', () => {
 });
 
 describe('node readers', () => {
+    const listPodForAllNamespaces = vi.fn();
+    const readNode = vi.fn();
     beforeEach(() => {
         const pods = [{ spec: { nodeName: 'n1' } }, { spec: { nodeName: 'n1' } }, { spec: {} }] as V1Pod[];
+        listPodForAllNamespaces.mockReset();
+        listPodForAllNamespaces.mockImplementation(async (params?: { fieldSelector?: string }) => {
+            // The cluster's pods are never listed whole here; only a node's own may be asked for.
+            if (!params?.fieldSelector) throw new Error('listed every pod in the cluster');
+            return { items: pods.filter((p) => `spec.nodeName=${p.spec?.nodeName}` === params.fieldSelector) };
+        });
+        readNode.mockReset();
+        readNode.mockImplementation(async ({ name }: { name: string }) => {
+            if (name === 'n1') return node();
+            throw new ApiException(404, 'not found', {}, {});
+        });
+        sampler.ensureSampler.mockReset();
         client.apis.mockReturnValue({
             core: {
                 listNode: async () => ({ items: [node(), node({ metadata: { name: 'n2' } })] }),
-                listPodForAllNamespaces: async () => ({ items: pods }),
+                listPodForAllNamespaces,
+                readNode,
             },
         });
     });
 
-    it('lists nodes with pods counted per node and usage as percent of allocatable', async () => {
+    it('lists nodes with usage as percent of allocatable, without touching pods', async () => {
         sampler.nodeUsage.mockImplementation((name: string) => (name === 'n1' ? { cpu: 1000, mem: 3970 } : undefined));
         const list = await nodes.listNodes();
-        expect(list.map((n) => [n.name, n.pods, n.cpuUsed, n.memUsed])).toEqual([
-            ['n1', 2, 25, 50],
-            ['n2', 0, null, null],
+        expect(list.map((n) => [n.name, n.cpuUsed, n.memUsed])).toEqual([
+            ['n1', 25, 50],
+            ['n2', null, null],
         ]);
+        expect(list[0]).not.toHaveProperty('pods');
+        expect(listPodForAllNamespaces).not.toHaveBeenCalled();
         expect(sampler.ensureSampler).toHaveBeenCalled();
     });
 
-    it('gets one node by name or null', async () => {
+    it('gets one node by a direct read and counts only its pods through a field selector', async () => {
         await expect(nodes.getNode('n1')).resolves.toMatchObject({
             name: 'n1',
             pods: 2,
             info: { architecture: 'arm64' },
         });
+        expect(readNode).toHaveBeenCalledWith({ name: 'n1' });
+        expect(listPodForAllNamespaces).toHaveBeenCalledWith({ fieldSelector: 'spec.nodeName=n1' });
+        expect(sampler.ensureSampler).toHaveBeenCalled();
         await expect(nodes.getNode('missing')).resolves.toBeNull();
+    });
+
+    it('refuses a node name that could not be one rather than putting it in a selector', async () => {
+        await expect(nodes.getNode('a,b=c')).rejects.toMatchObject({ kind: 'invalid', op: 'nodes.get' });
+        expect(readNode).not.toHaveBeenCalled();
+        expect(listPodForAllNamespaces).not.toHaveBeenCalled();
     });
 
     it('classifies API failures', async () => {
         client.apis.mockReturnValue({
+            core: { listNode: () => Promise.reject(Object.assign(new Error('x'), { code: 401 })) },
+        });
+        await expect(nodes.listNodes()).rejects.toMatchObject({ kind: 'unauthorized', op: 'nodes.list' });
+        client.apis.mockReturnValue({
             core: {
-                listNode: () => Promise.reject(Object.assign(new Error('x'), { code: 401 })),
+                readNode: () => Promise.reject(Object.assign(new Error('x'), { code: 403 })),
                 listPodForAllNamespaces: async () => ({ items: [] }),
             },
         });
-        await expect(nodes.listNodes()).rejects.toMatchObject({ kind: 'unauthorized', op: 'nodes.list' });
+        await expect(nodes.getNode('n1')).rejects.toMatchObject({ kind: 'forbidden', op: 'nodes.get' });
     });
 });
 

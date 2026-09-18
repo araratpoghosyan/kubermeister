@@ -159,7 +159,8 @@ export function ContextSelector() {
 
 const ALL_NAMESPACES = 'All namespaces';
 
-/** Scope namespaced lists to one namespace or all, with a filter box and pod counts. */
+/** Scope namespaced lists to one namespace or all, with a filter box. Names only: a pod count beside
+ * each would be a whole-cluster pod list dressed as a label. */
 export function NamespaceSelector() {
     const namespaces = useIpcQuery('namespaces.list', {});
     const active = useIpcQuery('namespace.active', {});
@@ -195,12 +196,6 @@ export function NamespaceSelector() {
                     <span data-testid="active-namespace">
                         {/* Until the selection is known, "All namespaces" would be a claim rather than a label. */}
                         {active.isPending ? 'Loading…' : (activeName ?? ALL_NAMESPACES)}
-                        {active.data && (
-                            <>
-                                {' '}
-                                <span className="font-mono text-caption text-text-dim">· {active.data.pods} pods</span>
-                            </>
-                        )}
                     </span>
                     <ChevronDownIcon className="size-3 text-text-muted" />
                 </Button>
@@ -235,7 +230,6 @@ export function NamespaceSelector() {
                                         className={cn('size-3 text-primary', ns.name !== activeName && 'invisible')}
                                     />
                                     <span className="flex-1">{ns.name}</span>
-                                    <span className="font-mono text-caption text-text-muted">{ns.pods} pods</span>
                                 </CommandItem>
                             ))}
                         </CommandGroup>

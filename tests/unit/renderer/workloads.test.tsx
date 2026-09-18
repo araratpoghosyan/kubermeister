@@ -53,8 +53,8 @@ const data: Record<string, unknown> = {
     'update.state': { status: 'up-to-date' },
     'contexts.list': [{ name: 'alpha', cluster: 'a', user: 'u', current: true }],
     'context.current': { name: 'alpha', cluster: 'a', user: 'u', current: true },
-    'namespaces.list': [{ name: 'team-a', pods: 3, tone: 'accent' }],
-    'namespace.active': { name: 'team-a', pods: 3, tone: 'accent' },
+    'namespaces.list': [{ name: 'team-a', tone: 'accent' }],
+    'namespace.active': { name: 'team-a' },
     'cluster.active': null,
     'events.forObject': [],
     'deployments.rollouts': [

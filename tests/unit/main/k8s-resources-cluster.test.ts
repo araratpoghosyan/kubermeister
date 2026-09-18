@@ -1,4 +1,4 @@
-import type { V1Namespace, V1Node, V1Pod } from '@kubernetes/client-node';
+import type { V1Namespace, V1Node } from '@kubernetes/client-node';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const client = { apis: vi.fn(), getActiveNamespace: vi.fn<() => string | null>() };
@@ -19,25 +19,19 @@ function node(overrides: Partial<V1Node> = {}, ready = true): V1Node {
         ...overrides,
     } as V1Node;
 }
-function pod(namespace: string, nodeName = 'n1'): V1Pod {
-    return { metadata: { namespace, name: `p-${Math.random()}` }, spec: { nodeName } } as V1Pod;
-}
 function ns(name: string, phase = 'Active'): V1Namespace {
     return { metadata: { name }, status: { phase } } as V1Namespace;
 }
 
-function mockApis(overrides: {
-    nodes?: V1Node[];
-    pods?: V1Pod[];
-    namespaces?: V1Namespace[];
-    version?: string;
-    fail?: boolean;
-}) {
+/** Nothing in this module may list pods: a namespace or cluster read that does is the bug being tested for. */
+const listPodForAllNamespaces = vi.fn(() => Promise.reject(new Error('listed every pod in the cluster')));
+
+function mockApis(overrides: { nodes?: V1Node[]; namespaces?: V1Namespace[]; version?: string; fail?: boolean }) {
     const failing = () => Promise.reject(Object.assign(new Error('refused'), { code: 'ECONNREFUSED' }));
     client.apis.mockReturnValue({
         core: {
             listNode: overrides.fail ? failing : async () => ({ items: overrides.nodes ?? [] }),
-            listPodForAllNamespaces: async () => ({ items: overrides.pods ?? [] }),
+            listPodForAllNamespaces,
             listNamespace: async () => ({ items: overrides.namespaces ?? [] }),
         },
         version: {
@@ -67,26 +61,11 @@ describe('pure transforms', () => {
         expect(cluster.regionFromNode(node())).toBe('—');
     });
 
-    it('counts pods by an arbitrary key and skips pods without one', () => {
-        const counts = cluster.countBy(
-            [pod('a'), pod('a'), pod('b'), { metadata: {} } as V1Pod],
-            (p) => p.metadata?.namespace,
-        );
-        expect([...counts.entries()]).toEqual([
-            ['a', 2],
-            ['b', 1],
-        ]);
-    });
-
     it('tones namespaces: active wins, Active is ok, anything else warns', () => {
         expect(cluster.namespaceTone(ns('team-a'), 'team-a')).toBe('accent');
         expect(cluster.namespaceTone(ns('kube-system'), 'team-a')).toBe('ok');
         expect(cluster.namespaceTone(ns('old', 'Terminating'), 'team-a')).toBe('warn');
-        expect(cluster.toNamespace(ns('team-a'), new Map([['team-a', 3]]), 'team-a')).toEqual({
-            name: 'team-a',
-            pods: 3,
-            tone: 'accent',
-        });
+        expect(cluster.toNamespace(ns('team-a'), 'team-a')).toEqual({ name: 'team-a', tone: 'accent' });
     });
 
     it('builds the cluster summary and marks any not-ready node as Degraded', () => {
@@ -120,24 +99,24 @@ describe('readers', () => {
         context.listContexts.mockReturnValue([alpha, beta]);
     });
 
-    it('lists namespaces with pod counts and tones', async () => {
-        mockApis({
-            namespaces: [ns('team-a'), ns('kube-system'), ns('gone', 'Terminating')],
-            pods: [pod('team-a'), pod('team-a'), pod('kube-system')],
-        });
+    it('lists namespaces with tones, and never the pods inside them', async () => {
+        mockApis({ namespaces: [ns('team-a'), ns('kube-system'), ns('gone', 'Terminating')] });
         await expect(cluster.listNamespaces()).resolves.toEqual([
-            { name: 'team-a', pods: 2, tone: 'accent' },
-            { name: 'kube-system', pods: 1, tone: 'ok' },
-            { name: 'gone', pods: 0, tone: 'warn' },
+            { name: 'team-a', tone: 'accent' },
+            { name: 'kube-system', tone: 'ok' },
+            { name: 'gone', tone: 'warn' },
         ]);
+        expect(listPodForAllNamespaces).not.toHaveBeenCalled();
     });
 
-    it('describes the active namespace, or all namespaces with the total', async () => {
-        mockApis({ pods: [pod('team-a'), pod('kube-system')] });
-        await expect(cluster.getActiveNamespaceInfo()).resolves.toEqual({ name: 'team-a', pods: 1, tone: 'accent' });
+    it('answers the active namespace from memory, without a cluster call', async () => {
+        client.apis.mockImplementation(() => {
+            throw new Error('the active namespace is not a cluster read');
+        });
+        await expect(cluster.getActiveNamespaceInfo()).resolves.toEqual({ name: 'team-a' });
         client.getActiveNamespace.mockReturnValue(null);
         // No label stands in for the name: the renderer says "All namespaces", main says null.
-        await expect(cluster.getActiveNamespaceInfo()).resolves.toEqual({ name: null, pods: 2, tone: 'accent' });
+        await expect(cluster.getActiveNamespaceInfo()).resolves.toEqual({ name: null });
     });
 
     it('returns live cluster facts for the active context', async () => {
@@ -180,10 +159,7 @@ describe('readers', () => {
 
     it('wraps failures of the namespace list into a classified error', async () => {
         client.apis.mockReturnValue({
-            core: {
-                listNamespace: () => Promise.reject(Object.assign(new Error('x'), { code: 403 })),
-                listPodForAllNamespaces: async () => ({ items: [] }),
-            },
+            core: { listNamespace: () => Promise.reject(Object.assign(new Error('x'), { code: 403 })) },
         });
         await expect(cluster.listNamespaces()).rejects.toMatchObject({ kind: 'forbidden', op: 'namespaces.list' });
     });

@@ -41,7 +41,7 @@ export function useSwitchContext(): (name: string) => Promise<void> {
 /**
  * Scope namespaced reads to one namespace, or all with `null`, and start over. The reset happens the
  * moment main has switched: it covers `namespace.active` too, and waiting on that read first would
- * hold every list on the old rows until the cluster-wide pod count behind it had come back.
+ * hold every list on the old rows until it had come back.
  */
 export async function selectNamespace(namespace: string | null): Promise<void> {
     await invoke('namespace.set', { namespace });

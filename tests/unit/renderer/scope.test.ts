@@ -25,12 +25,12 @@ describe('selectNamespace', () => {
         invoke.mockReset();
         queryClient.clear();
         queryClient.setQueryData(listKey, { kind: 'Pod', items: [{ name: 'web-1', namespace: 'team-a' }] });
-        queryClient.setQueryData(activeKey, { name: 'team-a', pods: 1, tone: 'accent' });
+        queryClient.setQueryData(activeKey, { name: 'team-a' });
     });
 
-    it('drops every cluster query as soon as main has switched, without waiting for the pod count', async () => {
-        // The active-namespace read counts pods across the whole cluster, which takes seconds on a
-        // real one; the lists must go back to loading before that answer, not after it.
+    it('drops every cluster query as soon as main has switched, without waiting for the re-read', async () => {
+        // The lists must go back to loading the moment main has switched, not once the active
+        // namespace has been read back; a slow answer there must not hold the old rows on screen.
         const neverAnswers = new Promise<never>(() => {});
         invoke.mockImplementation((channel: string) =>
             channel === 'namespace.set' ? Promise.resolve({ namespace: 'kube-system' }) : neverAnswers,

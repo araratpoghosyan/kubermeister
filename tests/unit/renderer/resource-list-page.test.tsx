@@ -23,7 +23,7 @@ vi.mock('@/lib/ipc', async () => ({
     invoke: vi.fn(async (channel: string) =>
         channel === 'context.current'
             ? { name: 'alpha', cluster: 'a', user: 'u', current: true }
-            : { name: 'team-a', pods: 1, tone: 'accent' },
+            : { name: 'team-a', tone: 'accent' },
     ),
 }));
 import type { StatusTone } from '@/lib/status';

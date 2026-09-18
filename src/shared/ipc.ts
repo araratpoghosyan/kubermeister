@@ -168,7 +168,7 @@ export const ipcSchemas = {
     'kubeconfig.pick': { input: noInput, output: z.object({ path: z.string().nullable() }) },
     'kubeconfig.useDefault': { input: noInput, output: settingsSchema },
     'namespaces.list': { input: noInput, output: z.array(namespaceSchema) },
-    'namespace.active': { input: noInput, output: activeNamespaceSchema.nullable() },
+    'namespace.active': { input: noInput, output: activeNamespaceSchema },
     'cluster.active': { input: noInput, output: clusterSchema.nullable() },
     'clusters.list': { input: noInput, output: z.array(clusterSchema) },
     'nodes.list': { input: noInput, output: z.array(nodeSchema) },

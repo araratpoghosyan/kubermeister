@@ -1,13 +1,19 @@
-import type { V1Node, V1Pod } from '@kubernetes/client-node';
+import type { CoreV1Event, V1Node, V1Pod } from '@kubernetes/client-node';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const listPodForAllNamespaces = vi.fn();
+const listEventForAllNamespaces = vi.fn();
 const listNode = vi.fn();
 const listJobForAllNamespaces = vi.fn();
 const listPersistentVolumeClaimForAllNamespaces = vi.fn();
 vi.mock('../../../src/main/k8s/client.js', () => ({
     apis: () => ({
-        core: { listPodForAllNamespaces, listNode, listPersistentVolumeClaimForAllNamespaces },
+        core: {
+            listPodForAllNamespaces,
+            listEventForAllNamespaces,
+            listNode,
+            listPersistentVolumeClaimForAllNamespaces,
+        },
         batch: { listJobForAllNamespaces },
     }),
 }));
@@ -51,37 +57,130 @@ function node(name: string, ready: boolean, unschedulable = false): V1Node {
     } as V1Node;
 }
 
+/** Script the phase-selected pod lists the alerts ask for; anything unselected must not be listed. */
+function podsByPhase(pods: V1Pod[]) {
+    listPodForAllNamespaces.mockImplementation(async (params?: { fieldSelector?: string }) => {
+        const phase = params?.fieldSelector?.match(/^status\.phase=(\w+)$/)?.[1];
+        if (!phase) throw new Error(`unexpected pod list: ${JSON.stringify(params)}`);
+        return { items: pods.filter((p) => p.status?.phase === phase) };
+    });
+}
+
+const NOW = Date.parse('2026-09-18T12:00:00Z');
+function backoff(name: string, message: string, minutesAgo: number, count = 1): CoreV1Event {
+    return {
+        metadata: { name: `${name}.ev`, namespace: 'team-a' },
+        type: 'Warning',
+        reason: 'BackOff',
+        message,
+        count,
+        lastTimestamp: new Date(NOW - minutesAgo * 60_000),
+        involvedObject: { kind: 'Pod', name, namespace: 'team-a' },
+    } as CoreV1Event;
+}
+
 describe('alerts', () => {
     beforeEach(() => {
         listPodForAllNamespaces.mockReset();
+        listEventForAllNamespaces.mockReset();
+        listEventForAllNamespaces.mockResolvedValue({ items: [] });
         listNode.mockReset();
         listNode.mockResolvedValue({ items: [] });
-        listPodForAllNamespaces.mockResolvedValue({ items: [] });
+        podsByPhase([]);
         listJobForAllNamespaces.mockReset();
         listJobForAllNamespaces.mockResolvedValue({ items: [] });
         listPersistentVolumeClaimForAllNamespaces.mockReset();
         listPersistentVolumeClaimForAllNamespaces.mockResolvedValue({ items: [] });
     });
 
-    it('derives pod alerts by status and restarts across all namespaces', async () => {
-        listPodForAllNamespaces.mockResolvedValue({
+    it('derives pending and failed pod alerts from phase-selected lists, never from every pod', async () => {
+        podsByPhase([
+            pod('pull', 'Pending', { waiting: 'ErrImagePull' }),
+            pod('init-crash', 'Pending', { waiting: 'CrashLoopBackOff', restarts: 3 }),
+            pod('dead', 'Failed'),
+            pod('wait', 'Pending'),
+            pod('fine', 'Running', { restarts: 4 }),
+        ]);
+        const result = await alerts.podAlerts(NOW);
+        expect(result).toEqual([
+            { tone: 'danger', title: 'Image pull failure: pull', detail: 'team-a/pull' },
+            { tone: 'danger', title: 'CrashLoopBackOff: init-crash', detail: '3 restarts — team-a/init-crash' },
+            { tone: 'warn', title: 'Pod pending: wait', detail: 'team-a/wait' },
+            { tone: 'danger', title: 'Pod failed: dead', detail: 'team-a/dead' },
+        ]);
+        expect(listPodForAllNamespaces.mock.calls.map((c) => c[0]?.fieldSelector).sort()).toEqual([
+            'status.phase=Failed',
+            'status.phase=Pending',
+        ]);
+        expect(listEventForAllNamespaces).toHaveBeenCalledWith({
+            fieldSelector: 'type=Warning,reason=BackOff,involvedObject.kind=Pod',
+        });
+    });
+
+    it('never raises a high-restarts alert: healthy pods are not read at all', async () => {
+        podsByPhase([pod('flaky', 'Running', { restarts: 50 })]);
+        await expect(alerts.podAlerts(NOW)).resolves.toEqual([]);
+    });
+
+    it('reads crash loops and image back-offs off recent Warning events, once per pod', async () => {
+        listEventForAllNamespaces.mockResolvedValue({
             items: [
-                pod('crash', 'Running', { waiting: 'CrashLoopBackOff', restarts: 12 }),
-                pod('pull', 'Pending', { waiting: 'ErrImagePull' }),
-                pod('dead', 'Failed'),
-                pod('wait', 'Pending'),
-                pod('flaky', 'Running', { restarts: 5 }),
-                pod('fine', 'Running', { restarts: 4 }),
+                backoff('crash', 'Back-off restarting failed container app in pod crash_team-a(uid)', 1, 12),
+                backoff('crash', 'Back-off restarting failed container app in pod crash_team-a(uid)', 5, 3),
+                backoff('stale', 'Back-off restarting failed container', 25),
+                backoff('pull', 'Back-off pulling image "ghcr.io/x/y:1"', 2),
+                backoff('once', 'Back-off restarting failed container', 3),
+                { ...backoff('nameless', 'Back-off restarting failed container', 1), involvedObject: { kind: 'Pod' } },
             ],
         });
-        const result = await alerts.podAlerts();
-        expect(result).toEqual([
-            { tone: 'danger', title: 'CrashLoopBackOff: crash', detail: '12 restarts — team-a/crash' },
+        await expect(alerts.podAlerts(NOW)).resolves.toEqual([
+            {
+                tone: 'danger',
+                title: 'CrashLoopBackOff: crash',
+                detail: '15 back-offs in the last 10 min — team-a/crash',
+            },
             { tone: 'danger', title: 'Image pull failure: pull', detail: 'team-a/pull' },
-            { tone: 'danger', title: 'Pod failed: dead', detail: 'team-a/dead' },
-            { tone: 'warn', title: 'Pod pending: wait', detail: 'team-a/wait' },
-            { tone: 'warn', title: 'High restarts: flaky', detail: '5 restarts — team-a/flaky' },
+            { tone: 'danger', title: 'CrashLoopBackOff: once', detail: '1 back-off in the last 10 min — team-a/once' },
         ]);
+    });
+
+    it('reads the event time from whichever stamp the event carries', async () => {
+        const base = backoff('crash', 'Back-off restarting failed container', 0);
+        listEventForAllNamespaces.mockResolvedValue({
+            items: [
+                { ...base, lastTimestamp: undefined, eventTime: new Date(NOW - 60_000) },
+                {
+                    ...base,
+                    involvedObject: { kind: 'Pod', name: 'older', namespace: 'team-a' },
+                    lastTimestamp: undefined,
+                    metadata: { name: 'older.ev', namespace: 'team-a', creationTimestamp: new Date(NOW - 60_000) },
+                },
+                {
+                    ...base,
+                    involvedObject: { kind: 'Pod', name: 'undated', namespace: 'team-a' },
+                    lastTimestamp: undefined,
+                    metadata: { name: 'undated.ev', namespace: 'team-a' },
+                },
+            ],
+        });
+        expect((await alerts.podAlerts(NOW)).map((a) => a.title)).toEqual([
+            'CrashLoopBackOff: crash',
+            'CrashLoopBackOff: older',
+        ]);
+    });
+
+    it('does not report a pod twice when both a selector and an event name it', async () => {
+        podsByPhase([pod('pull', 'Pending', { waiting: 'ErrImagePull' })]);
+        listEventForAllNamespaces.mockResolvedValue({ items: [backoff('pull', 'Back-off pulling image "x"', 1)] });
+        await expect(alerts.podAlerts(NOW)).resolves.toEqual([
+            { tone: 'danger', title: 'Image pull failure: pull', detail: 'team-a/pull' },
+        ]);
+    });
+
+    it('treats a failing pod or event source as empty rather than failing the alerts', async () => {
+        listPodForAllNamespaces.mockRejectedValue(new Error('forbidden'));
+        listEventForAllNamespaces.mockRejectedValue(new Error('forbidden'));
+        await expect(alerts.podAlerts(NOW)).resolves.toEqual([]);
     });
 
     it('derives node alerts, with NotReady outranking cordoned', async () => {
@@ -93,15 +192,13 @@ describe('alerts', () => {
     });
 
     it('sorts danger first, caps the list, and survives a failing source', async () => {
-        listPodForAllNamespaces.mockResolvedValue({
-            items: Array.from({ length: 30 }, (_, i) => pod(`p${i}`, 'Pending')),
-        });
+        podsByPhase(Array.from({ length: 30 }, (_, i) => pod(`p${i}`, 'Pending')));
         listNode.mockRejectedValue(new Error('forbidden'));
         const result = await alerts.listAlerts();
         expect(result).toHaveLength(alerts.MAX_ALERTS);
         expect(result.every((a) => a.tone === 'warn')).toBe(true);
 
-        listPodForAllNamespaces.mockResolvedValue({ items: [pod('wait', 'Pending')] });
+        podsByPhase([pod('wait', 'Pending')]);
         listNode.mockResolvedValue({ items: [node('b', false)] });
         expect((await alerts.listAlerts()).map((a) => a.tone)).toEqual(['danger', 'warn']);
     });

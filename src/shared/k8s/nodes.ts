@@ -16,7 +16,6 @@ export const nodeSchema = z.object({
     cpuUsed: z.number().nullable(),
     /** Memory usage as a percentage of allocatable; null until metrics-server has reported the node. */
     memUsed: z.number().nullable(),
-    pods: z.number().int().nonnegative(),
     age: z.string(),
     instanceType: z.string(),
 });
@@ -35,8 +34,10 @@ export const nodeInfoSchema = z.object({
     architecture: z.string(),
 });
 
-/** The single-node view: the list fields plus conditions and system info. */
+/** The single-node view: the list fields plus its pod count, conditions and system info. */
 export const nodeDetailSchema = nodeSchema.extend({
+    /** Pods scheduled on this node, counted with a server-side selector on `spec.nodeName`. */
+    pods: z.number().int().nonnegative(),
     conditions: z.array(nodeConditionSchema),
     info: nodeInfoSchema,
     labels: z.array(z.tuple([z.string(), z.string()])),

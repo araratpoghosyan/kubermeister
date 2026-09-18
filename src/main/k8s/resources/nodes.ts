@@ -2,13 +2,13 @@ import type { V1Node } from '@kubernetes/client-node';
 import type { Usage } from '../../../shared/k8s/metrics.js';
 import type { Node, NodeDetail } from '../../../shared/k8s/nodes.js';
 import type { CordonInput, WriteResult } from '../../../shared/k8s/write.js';
-import { apis } from '../client.js';
+import { apis, isSafeSelectorValue, readOrNull } from '../client.js';
 import { setNodeUnschedulable } from '../drain.js';
-import { withK8s } from '../errors.js';
+import { K8sError, withK8s } from '../errors.js';
 import { assertContext } from './write.js';
 import { age, cpuToCores, cpuToMillicores, dash, memToGiB, memToMi, toPairs } from '../format.js';
 import { ensureSampler, nodeUsage, percent } from '../sampler.js';
-import { countBy, nodeReady } from './cluster.js';
+import { nodeReady } from './cluster.js';
 
 const ROLE_LABEL_PREFIX = 'node-role.kubernetes.io/';
 const INSTANCE_TYPE_LABELS = ['node.kubernetes.io/instance-type', 'beta.kubernetes.io/instance-type'];
@@ -39,7 +39,7 @@ export function instanceType(node: V1Node): string {
 }
 
 /** `usage` is the latest metrics-server sample for the node; percentages are null without one. */
-export function toNode(node: V1Node, podsByNode: Map<string, number>, now = Date.now(), usage?: Usage): Node {
+export function toNode(node: V1Node, now = Date.now(), usage?: Usage): Node {
     const allocatable = node.status?.allocatable ?? node.status?.capacity ?? {};
     const name = node.metadata?.name ?? '';
     return {
@@ -51,21 +51,16 @@ export function toNode(node: V1Node, podsByNode: Map<string, number>, now = Date
         memory: memToGiB(allocatable.memory),
         cpuUsed: usage ? percent(usage.cpu, cpuToMillicores(allocatable.cpu)) : null,
         memUsed: usage ? percent(usage.mem, memToMi(allocatable.memory)) : null,
-        pods: podsByNode.get(name) ?? 0,
         age: age(node.metadata?.creationTimestamp, now),
         instanceType: instanceType(node),
     };
 }
 
-export function toNodeDetail(
-    node: V1Node,
-    podsByNode: Map<string, number>,
-    now = Date.now(),
-    usage?: Usage,
-): NodeDetail {
+export function toNodeDetail(node: V1Node, pods: number, now = Date.now(), usage?: Usage): NodeDetail {
     const info = node.status?.nodeInfo;
     return {
-        ...toNode(node, podsByNode, now, usage),
+        ...toNode(node, now, usage),
+        pods,
         conditions: (node.status?.conditions ?? []).map((c) => ({
             type: c.type,
             status: c.status,
@@ -83,17 +78,24 @@ export function toNodeDetail(
     };
 }
 
-async function podsPerNode(): Promise<Map<string, number>> {
-    const res = await apis().core.listPodForAllNamespaces();
-    return countBy(res.items, (pod) => pod.spec?.nodeName);
-}
-
+/** The node objects alone, a few kilobytes: the list never asks for pods, that is the detail's job. */
 export function listNodes(): Promise<Node[]> {
     return withK8s('nodes.list', async () => {
-        const [res, podsByNode] = await Promise.all([apis().core.listNode(), podsPerNode()]);
+        const res = await apis().core.listNode();
         ensureSampler();
-        return res.items.map((node) => toNode(node, podsByNode, Date.now(), nodeUsage(node.metadata?.name ?? '')));
+        return res.items.map((node) => toNode(node, Date.now(), nodeUsage(node.metadata?.name ?? '')));
     });
+}
+
+/** A node name is DNS-1123, so anything else cannot be a node and must not reach a selector. */
+function assertNodeName(name: string, op: string): void {
+    if (!isSafeSelectorValue(name)) throw new K8sError('invalid', `"${name}" is not a valid node name.`, op);
+}
+
+/** How many pods the API server says are scheduled on this node, without listing the cluster's. */
+async function countPodsOnNode(name: string): Promise<number> {
+    const res = await apis().core.listPodForAllNamespaces({ fieldSelector: `spec.nodeName=${name}` });
+    return res.items.length;
 }
 
 /**
@@ -109,12 +111,20 @@ export function cordonNode(input: CordonInput): Promise<WriteResult> {
     });
 }
 
-/** Null when no node has that name, so the UI shows "not found" rather than an error. */
+/**
+ * Null when no node has that name, so the UI shows "not found" rather than an error. Reads the one
+ * node and asks the API server only for the pods scheduled on it; the cluster's other nodes and
+ * pods are not this screen's business.
+ */
 export function getNode(name: string): Promise<NodeDetail | null> {
-    return withK8s('nodes.get', async () => {
-        const [res, podsByNode] = await Promise.all([apis().core.listNode(), podsPerNode()]);
-        const node = res.items.find((n) => n.metadata?.name === name);
+    const op = 'nodes.get';
+    return withK8s(op, async () => {
+        assertNodeName(name, op);
+        const [node, pods] = await Promise.all([
+            readOrNull(() => apis().core.readNode({ name })),
+            countPodsOnNode(name),
+        ]);
         ensureSampler();
-        return node ? toNodeDetail(node, podsByNode, Date.now(), nodeUsage(name)) : null;
+        return node ? toNodeDetail(node, pods, Date.now(), nodeUsage(name)) : null;
     });
 }

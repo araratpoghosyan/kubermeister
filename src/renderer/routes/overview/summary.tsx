@@ -26,7 +26,6 @@ const chartConfig = {
 
 const DASHBOARD_KEYS = [
     ['cluster.active'],
-    ['namespaces.list'],
     ['events.recent'],
     ['metrics.alerts'],
     ['metrics.sparklines'],
@@ -38,7 +37,6 @@ function DashboardPage() {
     const queryClient = useQueryClient();
     const refetchInterval = useRefreshIntervalMs();
     const clusterQuery = useIpcQuery('cluster.active', {}, { refetchInterval });
-    const namespacesQuery = useIpcQuery('namespaces.list', {}, { refetchInterval });
     const eventsQuery = useIpcQuery('events.recent', {}, { refetchInterval });
     const alertsQuery = useIpcQuery('metrics.alerts', {}, { refetchInterval });
     const spark = useIpcQuery('metrics.sparklines', {}, { refetchInterval }).data;
@@ -46,8 +44,8 @@ function DashboardPage() {
 
     // Sparklines and workload health are best-effort (empty, not failed, without metrics-server), so
     // reachability is judged on the core reads alone: a failed cluster read must not render as a
-    // healthy but idle dashboard.
-    const coreQueries = [clusterQuery, namespacesQuery, eventsQuery, alertsQuery];
+    // healthy but idle dashboard. No pod figure at all: counting pods means listing them.
+    const coreQueries = [clusterQuery, eventsQuery, alertsQuery];
     const loading = coreQueries.some((q) => q.isPending);
     const failedQuery = coreQueries.find((q) => q.isError);
     const failure = failedQuery ? describeError(failedQuery.error) : null;
@@ -56,12 +54,10 @@ function DashboardPage() {
     };
 
     const cluster = clusterQuery.data;
-    const namespaces = namespacesQuery.data ?? [];
     const events = eventsQuery.data ?? [];
     const alerts = alertsQuery.data ?? [];
     const sparkCpu = spark?.cpu ?? [];
     const sparkMem = spark?.mem ?? [];
-    const totalPods = namespaces.reduce((sum, ns) => sum + ns.pods, 0);
     const memHealth = (workloadHealth ?? []).map((p) => p.mem);
     const avgMem = memHealth.length ? Math.round(memHealth.reduce((a, b) => a + b, 0) / memHealth.length) : 0;
     const peakMem = memHealth.length ? Math.max(...memHealth) : 0;
@@ -103,8 +99,8 @@ function DashboardPage() {
                 </Card>
             ) : loading ? (
                 <div className="flex flex-col gap-3" role="status" aria-label="Loading">
-                    <div className="grid grid-cols-4 gap-3">
-                        {Array.from({ length: 4 }).map((_, i) => (
+                    <div className="grid grid-cols-3 gap-3">
+                        {Array.from({ length: 3 }).map((_, i) => (
                             <Skeleton key={i} className="h-24 w-full rounded-card" />
                         ))}
                     </div>
@@ -116,18 +112,13 @@ function DashboardPage() {
                 </div>
             ) : (
                 <>
-                    <div className="mb-4 grid grid-cols-4 gap-3" data-testid="dashboard-metrics">
+                    <div className="mb-4 grid grid-cols-3 gap-3" data-testid="dashboard-metrics">
                         <MetricCard
                             label="Nodes"
                             value={`${cluster?.nodes ?? 0}`}
                             sub={cluster?.status ?? '—'}
                             spark={spark?.nodes ?? []}
                             sparkColor="var(--ok)"
-                        />
-                        <MetricCard
-                            label="Pods running"
-                            value={`${totalPods}`}
-                            sub={`across ${namespaces.length} namespace${namespaces.length === 1 ? '' : 's'}`}
                         />
                         <MetricCard
                             label="CPU usage"

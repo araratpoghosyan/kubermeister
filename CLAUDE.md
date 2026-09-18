@@ -92,7 +92,15 @@ Body: why the change is needed, what a reader of the history cannot learn from t
   colors. Query keys carry no scope, so a context or namespace switch resets every cluster query
   (`invalidateClusterQueries` uses `resetQueries`): screens go back to loading instead of showing the
   previous scope's rows while writes already reach the new one. `namespace.active` reports `name:
-null` under "All namespaces"; the label is the renderer's, never a value handed to a cluster call. `@tanstack/react-table` stays on v8 (v9 is a different API; Dependabot ignores the major).
+null` under "All namespaces"; the label is the renderer's, never a value handed to a cluster call. It
+  is answered from main's own memory, never from the cluster, so it is known at once and stays known
+  while the cluster is down. **No list screen lists the cluster's pods for a count**: the Namespaces
+  and Nodes lists carry no pod column, the cluster summary shows no pod total, and the namespace
+  selector and palette show names only, because on a busy cluster one such count is megabytes on
+  every refresh. Pods are listed only where a detail needs them and scoped to that object: a
+  namespace's own screen lists its namespace, a node's screen and describe select on `spec.nodeName`,
+  a workload's screen selects its own. The Pods screen's own list and its informer are the only
+  whole-cluster pod lists. `@tanstack/react-table` stays on v8 (v9 is a different API; Dependabot ignores the major).
   Charts use recharts through the shadcn `chart` wrapper; the summary dashboard is the reference.
   The shadcn CLI writes `import { cn } from "cn"`, installs a `cn` package and puts new packages
   under `dependencies`: fix the import to `@/lib/utils`, uninstall `cn` and move the package to
@@ -160,7 +168,11 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   usage and empty series, never an error. **The sampler is in memory on purpose**: its buffers start
   empty on every launch and a context switch resets them, so a chart shows what has happened since
   the app opened and never claims history it does not have. Alerts (`alerts.ts`) derive from cluster
-  state, cluster-wide, with thresholds the app decides rather than the user.
+  state, cluster-wide, with thresholds the app decides rather than the user. Pod alerts never read
+  every pod: pending and failed pods come from `status.phase` field selectors, crash loops and image
+  pull failures from the recent Warning `BackOff` events the kubelet emits for them (a
+  CrashLoopBackOff pod is phase Running, so no selector finds it), deduplicated per pod. There is no
+  high-restarts alert because healthy pods' restart counts are never read.
 - **Resource reads** (`src/main/k8s/resources/*`) are pure transforms from Kubernetes objects to
   view models, exported and unit tested on their own, plus thin readers that fetch and delegate.
   Keep it that way: the watch stream feeds the very same transforms.

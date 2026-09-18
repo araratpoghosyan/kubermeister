@@ -5,7 +5,7 @@ import type { Namespace } from '../../../shared/k8s/cluster';
 import { StatusBadge } from '@/components/data-display/status-badge';
 import { ResourceListPage } from '@/components/templates/resource-list-page';
 import { CreateNamespaceButton } from '@/components/namespace/create-namespace-button';
-import { nameColumn, textColumn } from '@/components/templates/list-columns';
+import { nameColumn } from '@/components/templates/list-columns';
 import { useIpcQuery } from '@/lib/query';
 import { useRefreshIntervalMs } from '@/lib/settings';
 import { NAMESPACE_TONE } from '@/lib/status';
@@ -16,6 +16,8 @@ const TONE_LABEL = { accent: 'Active', ok: 'Ready', warn: 'Terminating' } as con
 
 const detailPath = (ns: Pick<Namespace, 'name'>) => `/overview/namespaces/${encodeURIComponent(ns.name)}`;
 
+// No pod count here: that is a whole-cluster pod list for one column. The namespace's own screen
+// counts what lives in it.
 const columns: ColumnDef<Namespace>[] = [
     nameColumn<Namespace>({ icon: BoxesIcon, href: detailPath }),
     {
@@ -27,7 +29,6 @@ const columns: ColumnDef<Namespace>[] = [
             <StatusBadge tone={NAMESPACE_TONE[row.original.tone]}>{TONE_LABEL[row.original.tone]}</StatusBadge>
         ),
     },
-    textColumn<Namespace>('pods', 'Pods', { size: 80, numeric: true, mono: true }),
 ];
 
 function NamespacesPage() {
