@@ -121,11 +121,47 @@ describe('ResourceListPage', () => {
         void first;
     });
 
+    it('adds the classified reason under the generic sentence when it says more', async () => {
+        renderPage({
+            query: {
+                data: undefined,
+                isPending: false,
+                isError: true,
+                refetch: vi.fn(),
+                error: new IpcError({
+                    kind: 'timeout',
+                    detail: 'The cluster did not answer within 15 s. It may be busy, or the connection slow.',
+                    op: 'x',
+                }),
+            } as Props['query'],
+        });
+        expect(await screen.findByText('Cluster timed out')).toBeInTheDocument();
+        expect(screen.getByText('The cluster took too long to return Pods.')).toBeInTheDocument();
+        expect(
+            screen.getByText('The cluster did not answer within 15 s. It may be busy, or the connection slow.'),
+        ).toBeInTheDocument();
+    });
+
+    it('hides a reason that only repeats the title or the generic sentence', async () => {
+        renderPage({
+            query: {
+                data: undefined,
+                isPending: false,
+                isError: true,
+                refetch: vi.fn(),
+                error: new IpcError({ kind: 'unreachable', detail: 'The cluster API server is unreachable.', op: 'x' }),
+            } as Props['query'],
+        });
+        expect(await screen.findAllByText('The cluster API server is unreachable.')).toHaveLength(1);
+        expect(screen.getAllByText('Cluster unreachable')).toHaveLength(1);
+    });
+
     it.each([
         ['forbidden', "You don't have permission to view Pods."],
         ['unreachable', 'The cluster API server is unreachable.'],
+        ['timeout', 'The cluster took too long to return Pods.'],
         ['notFound', "Pods aren't available on this cluster."],
-        ['timeout', 'Failed to load Pods.'],
+        ['conflict', 'Failed to load Pods.'],
     ])('describes a %s error', async (kind, copy) => {
         renderPage({
             query: {

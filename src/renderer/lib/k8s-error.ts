@@ -9,6 +9,7 @@ export interface DescribedError {
 
 const TITLES: Record<K8sErrorKind, string> = {
     unreachable: 'Cluster unreachable',
+    timeout: 'Cluster timed out',
     forbidden: 'Access denied',
     unauthorized: 'Not authenticated',
     notFound: 'Not found',

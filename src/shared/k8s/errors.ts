@@ -1,8 +1,14 @@
 import { z } from 'zod';
 
-/** Coarse classification of why a cluster call failed, shown to the user. */
+/**
+ * Coarse classification of why a cluster call failed, shown to the user. `unreachable` is a
+ * connection that never came up (refused, DNS, TLS, connect timeout); `timeout` is a server that was
+ * reached but did not finish answering within the app's read ceiling, which on a busy cluster or a
+ * slow link is a different problem with a different fix.
+ */
 export const k8sErrorKindSchema = z.enum([
     'unreachable',
+    'timeout',
     'forbidden',
     'unauthorized',
     'notFound',
