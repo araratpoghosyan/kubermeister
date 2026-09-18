@@ -1,6 +1,14 @@
 import { ApiException } from '@kubernetes/client-node';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { K8sError, readTimeoutMs, setReadTimeoutSec, timeoutDetail, withK8s } from '../../../src/main/k8s/errors';
+import {
+    K8sError,
+    readTimeoutMs,
+    setReadTimeoutSec,
+    timeoutDetail,
+    toK8sError,
+    withK8s,
+} from '../../../src/main/k8s/errors';
+import { ExecPluginError } from '../../../src/main/k8s/exec-auth';
 
 async function failWith(error: unknown): Promise<K8sError> {
     try {
@@ -76,6 +84,16 @@ describe('withK8s', () => {
         expect((await failWith(socket)).kind).toBe('unreachable');
         const aborted = new TypeError('fetch failed', { cause: { code: 'ECONNABORTED' } });
         expect((await failWith(aborted)).kind).toBe('unreachable');
+    });
+
+    it('reports a credential plugin failure as unauthorized with the guard sentence as detail', async () => {
+        const plugin = new ExecPluginError('aws', 'The credential plugin "aws" failed: SSO session expired', null);
+        const error = await failWith(plugin);
+        expect(error.kind).toBe('unauthorized');
+        expect(error.detail).toBe('The credential plugin "aws" failed: SSO session expired');
+        expect(toK8sError('op', plugin)).toMatchObject({ kind: 'unauthorized', op: 'op' });
+        const existing = new K8sError('forbidden', 'nope', 'inner');
+        expect(toK8sError('op', existing)).toBe(existing);
     });
 
     it('finds connection codes inside AggregateError branches and survives cycles', async () => {

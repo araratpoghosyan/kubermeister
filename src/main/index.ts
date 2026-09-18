@@ -7,6 +7,7 @@ import { stopSampler } from './k8s/sampler.js';
 import { installApplicationMenu } from './menu.js';
 import { isExternalWebUrl, isInternalNavigation } from './security.js';
 import { getSettings, updateSettings } from './settings/store.js';
+import { adoptLoginShellPath } from './shell-path.js';
 import { startUpdater } from './updater.js';
 import { usableBounds } from './window-bounds.js';
 
@@ -18,6 +19,11 @@ if (process.env.KUBERMEISTER_USER_DATA) app.setPath('userData', process.env.KUBE
 // "Kubermeister Tip"), which also separates their settings folders. Only development, which runs
 // from Electron's own bundle, needs the name set by hand.
 if (!app.isPackaged) app.setName('Kubermeister');
+
+// A kubeconfig written by `aws eks update-kubeconfig` names its credential plugin by bare command,
+// which a Finder or Dock launch cannot find under launchd's PATH. The login shell's PATH is looked
+// up while Electron starts and awaited before any IPC handler can reach the cluster.
+const shellPathReady = adoptLoginShellPath();
 
 function createWindow(): BrowserWindow {
     // Reading the screen needs the app to be ready, which it is by the time a window is created.
@@ -65,7 +71,8 @@ function createWindow(): BrowserWindow {
     return window;
 }
 
-void app.whenReady().then(() => {
+void app.whenReady().then(async () => {
+    await shellPathReady;
     // The read ceiling is a setting; apply the saved one before the first cluster call can run.
     setReadTimeoutSec(getSettings().data.readTimeoutSec);
     installApplicationMenu();
