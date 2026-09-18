@@ -124,8 +124,10 @@ describe('withK8s timeout', () => {
         try {
             expect(readTimeoutMs()).toBe(2_000);
             const pending = withK8s('slow', () => new Promise<never>(() => {}));
+            // The matcher must be listening before the timer fires, or the rejection is unhandled.
+            const assertion = expect(pending).rejects.toMatchObject({ kind: 'timeout', detail: timeoutDetail(2_000) });
             await vi.advanceTimersByTimeAsync(2_000);
-            await expect(pending).rejects.toMatchObject({ kind: 'timeout', detail: timeoutDetail(2_000) });
+            await assertion;
         } finally {
             setReadTimeoutSec(60);
         }
