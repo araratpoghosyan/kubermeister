@@ -199,7 +199,7 @@ export function ContextSelector() {
 
 const ALL_NAMESPACES = 'All namespaces';
 
-/** Scope namespaced lists to one namespace or all, with a filter box and pod counts. */
+/** Scope namespaced lists to one namespace or all, with a filter box. */
 export function NamespaceSelector() {
     const namespaces = useIpcQuery('namespaces.list', {});
     const active = useIpcQuery('namespace.active', {});
@@ -209,13 +209,8 @@ export function NamespaceSelector() {
     const allSelected = active.data?.name === null;
     const selectNamespace = useSelectNamespace();
     // The selection is the app's own memory and arrives at once; the list is a cluster read, so the
-    // pill is busy while it loads and simply carries no count when it failed.
+    // pill is busy only while that loads.
     const loading = active.isPending || namespaces.isPending;
-    const podCount = namespaces.data
-        ? allSelected
-            ? namespaces.data.reduce((sum, ns) => sum + ns.pods, 0)
-            : namespaces.data.find((ns) => ns.name === activeName)?.pods
-        : undefined;
 
     const select = async (namespace: string | null) => {
         setOpen(false);
@@ -241,12 +236,6 @@ export function NamespaceSelector() {
                     <span data-testid="active-namespace">
                         {/* Until the selection is known, "All namespaces" would be a claim rather than a label. */}
                         {active.isPending ? 'Loading…' : (activeName ?? ALL_NAMESPACES)}
-                        {podCount !== undefined && (
-                            <>
-                                {' '}
-                                <span className="font-mono text-caption text-text-dim">· {podCount} pods</span>
-                            </>
-                        )}
                     </span>
                     <ChevronDownIcon className="size-3 text-text-muted" />
                 </Button>
@@ -281,7 +270,6 @@ export function NamespaceSelector() {
                                         className={cn('size-3 text-primary', ns.name !== activeName && 'invisible')}
                                     />
                                     <span className="flex-1">{ns.name}</span>
-                                    <span className="font-mono text-caption text-text-muted">{ns.pods} pods</span>
                                 </CommandItem>
                             ))}
                         </CommandGroup>

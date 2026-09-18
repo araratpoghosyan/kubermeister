@@ -168,13 +168,12 @@ describe('NamespaceSelector', () => {
         expect(within(list).getAllByRole('option')).toHaveLength(1);
     });
 
-    it('names the selection at once, and without a count, while the namespace list is still loading', async () => {
+    it('names the selection at once while the namespace list is still loading', async () => {
         invoke.mockImplementation((channel: string) =>
             channel === 'namespaces.list' ? new Promise<never>(() => {}) : Promise.resolve(data[channel]),
         );
         renderInRouter(<NamespaceSelector />);
         await waitFor(() => expect(screen.getByTestId('active-namespace')).toHaveTextContent('team-a'));
-        expect(screen.getByTestId('active-namespace')).not.toHaveTextContent('pods');
         expect(screen.getByTestId('namespace-selector')).toHaveAttribute('aria-busy', 'true');
     });
 
@@ -189,16 +188,17 @@ describe('NamespaceSelector', () => {
         await waitFor(() => expect(screen.getByTestId('namespace-selector')).toHaveAttribute('aria-busy', 'false'));
         expect(screen.getByTestId('active-namespace')).toHaveTextContent('team-a');
         expect(screen.getByTestId('active-namespace')).not.toHaveTextContent('All namespaces');
-        expect(screen.getByTestId('active-namespace')).not.toHaveTextContent('pods');
     });
 
-    it('shows the active namespace with its pod count', async () => {
+    it('shows the active namespace by name alone, with no pod count anywhere in the selector', async () => {
         renderInRouter(<NamespaceSelector />);
-        await waitFor(() => expect(screen.getByTestId('active-namespace')).toHaveTextContent('team-a · 1 pods'));
+        await waitFor(() => expect(screen.getByTestId('active-namespace')).toHaveTextContent('team-a'));
+        expect(screen.getByTestId('active-namespace')).not.toHaveTextContent('pods');
         expect(screen.getByTestId('namespace-selector')).toHaveAttribute('aria-busy', 'false');
         await userEvent.click(screen.getByTestId('namespace-selector'));
         const list = await screen.findByRole('listbox');
         expect(within(list).queryByRole('progressbar')).not.toBeInTheDocument();
+        expect(within(list).getByRole('option', { name: /kube-system/ })).not.toHaveTextContent('pods');
     });
 
     it('shows All namespaces when nothing is selected', async () => {
@@ -206,10 +206,7 @@ describe('NamespaceSelector', () => {
             channel === 'namespace.active' ? { name: null } : data[channel],
         );
         renderInRouter(<NamespaceSelector />);
-        // The count under All namespaces is the list's total, since the selection carries none.
-        await waitFor(() =>
-            expect(screen.getByTestId('active-namespace')).toHaveTextContent('All namespaces · 10 pods'),
-        );
+        await waitFor(() => expect(screen.getByTestId('active-namespace')).toHaveTextContent('All namespaces'));
         // The check mark sits on the All namespaces entry, not on any real namespace.
         await userEvent.click(screen.getByTestId('namespace-selector'));
         const list = await screen.findByRole('listbox');
