@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS, type Settings } from '../../../src/shared/settings';
 
 const FIXTURE = resolve('tests/unit/fixtures/kubeconfig.yaml');
+const INVALID_ENTRIES = resolve('tests/unit/fixtures/kubeconfig-invalid-entries.yaml');
 
 let settings: Settings;
 vi.mock('../../../src/main/settings/store.js', () => ({
@@ -59,6 +60,17 @@ describe('kubeConfig', () => {
         expect((await loadClient()).kubeConfig().getCurrentContext()).toBe('alpha');
     });
 
+    it('drops entries kubectl tolerates (empty cluster, no name, no server) and keeps the rest', async () => {
+        withSettings({}, INVALID_ENTRIES);
+        const { kubeConfig, getActiveNamespace } = await loadClient();
+        const kc = kubeConfig();
+        expect(kc.getContexts().map((c) => c.name)).toEqual(['alpha']);
+        expect(kc.getClusters().map((c) => c.name)).toEqual(['alpha-cluster']);
+        expect(kc.getUsers().map((u) => u.name)).toEqual(['alpha-user']);
+        expect(kc.getCurrentContext()).toBe('alpha');
+        expect(getActiveNamespace()).toBe('team-a');
+    });
+
     it('memoises the config and API clients until invalidated or reloaded', async () => {
         const { kubeConfig, apis, invalidateApis, reloadKubeConfig, setActiveNamespace, getActiveNamespace } =
             await loadClient();
@@ -107,6 +119,11 @@ describe('kubeconfigError', () => {
 
     it('accepts a valid configured file', async () => {
         withSettings({});
+        expect((await loadClient()).kubeconfigError()).toBeNull();
+    });
+
+    it('accepts a file with invalid entries, as kubectl does', async () => {
+        withSettings({}, INVALID_ENTRIES);
         expect((await loadClient()).kubeconfigError()).toBeNull();
     });
 

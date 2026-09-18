@@ -337,7 +337,10 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   because a pod deleted on its own comes back unchanged.
 - **Kubernetes access** lives in `src/main/k8s`. The kubeconfig is read-only: switching context
   or namespace changes memory and the app's own settings, never the file. Every cluster call goes
-  through `withK8s` (timeout plus `[kind]`-prefixed `K8sError`). The ceiling is the
+  through `withK8s` (timeout plus `[kind]`-prefixed `K8sError`). The kubeconfig loads with
+  `onInvalidEntry: 'filter'`: an entry with no name, an empty `cluster:` or a cluster without a
+  server is dropped, as kubectl tolerates it, instead of failing the whole file and every other
+  context with it. The ceiling is the
   `data.readTimeoutSec` setting (60 s by default), applied to `errors.ts` at startup and on every
   settings write rather than read per call, so the k8s modules never import the settings store; a
   timed-out list or summary points at Settings, since how long a cluster may take is the user's to say. No `kubectl` dependency; the
