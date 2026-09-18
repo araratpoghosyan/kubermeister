@@ -25,6 +25,7 @@ export const IPC_CHANNELS = [
     'cluster.active',
     'clusters.list',
     'nodes.list',
+    'nodes.podCounts',
     'nodes.get',
     'nodes.cordon',
     'nodes.drainPlan',

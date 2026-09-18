@@ -61,7 +61,7 @@ import {
 import { ipcErrorSchema } from './k8s/errors.js';
 import { activeNamespaceSchema, clusterSchema, namespacePodCountsSchema, namespaceSchema } from './k8s/cluster.js';
 import { namespaceNameSchema } from './k8s/names.js';
-import { nodeDetailSchema, nodeSchema } from './k8s/nodes.js';
+import { nodeDetailSchema, nodePodCountsSchema, nodeSchema } from './k8s/nodes.js';
 import {
     resourceGetInputSchema,
     resourceGetOutputSchema,
@@ -173,6 +173,7 @@ export const ipcSchemas = {
     'cluster.active': { input: noInput, output: clusterSchema.nullable() },
     'clusters.list': { input: noInput, output: z.array(clusterSchema) },
     'nodes.list': { input: noInput, output: z.array(nodeSchema) },
+    'nodes.podCounts': { input: noInput, output: nodePodCountsSchema },
     'nodes.get': { input: z.object({ name: z.string().min(1) }), output: nodeDetailSchema.nullable() },
     'nodes.cordon': { input: cordonInputSchema, output: writeResultSchema },
     'nodes.drainPlan': { input: drainPlanInputSchema, output: drainPlanSchema },

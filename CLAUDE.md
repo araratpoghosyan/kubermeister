@@ -344,7 +344,9 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   cache before the shell renders (only when the probe reached the cluster, and only once), so
   the selector and palette open populated. Pod counts per namespace are a whole-cluster pod
   list and travel separately as `namespaces.podCounts`, which the Namespaces page and the
-  summary fill in when it lands.
+  summary fill in when it lands. Nodes follow the same split: `nodes.list` is the node objects,
+  `nodes.podCounts` the per-node count from one pod list, and `nodes.get` reads the one node and
+  counts its pods with a `spec.nodeName` field selector rather than listing the cluster's.
 - **Settings** (`src/shared/settings.ts`, `src/main/settings/store.ts`) are a versioned JSON file
   in Electron's `userData`, so the stable and tip apps never share state. The settings screen at
   `/settings` edits them through `settings.set`; the application menu (`src/main/menu.ts`) opens it
