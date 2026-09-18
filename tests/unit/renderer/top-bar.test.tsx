@@ -87,7 +87,7 @@ describe('ContextSelector', () => {
             channel === 'cluster.active'
                 ? {
                       ...(data['cluster.active'] as object),
-                      problem: { kind: 'unreachable', detail: 'Timed out after 15s waiting for the cluster.' },
+                      problem: { kind: 'unreachable', detail: 'Timed out after 60s waiting for the cluster.' },
                   }
                 : data[channel],
         );
@@ -96,7 +96,7 @@ describe('ContextSelector', () => {
         await waitFor(() =>
             expect(trigger.querySelector('[title]')).toHaveAttribute(
                 'title',
-                'Cluster unreachable: Timed out after 15s waiting for the cluster.',
+                'Cluster unreachable: Timed out after 60s waiting for the cluster.',
             ),
         );
         expect(trigger.querySelector('[title]')).toHaveClass('bg-danger');

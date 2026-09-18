@@ -128,9 +128,9 @@ describe('ResourceListPage', () => {
                 refetch: vi.fn(),
                 error: new IpcError({ kind, detail, op: 'x' }),
             }) as Props['query'];
-        renderPage({ query: failing('unreachable', 'Timed out after 15s waiting for the cluster.') });
+        renderPage({ query: failing('unreachable', 'Timed out after 60s waiting for the cluster.') });
         expect(await screen.findByText('The cluster API server is unreachable.')).toBeInTheDocument();
-        expect(screen.getByText('Timed out after 15s waiting for the cluster.')).toBeInTheDocument();
+        expect(screen.getByText('Timed out after 60s waiting for the cluster.')).toBeInTheDocument();
     });
 
     it('hides a reason that only repeats the generic sentence or the title', async () => {

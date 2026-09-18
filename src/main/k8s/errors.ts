@@ -116,10 +116,13 @@ export function toK8sError(op: string, error: unknown): K8sError {
 }
 
 /**
- * Ceiling on a single cluster read. Without it an unreachable context waits out the OS TCP timeout
- * (60 to 75 s), hanging the UI. On expiry the read rejects as `unreachable`.
+ * Ceiling on a single cluster read. Without it a call that never returns hangs the UI; with too
+ * short a one, a whole-cluster list on a busy cluster over a slow link is cut off and reported as
+ * an unreachable cluster while the API server was answering. Connectivity itself is judged much
+ * sooner (undici's connect timeout is 10 s), so this only has to bound the slow-but-alive case.
+ * On expiry the read rejects as `unreachable`.
  */
-export const READ_TIMEOUT_MS = 15_000;
+export const READ_TIMEOUT_MS = 60_000;
 
 async function withTimeout<T>(op: string, ms: number, fn: () => Promise<T>): Promise<T> {
     let timer: NodeJS.Timeout | undefined;
