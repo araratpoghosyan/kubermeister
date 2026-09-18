@@ -36,8 +36,11 @@ export const namespaceSchema = z.object({
     tone: namespaceToneSchema,
 });
 
-/** Running pod count per namespace name; a namespace with no pods is absent. */
-export const namespacePodCountsSchema = z.record(z.string(), z.number().int().nonnegative());
+/**
+ * How many pods the cluster holds, learned from the list metadata of a one-item list rather than
+ * from listing them; null when the API server would not say (a list served from its cache).
+ */
+export const podCountSchema = z.object({ total: z.number().int().nonnegative().nullable() });
 
 /**
  * The active selection: `name` is null under "All namespaces", never a display label, so no caller
@@ -51,5 +54,5 @@ export type Cluster = z.infer<typeof clusterSchema>;
 export type ConnectionProblem = z.infer<typeof connectionProblemSchema>;
 export type NamespaceTone = z.infer<typeof namespaceToneSchema>;
 export type Namespace = z.infer<typeof namespaceSchema>;
-export type NamespacePodCounts = z.infer<typeof namespacePodCountsSchema>;
+export type PodCount = z.infer<typeof podCountSchema>;
 export type ActiveNamespace = z.infer<typeof activeNamespaceSchema>;

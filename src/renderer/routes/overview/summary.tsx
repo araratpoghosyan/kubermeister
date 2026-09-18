@@ -27,7 +27,7 @@ const chartConfig = {
 const DASHBOARD_KEYS = [
     ['cluster.active'],
     ['namespaces.list'],
-    ['namespaces.podCounts'],
+    ['pods.count'],
     ['events.recent'],
     ['metrics.alerts'],
     ['metrics.sparklines'],
@@ -40,7 +40,7 @@ function DashboardPage() {
     const refetchInterval = useRefreshIntervalMs();
     const clusterQuery = useIpcQuery('cluster.active', {}, { refetchInterval });
     const namespacesQuery = useIpcQuery('namespaces.list', {}, { refetchInterval });
-    const podCounts = useIpcQuery('namespaces.podCounts', {}, { refetchInterval }).data;
+    const podCount = useIpcQuery('pods.count', {}, { refetchInterval }).data;
     const eventsQuery = useIpcQuery('events.recent', {}, { refetchInterval });
     const alertsQuery = useIpcQuery('metrics.alerts', {}, { refetchInterval });
     const spark = useIpcQuery('metrics.sparklines', {}, { refetchInterval }).data;
@@ -48,7 +48,7 @@ function DashboardPage() {
 
     // Sparklines and workload health are best-effort (empty, not failed, without metrics-server), so
     // reachability is judged on the core reads alone: a failed cluster read must not render as a
-    // healthy but idle dashboard. The pod count is a whole-cluster pod list and fills in when it lands.
+    // healthy but idle dashboard. The pod total is best effort too: the API server may decline to count.
     const coreQueries = [clusterQuery, namespacesQuery, eventsQuery, alertsQuery];
     const loading = coreQueries.some((q) => q.isPending);
     const failedQuery = coreQueries.find((q) => q.isError);
@@ -62,7 +62,7 @@ function DashboardPage() {
     const alerts = alertsQuery.data ?? [];
     const sparkCpu = spark?.cpu ?? [];
     const sparkMem = spark?.mem ?? [];
-    const totalPods = podCounts ? Object.values(podCounts).reduce((sum, n) => sum + n, 0) : null;
+    const totalPods = podCount?.total ?? null;
     const memHealth = (workloadHealth ?? []).map((p) => p.mem);
     const avgMem = memHealth.length ? Math.round(memHealth.reduce((a, b) => a + b, 0) / memHealth.length) : 0;
     const peakMem = memHealth.length ? Math.max(...memHealth) : 0;
@@ -129,7 +129,7 @@ function DashboardPage() {
                             sparkColor="var(--ok)"
                         />
                         <MetricCard
-                            label="Pods running"
+                            label="Pods"
                             value={totalPods === null ? '—' : `${totalPods}`}
                             sub={`across ${namespaces.length} namespace${namespaces.length === 1 ? '' : 's'}`}
                         />

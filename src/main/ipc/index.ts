@@ -11,7 +11,7 @@ import { endAllStreams } from './streams.js';
 import { stopAllInformers } from '../k8s/watch.js';
 import { readPodLogSnapshot, readPodLogText } from '../k8s/logs.js';
 import {
-    countPodsPerNamespace,
+    countPods,
     getActiveCluster,
     getActiveNamespaceInfo,
     listClusters,
@@ -71,7 +71,7 @@ import {
 } from '../k8s/resources/workloads.js';
 import { getResource, listResources } from '../k8s/resources/index.js';
 import { getDrainPlan } from '../k8s/drain.js';
-import { cordonNode, countPodsPerNode, getNode, listNodes } from '../k8s/resources/nodes.js';
+import { cordonNode, getNode, listNodes } from '../k8s/resources/nodes.js';
 import { getSettings, updateSettings } from '../settings/store.js';
 import { runStartupChecks } from '../startup/checks.js';
 import { checkForUpdates, downloadUpdate, getUpdateState, installUpdate } from '../updater.js';
@@ -138,12 +138,11 @@ const handlers: Handlers = {
     'settings.set': async (patch) => updateSettings(patch),
     'kubeconfig.pick': async () => ({ path: await pickKubeconfig() }),
     'namespaces.list': () => listNamespaces(),
-    'namespaces.podCounts': () => countPodsPerNamespace(),
+    'pods.count': () => countPods(),
     'namespace.active': () => getActiveNamespaceInfo(),
     'cluster.active': () => getActiveCluster(),
     'clusters.list': () => listClusters(),
     'nodes.list': () => listNodes(),
-    'nodes.podCounts': () => countPodsPerNode(),
     'nodes.get': ({ name }) => getNode(name),
     'nodes.cordon': (input) => cordonNode(input),
     'nodes.drainPlan': ({ name, ...options }) => getDrainPlan(name, { ...options }),

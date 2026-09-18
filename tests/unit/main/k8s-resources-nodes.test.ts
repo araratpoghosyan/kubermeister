@@ -190,12 +190,6 @@ describe('node readers', () => {
         expect(sampler.ensureSampler).toHaveBeenCalled();
     });
 
-    it('counts pods per node from one cluster-wide list, skipping unscheduled pods', async () => {
-        await expect(nodes.countPodsPerNode()).resolves.toEqual({ n1: 2 });
-        expect(listPodForAllNamespaces).toHaveBeenCalledOnce();
-        expect(listPodForAllNamespaces).toHaveBeenCalledWith();
-    });
-
     it('gets one node by a direct read and counts only its pods through a field selector', async () => {
         await expect(nodes.getNode('n1')).resolves.toMatchObject({
             name: 'n1',

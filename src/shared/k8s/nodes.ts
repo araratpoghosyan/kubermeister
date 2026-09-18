@@ -20,12 +20,6 @@ export const nodeSchema = z.object({
     instanceType: z.string(),
 });
 
-/**
- * Pods scheduled per node name, from one cluster-wide pod list. It travels apart from the node
- * list, which is a few kilobytes, so the Nodes screen renders before the count arrives.
- */
-export const nodePodCountsSchema = z.record(z.string(), z.number().int().nonnegative());
-
 export const nodeConditionSchema = z.object({
     type: z.string(),
     status: z.string(),
@@ -51,7 +45,6 @@ export const nodeDetailSchema = nodeSchema.extend({
 });
 
 export type Node = z.infer<typeof nodeSchema>;
-export type NodePodCounts = z.infer<typeof nodePodCountsSchema>;
 export type NodeCondition = z.infer<typeof nodeConditionSchema>;
 export type NodeInfo = z.infer<typeof nodeInfoSchema>;
 export type NodeDetail = z.infer<typeof nodeDetailSchema>;

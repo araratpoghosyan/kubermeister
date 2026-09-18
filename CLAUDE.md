@@ -342,11 +342,13 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   cluster is down; the namespace selector shows names only, no pod counts. `namespaces.list` is the
   namespace objects alone and must stay that small: the startup gate primes it into the query
   cache before the shell renders (only when the probe reached the cluster, and only once), so
-  the selector and palette open populated. Pod counts per namespace are a whole-cluster pod
-  list and travel separately as `namespaces.podCounts`, which the Namespaces page and the
-  summary fill in when it lands. Nodes follow the same split: `nodes.list` is the node objects,
-  `nodes.podCounts` the per-node count from one pod list, and `nodes.get` reads the one node and
-  counts its pods with a `spec.nodeName` field selector rather than listing the cluster's.
+  the selector and palette open populated. **No list screen lists the cluster's pods for a count**:
+  the Namespaces and Nodes lists carry no pod column, the summary's pod total comes from
+  `pods.count` (a one-item list whose metadata carries `remainingItemCount`, null when the API
+  server will not estimate), and pod alerts come from `status.phase` field selectors plus the
+  recent Warning `BackOff` events rather than from every pod's status. Pods are listed only where
+  a detail needs them: a namespace's own screen lists its namespace, a node's screen and describe
+  count with a `spec.nodeName` field selector, a workload's screen selects its own.
 - **Settings** (`src/shared/settings.ts`, `src/main/settings/store.ts`) are a versioned JSON file
   in Electron's `userData`, so the stable and tip apps never share state. The settings screen at
   `/settings` edits them through `settings.set`; the application menu (`src/main/menu.ts`) opens it

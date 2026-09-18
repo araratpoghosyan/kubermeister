@@ -1,6 +1,6 @@
 import type { V1Node } from '@kubernetes/client-node';
 import type { Usage } from '../../../shared/k8s/metrics.js';
-import type { Node, NodeDetail, NodePodCounts } from '../../../shared/k8s/nodes.js';
+import type { Node, NodeDetail } from '../../../shared/k8s/nodes.js';
 import type { CordonInput, WriteResult } from '../../../shared/k8s/write.js';
 import { apis, isSafeSelectorValue, readOrNull } from '../client.js';
 import { setNodeUnschedulable } from '../drain.js';
@@ -8,7 +8,7 @@ import { K8sError, withK8s } from '../errors.js';
 import { assertContext } from './write.js';
 import { age, cpuToCores, cpuToMillicores, dash, memToGiB, memToMi, toPairs } from '../format.js';
 import { ensureSampler, nodeUsage, percent } from '../sampler.js';
-import { countBy, nodeReady } from './cluster.js';
+import { nodeReady } from './cluster.js';
 
 const ROLE_LABEL_PREFIX = 'node-role.kubernetes.io/';
 const INSTANCE_TYPE_LABELS = ['node.kubernetes.io/instance-type', 'beta.kubernetes.io/instance-type'];
@@ -78,20 +78,12 @@ export function toNodeDetail(node: V1Node, pods: number, now = Date.now(), usage
     };
 }
 
-/** The node objects alone: a few kilobytes, so the screen renders at once. Counts come separately. */
+/** The node objects alone, a few kilobytes: the list never asks for pods, that is the detail's job. */
 export function listNodes(): Promise<Node[]> {
     return withK8s('nodes.list', async () => {
         const res = await apis().core.listNode();
         ensureSampler();
         return res.items.map((node) => toNode(node, Date.now(), nodeUsage(node.metadata?.name ?? '')));
-    });
-}
-
-/** Pods scheduled per node from one cluster-wide pod list, for the Pods column. */
-export function countPodsPerNode(): Promise<NodePodCounts> {
-    return withK8s('nodes.podCounts', async () => {
-        const res = await apis().core.listPodForAllNamespaces();
-        return Object.fromEntries(countBy(res.items, (pod) => pod.spec?.nodeName));
     });
 }
 

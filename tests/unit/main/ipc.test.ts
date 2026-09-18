@@ -21,12 +21,12 @@ const store = { getSettings: vi.fn(), updateSettings: vi.fn() };
 const startup = { runStartupChecks: vi.fn() };
 const resources = {
     listNamespaces: vi.fn(),
-    countPodsPerNamespace: vi.fn(),
+    countPods: vi.fn(),
     getActiveNamespaceInfo: vi.fn(),
     getActiveCluster: vi.fn(),
     listClusters: vi.fn(),
 };
-const nodesMod = { listNodes: vi.fn(), getNode: vi.fn(), countPodsPerNode: vi.fn() };
+const nodesMod = { listNodes: vi.fn(), getNode: vi.fn() };
 const generic = { listResources: vi.fn(), getResource: vi.fn() };
 const logsMod = { readPodLogSnapshot: vi.fn() };
 const eventsMod = { listEventsForObject: vi.fn(), listRecentEvents: vi.fn(), listEvents: vi.fn() };
@@ -349,20 +349,18 @@ describe('registerHandlers', () => {
             instanceType: '—',
         };
         resources.listNamespaces.mockResolvedValue([namespace]);
-        resources.countPodsPerNamespace.mockResolvedValue({ 'team-a': 2 });
+        resources.countPods.mockResolvedValue({ total: 2 });
         resources.getActiveNamespaceInfo.mockResolvedValue({ name: namespace.name });
         resources.getActiveCluster.mockResolvedValue(clusterInfo);
         resources.listClusters.mockResolvedValue([clusterInfo]);
         nodesMod.listNodes.mockResolvedValue([nodeRow]);
-        nodesMod.countPodsPerNode.mockResolvedValue({ n1: 2 });
         nodesMod.getNode.mockResolvedValue(null);
         await expect(invoke('namespaces.list', {})).resolves.toEqual([namespace]);
-        await expect(invoke('namespaces.podCounts', {})).resolves.toEqual({ 'team-a': 2 });
+        await expect(invoke('pods.count', {})).resolves.toEqual({ total: 2 });
         await expect(invoke('namespace.active', {})).resolves.toEqual({ name: namespace.name });
         await expect(invoke('cluster.active', {})).resolves.toEqual(clusterInfo);
         await expect(invoke('clusters.list', {})).resolves.toEqual([clusterInfo]);
         await expect(invoke('nodes.list', {})).resolves.toEqual([nodeRow]);
-        await expect(invoke('nodes.podCounts', {})).resolves.toEqual({ n1: 2 });
         await expect(invoke('nodes.get', { name: 'missing' })).resolves.toBeNull();
         expect(nodesMod.getNode).toHaveBeenCalledWith('missing');
     });

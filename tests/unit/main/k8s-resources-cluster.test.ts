@@ -128,17 +128,37 @@ describe('readers', () => {
         ]);
     });
 
-    it('counts pods per namespace from one cluster-wide list, omitting empty namespaces', async () => {
-        mockApis({ pods: [pod('team-a'), pod('team-a'), pod('kube-system')] });
-        await expect(cluster.countPodsPerNamespace()).resolves.toEqual({ 'team-a': 2, 'kube-system': 1 });
-    });
+    describe('countPods', () => {
+        const listPodForAllNamespaces = vi.fn();
+        beforeEach(() => {
+            listPodForAllNamespaces.mockReset();
+            client.apis.mockReturnValue({ core: { listPodForAllNamespaces } });
+        });
 
-    it('wraps a failed pod count into a classified error', async () => {
-        mockApis({});
-        client.apis().core.listPodForAllNamespaces = () => Promise.reject(Object.assign(new Error('x'), { code: 403 }));
-        await expect(cluster.countPodsPerNamespace()).rejects.toMatchObject({
-            kind: 'forbidden',
-            op: 'namespaces.podCounts',
+        it('asks for one pod and adds the remaining count the list metadata reports', async () => {
+            listPodForAllNamespaces.mockResolvedValue({
+                items: [pod('team-a')],
+                metadata: { _continue: 'tok', remainingItemCount: 899 },
+            });
+            await expect(cluster.countPods()).resolves.toEqual({ total: 900 });
+            expect(listPodForAllNamespaces).toHaveBeenCalledWith({ limit: 1 });
+        });
+
+        it('is exact when the list is complete, including an empty cluster', async () => {
+            listPodForAllNamespaces.mockResolvedValue({ items: [pod('team-a')], metadata: {} });
+            await expect(cluster.countPods()).resolves.toEqual({ total: 1 });
+            listPodForAllNamespaces.mockResolvedValue({ items: [] });
+            await expect(cluster.countPods()).resolves.toEqual({ total: 0 });
+        });
+
+        it('reports null rather than a guess when the server continues without counting', async () => {
+            listPodForAllNamespaces.mockResolvedValue({ items: [pod('team-a')], metadata: { _continue: 'tok' } });
+            await expect(cluster.countPods()).resolves.toEqual({ total: null });
+        });
+
+        it('wraps a failure into a classified error', async () => {
+            listPodForAllNamespaces.mockRejectedValue(Object.assign(new Error('x'), { code: 403 }));
+            await expect(cluster.countPods()).rejects.toMatchObject({ kind: 'forbidden', op: 'pods.count' });
         });
     });
 
