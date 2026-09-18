@@ -26,12 +26,18 @@ export const clusterSchema = z.object({
 
 export const namespaceToneSchema = z.enum(['accent', 'ok', 'warn']);
 
+/**
+ * A namespace as the selector, the palette and the startup prime need it: the namespace objects
+ * alone, which is a small, fast list. Pod counts are a whole-cluster pod list and travel separately.
+ */
 export const namespaceSchema = z.object({
     name: z.string(),
-    pods: z.number().int().nonnegative(),
     /** `accent` marks the active namespace, `ok` an Active one, `warn` anything else (Terminating). */
     tone: namespaceToneSchema,
 });
+
+/** Running pod count per namespace name; a namespace with no pods is absent. */
+export const namespacePodCountsSchema = z.record(z.string(), z.number().int().nonnegative());
 
 /**
  * The active selection: `name` is null under "All namespaces", never a display label, so no caller
@@ -45,4 +51,5 @@ export type Cluster = z.infer<typeof clusterSchema>;
 export type ConnectionProblem = z.infer<typeof connectionProblemSchema>;
 export type NamespaceTone = z.infer<typeof namespaceToneSchema>;
 export type Namespace = z.infer<typeof namespaceSchema>;
+export type NamespacePodCounts = z.infer<typeof namespacePodCountsSchema>;
 export type ActiveNamespace = z.infer<typeof activeNamespaceSchema>;

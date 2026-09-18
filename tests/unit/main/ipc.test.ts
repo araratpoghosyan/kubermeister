@@ -21,6 +21,7 @@ const store = { getSettings: vi.fn(), updateSettings: vi.fn() };
 const startup = { runStartupChecks: vi.fn() };
 const resources = {
     listNamespaces: vi.fn(),
+    countPodsPerNamespace: vi.fn(),
     getActiveNamespaceInfo: vi.fn(),
     getActiveCluster: vi.fn(),
     listClusters: vi.fn(),
@@ -326,7 +327,7 @@ describe('registerHandlers', () => {
     });
 
     it('forwards the cluster, namespace and node channels', async () => {
-        const namespace = { name: 'team-a', pods: 2, tone: 'accent' };
+        const namespace = { name: 'team-a', tone: 'accent' };
         const clusterInfo = {
             name: 'alpha',
             nodes: 1,
@@ -349,12 +350,14 @@ describe('registerHandlers', () => {
             instanceType: '—',
         };
         resources.listNamespaces.mockResolvedValue([namespace]);
+        resources.countPodsPerNamespace.mockResolvedValue({ 'team-a': 2 });
         resources.getActiveNamespaceInfo.mockResolvedValue({ name: namespace.name });
         resources.getActiveCluster.mockResolvedValue(clusterInfo);
         resources.listClusters.mockResolvedValue([clusterInfo]);
         nodesMod.listNodes.mockResolvedValue([nodeRow]);
         nodesMod.getNode.mockResolvedValue(null);
         await expect(invoke('namespaces.list', {})).resolves.toEqual([namespace]);
+        await expect(invoke('namespaces.podCounts', {})).resolves.toEqual({ 'team-a': 2 });
         await expect(invoke('namespace.active', {})).resolves.toEqual({ name: namespace.name });
         await expect(invoke('cluster.active', {})).resolves.toEqual(clusterInfo);
         await expect(invoke('clusters.list', {})).resolves.toEqual([clusterInfo]);

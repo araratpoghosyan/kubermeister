@@ -69,7 +69,7 @@ const data: Record<string, unknown> = {
     'update.state': { status: 'up-to-date' },
     'contexts.list': [{ name: 'alpha', cluster: 'a', user: 'u', current: true }],
     'context.current': { name: 'alpha', cluster: 'a', user: 'u', current: true },
-    'namespaces.list': [{ name: 'kube-system', pods: 3, tone: 'accent' }],
+    'namespaces.list': [{ name: 'kube-system', tone: 'accent' }],
     'namespace.active': { name: 'kube-system' },
     'cluster.active': null,
     'events.forObject': [],

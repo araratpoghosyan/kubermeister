@@ -30,8 +30,8 @@ const data: Record<string, unknown> = {
         { name: 'beta', cluster: 'b', user: 'u', current: false },
     ],
     'namespaces.list': [
-        { name: 'team-a', pods: 4, tone: 'accent' },
-        { name: 'kube-system', pods: 9, tone: 'ok' },
+        { name: 'team-a', tone: 'accent' },
+        { name: 'kube-system', tone: 'ok' },
     ],
     'namespace.active': { name: 'team-a' },
     'cluster.active': null,
@@ -70,7 +70,7 @@ describe('command palette', () => {
         await userEvent.keyboard('{Control>}k{/Control}');
         const dialog = await screen.findByRole('dialog', { name: 'Quick actions' });
         await waitFor(() => expect(within(dialog).getByRole('option', { name: /beta/ })).toBeInTheDocument());
-        expect(within(dialog).getByRole('option', { name: /kube-system/ })).toHaveTextContent('9 pods');
+        expect(within(dialog).getByRole('option', { name: /kube-system/ })).not.toHaveTextContent('pods');
         for (const label of ['Cluster summary', 'Nodes', 'Namespaces', 'Pods', 'Jobs', 'Autoscalers', 'Settings']) {
             expect(within(dialog).getByRole('option', { name: label })).toBeInTheDocument();
         }

@@ -18,7 +18,7 @@ function testQueryClient(): QueryClient {
 }
 
 /** Render under the app's providers with a fresh QueryClient and retries off so failures surface immediately. */
-export function renderWithQuery(ui: ReactElement): RenderResult {
+export function renderWithQuery(ui: ReactElement): RenderResult & { client: QueryClient } {
     const client = testQueryClient();
     // A wrapper rather than nesting, so `rerender` keeps the providers: rendering the bare element
     // again would drop the query client under any component that asks for one.
@@ -29,7 +29,7 @@ export function renderWithQuery(ui: ReactElement): RenderResult {
             </QueryClientProvider>
         </ThemeProvider>
     );
-    return render(ui, { wrapper: Providers });
+    return { ...render(ui, { wrapper: Providers }), client };
 }
 
 /** Render a route tree at `path` under the app's providers, on an in-memory history. */

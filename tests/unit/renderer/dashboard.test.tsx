@@ -21,9 +21,10 @@ const data: Record<string, unknown> = {
     'namespace.active': { name: 'team-a' },
     'cluster.active': { name: 'alpha', nodes: 3, status: 'Degraded', version: '1.36.4', provider: 'k3s', region: 'eu' },
     'namespaces.list': [
-        { name: 'team-a', pods: 4, tone: 'accent' },
-        { name: 'kube-system', pods: 9, tone: 'ok' },
+        { name: 'team-a', tone: 'accent' },
+        { name: 'kube-system', tone: 'ok' },
     ],
+    'namespaces.podCounts': { 'team-a': 4, 'kube-system': 9 },
     'events.recent': [
         {
             time: '12:00:05',
@@ -92,7 +93,8 @@ describe('cluster dashboard', () => {
             if (channel === 'events.recent' || channel === 'metrics.alerts') return [];
             if (channel === 'metrics.sparklines') return { nodes: [], cpu: [], mem: [] };
             if (channel === 'metrics.workloadHealth') throw new Error('no metrics-server');
-            if (channel === 'namespaces.list') return [{ name: 'only', pods: 1, tone: 'ok' }];
+            if (channel === 'namespaces.list') return [{ name: 'only', tone: 'ok' }];
+            if (channel === 'namespaces.podCounts') throw new Error('pods still loading elsewhere');
             return data[channel];
         });
         renderRoutes(routeTree, '/overview/summary');
@@ -102,6 +104,8 @@ describe('cluster dashboard', () => {
         expect(within(page).getByTestId('alert-count')).toHaveTextContent('0');
         expect(within(page).getByTestId('alert-count')).not.toHaveClass('text-danger');
         expect(within(page).getByTestId('dashboard-metrics')).toHaveTextContent('across 1 namespace');
+        // The pod total is its own whole-cluster read; until it lands the card claims no number.
+        expect(within(page).getByTestId('dashboard-metrics')).toHaveTextContent('Pods running—');
         expect(within(page).getByTestId('dashboard-metrics')).toHaveTextContent('CPU usage0%');
         expect(within(page).getByTestId('workload-health')).not.toHaveTextContent('mem avg');
         expect(within(page).queryByTestId('dashboard-error')).not.toBeInTheDocument();

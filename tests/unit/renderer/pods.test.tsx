@@ -91,8 +91,8 @@ const data: Record<string, unknown> = {
     'update.state': { status: 'up-to-date' },
     'contexts.list': [{ name: 'alpha', cluster: 'a', user: 'u', current: true }],
     'namespaces.list': [
-        { name: 'team-a', pods: 1, tone: 'accent' },
-        { name: 'kube-system', pods: 9, tone: 'ok' },
+        { name: 'team-a', tone: 'accent' },
+        { name: 'kube-system', tone: 'ok' },
     ],
     'namespace.active': { name: 'team-a' },
     'resources.list': {

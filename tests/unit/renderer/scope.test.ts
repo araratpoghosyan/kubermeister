@@ -25,7 +25,7 @@ describe('selectNamespace', () => {
         invoke.mockReset();
         queryClient.clear();
         queryClient.setQueryData(listKey, { kind: 'Pod', items: [{ name: 'web-1', namespace: 'team-a' }] });
-        queryClient.setQueryData(activeKey, { name: 'team-a', pods: 1, tone: 'accent' });
+        queryClient.setQueryData(activeKey, { name: 'team-a', tone: 'accent' });
     });
 
     it('drops every cluster query as soon as main has switched, without waiting for the pod count', async () => {

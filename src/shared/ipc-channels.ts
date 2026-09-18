@@ -20,6 +20,7 @@ export const IPC_CHANNELS = [
     'kubeconfig.pick',
     'kubeconfig.useDefault',
     'namespaces.list',
+    'namespaces.podCounts',
     'namespace.active',
     'cluster.active',
     'clusters.list',

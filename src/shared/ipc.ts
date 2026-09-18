@@ -59,7 +59,7 @@ import {
     resourceSeriesSchema,
 } from './k8s/metrics.js';
 import { ipcErrorSchema } from './k8s/errors.js';
-import { activeNamespaceSchema, clusterSchema, namespaceSchema } from './k8s/cluster.js';
+import { activeNamespaceSchema, clusterSchema, namespacePodCountsSchema, namespaceSchema } from './k8s/cluster.js';
 import { namespaceNameSchema } from './k8s/names.js';
 import { nodeDetailSchema, nodeSchema } from './k8s/nodes.js';
 import {
@@ -168,6 +168,7 @@ export const ipcSchemas = {
     'kubeconfig.pick': { input: noInput, output: z.object({ path: z.string().nullable() }) },
     'kubeconfig.useDefault': { input: noInput, output: settingsSchema },
     'namespaces.list': { input: noInput, output: z.array(namespaceSchema) },
+    'namespaces.podCounts': { input: noInput, output: namespacePodCountsSchema },
     'namespace.active': { input: noInput, output: activeNamespaceSchema.nullable() },
     'cluster.active': { input: noInput, output: clusterSchema.nullable() },
     'clusters.list': { input: noInput, output: z.array(clusterSchema) },

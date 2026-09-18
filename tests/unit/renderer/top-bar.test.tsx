@@ -21,8 +21,8 @@ const contexts = [
     { name: 'beta', cluster: 'b', user: 'u', current: false },
 ];
 const namespaces = [
-    { name: 'team-a', pods: 1, tone: 'accent' },
-    { name: 'kube-system', pods: 9, tone: 'ok' },
+    { name: 'team-a', tone: 'accent' },
+    { name: 'kube-system', tone: 'ok' },
 ];
 const data: Record<string, unknown> = {
     'update.state': { status: 'up-to-date' },

@@ -339,7 +339,12 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   kubeconfig's facts marked Degraded with a `problem` (kind and detail) that the top bar shows as a
   connection notice and the health dot carries in its tooltip. `namespace.active` is answered from
   memory, without a cluster call, so the selection is known at once and stays known while the
-  cluster is down; the namespace selector shows names only, no pod counts.
+  cluster is down; the namespace selector shows names only, no pod counts. `namespaces.list` is the
+  namespace objects alone and must stay that small: the startup gate primes it into the query
+  cache before the shell renders (only when the probe reached the cluster, and only once), so
+  the selector and palette open populated. Pod counts per namespace are a whole-cluster pod
+  list and travel separately as `namespaces.podCounts`, which the Namespaces page and the
+  summary fill in when it lands.
 - **Settings** (`src/shared/settings.ts`, `src/main/settings/store.ts`) are a versioned JSON file
   in Electron's `userData`, so the stable and tip apps never share state. The settings screen at
   `/settings` edits them through `settings.set`; the application menu (`src/main/menu.ts`) opens it

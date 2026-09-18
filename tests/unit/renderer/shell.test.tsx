@@ -36,8 +36,8 @@ const data: Record<string, unknown> = {
         },
     ],
     'namespaces.list': [
-        { name: 'team-a', pods: 4, tone: 'accent' },
-        { name: 'kube-system', pods: 9, tone: 'ok' },
+        { name: 'team-a', tone: 'accent' },
+        { name: 'kube-system', tone: 'ok' },
     ],
     'resources.list': { kind: 'Pod', items: [] },
     'events.recent': [],
@@ -60,7 +60,7 @@ describe('app shell', () => {
         expect(summary).toHaveTextContent('k3s · v1.36.4 · —');
         expect(screen.getByTestId('sidebar')).toHaveTextContent('Kubermeister');
         expect(screen.getByRole('link', { name: 'Cluster summary' })).toHaveAttribute('aria-current', 'page');
-        expect(await screen.findByTestId('active-namespace')).toHaveTextContent('team-a · 4 pods');
+        expect(await screen.findByTestId('active-namespace')).toHaveTextContent('team-a');
         expect(await screen.findByTestId('context-selector')).toHaveTextContent('alpha');
         expect(screen.getByTestId('breadcrumbs')).toHaveTextContent('Cluster summary');
         expect(screen.queryByTestId('update-pill')).not.toBeInTheDocument();

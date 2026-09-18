@@ -83,11 +83,7 @@ describe('pure transforms', () => {
         expect(cluster.namespaceTone(ns('team-a'), 'team-a')).toBe('accent');
         expect(cluster.namespaceTone(ns('kube-system'), 'team-a')).toBe('ok');
         expect(cluster.namespaceTone(ns('old', 'Terminating'), 'team-a')).toBe('warn');
-        expect(cluster.toNamespace(ns('team-a'), new Map([['team-a', 3]]), 'team-a')).toEqual({
-            name: 'team-a',
-            pods: 3,
-            tone: 'accent',
-        });
+        expect(cluster.toNamespace(ns('team-a'), 'team-a')).toEqual({ name: 'team-a', tone: 'accent' });
     });
 
     it('builds the cluster summary and marks any not-ready node as Degraded', () => {
@@ -121,16 +117,29 @@ describe('readers', () => {
         context.listContexts.mockReturnValue([alpha, beta]);
     });
 
-    it('lists namespaces with pod counts and tones', async () => {
-        mockApis({
-            namespaces: [ns('team-a'), ns('kube-system'), ns('gone', 'Terminating')],
-            pods: [pod('team-a'), pod('team-a'), pod('kube-system')],
-        });
+    it('lists namespaces with tones from the namespace list alone, never touching pods', async () => {
+        mockApis({ namespaces: [ns('team-a'), ns('kube-system'), ns('gone', 'Terminating')] });
+        const apis = client.apis();
+        apis.core.listPodForAllNamespaces = () => Promise.reject(new Error('pods must not be listed here'));
         await expect(cluster.listNamespaces()).resolves.toEqual([
-            { name: 'team-a', pods: 2, tone: 'accent' },
-            { name: 'kube-system', pods: 1, tone: 'ok' },
-            { name: 'gone', pods: 0, tone: 'warn' },
+            { name: 'team-a', tone: 'accent' },
+            { name: 'kube-system', tone: 'ok' },
+            { name: 'gone', tone: 'warn' },
         ]);
+    });
+
+    it('counts pods per namespace from one cluster-wide list, omitting empty namespaces', async () => {
+        mockApis({ pods: [pod('team-a'), pod('team-a'), pod('kube-system')] });
+        await expect(cluster.countPodsPerNamespace()).resolves.toEqual({ 'team-a': 2, 'kube-system': 1 });
+    });
+
+    it('wraps a failed pod count into a classified error', async () => {
+        mockApis({});
+        client.apis().core.listPodForAllNamespaces = () => Promise.reject(Object.assign(new Error('x'), { code: 403 }));
+        await expect(cluster.countPodsPerNamespace()).rejects.toMatchObject({
+            kind: 'forbidden',
+            op: 'namespaces.podCounts',
+        });
     });
 
     it('answers the active namespace from memory, without asking the cluster', async () => {

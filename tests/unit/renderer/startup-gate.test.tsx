@@ -35,16 +35,58 @@ describe('StartupGate', () => {
         invoke.mockReset();
     });
 
-    it('shows the preloader, then the app once the checks pass', async () => {
-        invoke.mockResolvedValueOnce(passing);
-        renderWithQuery(
+    it('shows the preloader, then the app once the checks pass and the namespaces are primed', async () => {
+        const order: string[] = [];
+        invoke.mockImplementation(async (channel: string) => {
+            order.push(channel);
+            if (channel === 'startupChecks') return passing;
+            if (channel === 'namespaces.list') return [{ name: 'team-a', tone: 'accent' }];
+            throw new Error(`unexpected ${channel}`);
+        });
+        const { client } = renderWithQuery(
             <StartupGate>
                 <p>the app</p>
             </StartupGate>,
         );
         expect(screen.getByRole('status')).toBeInTheDocument();
         expect(await screen.findByText('the app')).toBeInTheDocument();
-        expect(invoke).toHaveBeenCalledWith('startupChecks', {});
+        expect(order).toEqual(['startupChecks', 'namespaces.list']);
+        // The list is in the cache before the shell mounts, so the selector opens populated.
+        expect(client.getQueryData(['namespaces.list', {}])).toEqual([{ name: 'team-a', tone: 'accent' }]);
+    });
+
+    it('does not wait for namespaces when the probe could not reach the cluster', async () => {
+        const offline: StartupReport = {
+            ok: true,
+            checks: [
+                { id: 'kubeconfig', label: 'Kubeconfig file', status: 'ok' },
+                { id: 'cluster', label: 'Cluster connection', status: 'warning', detail: 'unreachable' },
+            ],
+        };
+        invoke.mockImplementation(async (channel: string) => {
+            if (channel === 'startupChecks') return offline;
+            return new Promise(() => {});
+        });
+        renderWithQuery(
+            <StartupGate>
+                <p>the app</p>
+            </StartupGate>,
+        );
+        expect(await screen.findByText('the app')).toBeInTheDocument();
+        expect(invoke).not.toHaveBeenCalledWith('namespaces.list', {});
+    });
+
+    it('lets the app in when the namespace prime fails', async () => {
+        invoke.mockImplementation(async (channel: string) => {
+            if (channel === 'startupChecks') return passing;
+            throw new Error('namespaces denied');
+        });
+        renderWithQuery(
+            <StartupGate>
+                <p>the app</p>
+            </StartupGate>,
+        );
+        expect(await screen.findByText('the app')).toBeInTheDocument();
     });
 
     it('shows the failing checks with details and hints, and retries on demand', async () => {

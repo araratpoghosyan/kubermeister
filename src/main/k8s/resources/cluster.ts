@@ -1,6 +1,12 @@
 import type { V1Namespace, V1Node, V1Pod } from '@kubernetes/client-node';
 import type { KubeContext } from '../../../shared/k8s/contexts.js';
-import type { ActiveNamespace, Cluster, Namespace, NamespaceTone } from '../../../shared/k8s/cluster.js';
+import type {
+    ActiveNamespace,
+    Cluster,
+    Namespace,
+    NamespacePodCounts,
+    NamespaceTone,
+} from '../../../shared/k8s/cluster.js';
 import { apis, getActiveNamespace } from '../client.js';
 import { getCurrentContext, listContexts } from '../context.js';
 import { toK8sError, withK8s } from '../errors.js';
@@ -57,9 +63,8 @@ export function namespaceTone(ns: V1Namespace, active: string | null): Namespace
     return ns.status?.phase === 'Active' ? 'ok' : 'warn';
 }
 
-export function toNamespace(ns: V1Namespace, podCounts: Map<string, number>, active: string | null): Namespace {
-    const name = ns.metadata?.name ?? '';
-    return { name, pods: podCounts.get(name) ?? 0, tone: namespaceTone(ns, active) };
+export function toNamespace(ns: V1Namespace, active: string | null): Namespace {
+    return { name: ns.metadata?.name ?? '', tone: namespaceTone(ns, active) };
 }
 
 export function toCluster(context: KubeContext, nodes: V1Node[], gitVersion: string): Cluster {
@@ -79,16 +84,23 @@ export function minimalCluster(context: KubeContext, status: Cluster['status'] =
     return { name: context.name, nodes: 0, status, version: '—', provider: context.cluster, region: '—' };
 }
 
-async function podsPerNamespace(): Promise<Map<string, number>> {
-    const res = await apis().core.listPodForAllNamespaces();
-    return countBy(res.items, (pod) => pod.metadata?.namespace);
-}
-
+/**
+ * The namespace objects alone. This is the read the app primes at startup and the selector lives
+ * on, so it must stay a single small list: nothing here may fan out to pods or any other kind.
+ */
 export function listNamespaces(): Promise<Namespace[]> {
     return withK8s('namespaces.list', async () => {
         const active = getActiveNamespace();
-        const [res, podCounts] = await Promise.all([apis().core.listNamespace(), podsPerNamespace()]);
-        return res.items.map((ns) => toNamespace(ns, podCounts, active));
+        const res = await apis().core.listNamespace();
+        return res.items.map((ns) => toNamespace(ns, active));
+    });
+}
+
+/** Pods per namespace from one cluster-wide pod list, for the screens that show counts. */
+export function countPodsPerNamespace(): Promise<NamespacePodCounts> {
+    return withK8s('namespaces.podCounts', async () => {
+        const res = await apis().core.listPodForAllNamespaces();
+        return Object.fromEntries(countBy(res.items, (pod) => pod.metadata?.namespace));
     });
 }
 
