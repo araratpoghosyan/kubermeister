@@ -83,6 +83,12 @@ interface ResourceListPageProps<T> {
      * the page's own `nounPlural` or title.
      */
     bulkDelete?: { kind: ManifestKind };
+    /**
+     * The kind ignores the active namespace (nodes, storage classes, cluster roles, ...). The page
+     * uses it to hold back advice that only applies to a namespaced list, such as narrowing the
+     * scope after a timeout.
+     */
+    clusterScoped?: boolean;
     /** `data-testid` for the rendered table. */
     testId?: string;
 }
@@ -178,6 +184,7 @@ export function ResourceListPage<T>({
     toolbar,
     rowProps,
     groupBy,
+    clusterScoped = false,
     testId,
 }: ResourceListPageProps<T>) {
     const navigateTo = useNavigateTo();
@@ -206,7 +213,7 @@ export function ResourceListPage<T>({
 
     // Selection is kept per scope: after a context or namespace switch the page reads a different,
     // empty bucket, so a stale selection can never delete same-named objects in the new scope.
-    const { context, namespace } = useScope();
+    const { context, namespace, allNamespaces } = useScope();
     const scopeId = `${context ?? ''}/${namespace ?? '*'}`;
     const [selectionByScope, setSelectionByScope] = useState<Record<string, RowSelectionState>>({});
     const rowSelection = selectionByScope[scopeId] ?? EMPTY_SELECTION;
@@ -365,6 +372,18 @@ export function ResourceListPage<T>({
                                     parsedError.detail !== listErrorBody(parsedError.kind, noun) && (
                                         <span className="max-w-xl text-meta text-text-dim">{parsedError.detail}</span>
                                     )}
+                                {/* Under All namespaces a list is the whole cluster's, which is what most
+                                    timeouts are; one namespace is a fraction of it. Nothing to gain for a
+                                    kind that ignores the namespace, so those say nothing. */}
+                                {parsedError?.kind === 'timeout' && allNamespaces && !clusterScoped && (
+                                    <span
+                                        className="mt-1 max-w-xl text-meta text-text-2"
+                                        data-testid="all-namespaces-hint"
+                                    >
+                                        You are viewing all namespaces, so the cluster is asked for {noun} from every
+                                        one of them at once. Selecting a namespace in the top bar asks for far less.
+                                    </span>
+                                )}
                             </div>
                             {retry && (
                                 <Button variant="outline" size="sm" onClick={() => void retry()}>

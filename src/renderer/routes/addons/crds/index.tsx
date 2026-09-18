@@ -33,6 +33,7 @@ function CrdsPage() {
     const crds = useWatchedList('CustomResourceDefinition');
     return (
         <ResourceListPage
+            clusterScoped
             icon={CodeIcon}
             title="Custom Resource Definitions"
             nounPlural="CRDs"

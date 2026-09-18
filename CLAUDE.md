@@ -247,7 +247,7 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   virtualised list rather than nesting tables).
   **Narrowing a list is the search box's job**: it matches the rows already on screen against the
   columns on screen, and nothing about it reaches the API server, so a list screen asks for one
-  thing only — its kind, in its namespace. `resources.meta` answers the two parts of `metadata` no
+  thing only — its kind, in its namespace. A namespaced list that times out under "All namespaces" says so and points at the namespace selector, since one namespace is a fraction of the cluster; cluster-scoped list screens pass `clusterScoped` to `ResourceListPage` so they never give that advice. `resources.meta` answers the two parts of `metadata` no
   view model carries, the controlling owner reference and the finalizers holding a deletion open,
   for any kind at all; `ResourceDetail` adds that card to the Labels tab itself rather than thirty
   screens passing the same three values. Which **columns** a list shows is a preference about one

@@ -21,6 +21,7 @@ function CsiNodesPage() {
     const nodes = useWatchedList('CSINode');
     return (
         <ResourceListPage
+            clusterScoped
             icon={ServerIcon}
             title="CSI Nodes"
             columns={columns}

@@ -23,6 +23,7 @@ function ApiServicesPage() {
     const services = useWatchedList('APIService');
     return (
         <ResourceListPage
+            clusterScoped
             icon={PlugIcon}
             title="API Services"
             columns={columns}

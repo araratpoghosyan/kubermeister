@@ -35,6 +35,7 @@ function NamespacesPage() {
     const namespaces = useIpcQuery('namespaces.list', {}, { refetchInterval: useRefreshIntervalMs() });
     return (
         <ResourceListPage
+            clusterScoped
             icon={BoxesIcon}
             title="Namespaces"
             columns={columns}

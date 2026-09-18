@@ -24,6 +24,7 @@ function CsiDriversPage() {
     const drivers = useWatchedList('CSIDriver');
     return (
         <ResourceListPage
+            clusterScoped
             icon={PlugIcon}
             title="CSI Drivers"
             columns={columns}

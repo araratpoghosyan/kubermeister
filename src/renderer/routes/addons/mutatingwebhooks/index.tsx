@@ -25,6 +25,7 @@ function MutatingWebhooksPage() {
     const configurations = useWatchedList('MutatingWebhookConfiguration');
     return (
         <ResourceListPage
+            clusterScoped
             icon={PencilIcon}
             title="Mutating Webhooks"
             columns={columns}

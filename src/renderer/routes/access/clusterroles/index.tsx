@@ -34,6 +34,7 @@ function ClusterRolesPage() {
     const roles = useWatchedList('ClusterRole');
     return (
         <ResourceListPage
+            clusterScoped
             icon={ShieldIcon}
             title="Cluster Roles"
             columns={columns}

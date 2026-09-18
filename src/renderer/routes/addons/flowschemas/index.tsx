@@ -22,6 +22,7 @@ function FlowSchemasPage() {
     const schemas = useWatchedList('FlowSchema');
     return (
         <ResourceListPage
+            clusterScoped
             icon={WavesIcon}
             title="Flow Schemas"
             columns={columns}

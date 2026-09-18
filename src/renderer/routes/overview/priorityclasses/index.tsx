@@ -38,6 +38,7 @@ function PriorityClassesPage() {
     const classes = useWatchedList('PriorityClass');
     return (
         <ResourceListPage
+            clusterScoped
             icon={ArrowUpNarrowWideIcon}
             title="Priority Classes"
             columns={columns}
