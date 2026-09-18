@@ -384,7 +384,8 @@ uploads one file at a time with retries, reads every asset back and checks its s
 and only then uploads the `*.yml` feed. Installer names carry the version, so a new build never
 overwrites the files a live feed points at, and any failure leaves the previous build complete;
 the feed file is the one asset written in place. Tip builds carry their build number in
-`releaseInfo.releaseNotes`, which the popover shows. Icons
+`releaseInfo.releaseNotes`, which the popover shows; a stable release's notes arrive from GitHub's Atom
+feed as rendered HTML, which `src/main/release-notes.ts` flattens to text before the bridge. Icons
 regenerate from `resources/icon.svg` and `resources/icon-tip.svg` with `resources/build-icon.sh`.
 
 ## Testing

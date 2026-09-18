@@ -2,6 +2,7 @@ import { app } from 'electron';
 import electronUpdater, { type UpdateInfo } from 'electron-updater';
 import type { UpdateState } from '../shared/ipc.js';
 import { broadcast } from './ipc/push.js';
+import { releaseNotesText } from './release-notes.js';
 import { getSettings } from './settings/store.js';
 
 // electron-updater is CommonJS; named imports are not reliably detected from ESM, so destructure.
@@ -27,7 +28,7 @@ function now(): string {
 
 /** The fields that describe a found version, kept through download and readiness. */
 function describe(info: UpdateInfo): Pick<UpdateState, 'version' | 'releaseDate' | 'notes'> {
-    const notes = typeof info.releaseNotes === 'string' ? info.releaseNotes.trim() : '';
+    const notes = typeof info.releaseNotes === 'string' ? releaseNotesText(info.releaseNotes) : '';
     return { version: info.version, releaseDate: info.releaseDate, ...(notes ? { notes } : {}) };
 }
 
