@@ -24,7 +24,6 @@ const data: Record<string, unknown> = {
         { name: 'team-a', tone: 'accent' },
         { name: 'kube-system', tone: 'ok' },
     ],
-    'pods.count': { total: 13 },
     'events.recent': [
         {
             time: '12:00:05',
@@ -63,8 +62,7 @@ describe('cluster dashboard', () => {
 
         const metrics = within(page).getByTestId('dashboard-metrics');
         expect(metrics).toHaveTextContent('Nodes3');
-        expect(metrics).toHaveTextContent('Pods13');
-        expect(metrics).toHaveTextContent('across 2 namespaces');
+        expect(metrics).not.toHaveTextContent('Pods');
         await waitFor(() => expect(metrics).toHaveTextContent('CPU usage42%'));
         expect(metrics).toHaveTextContent('Memory70%');
         expect(metrics.querySelectorAll('svg').length).toBeGreaterThanOrEqual(3);
@@ -93,8 +91,6 @@ describe('cluster dashboard', () => {
             if (channel === 'events.recent' || channel === 'metrics.alerts') return [];
             if (channel === 'metrics.sparklines') return { nodes: [], cpu: [], mem: [] };
             if (channel === 'metrics.workloadHealth') throw new Error('no metrics-server');
-            if (channel === 'namespaces.list') return [{ name: 'only', tone: 'ok' }];
-            if (channel === 'pods.count') throw new Error('the server would not count');
             return data[channel];
         });
         renderRoutes(routeTree, '/overview/summary');
@@ -103,9 +99,6 @@ describe('cluster dashboard', () => {
         expect(within(page).getByText('No active alerts.')).toBeInTheDocument();
         expect(within(page).getByTestId('alert-count')).toHaveTextContent('0');
         expect(within(page).getByTestId('alert-count')).not.toHaveClass('text-danger');
-        expect(within(page).getByTestId('dashboard-metrics')).toHaveTextContent('across 1 namespace');
-        // The pod total is best effort; when it is unknown the card claims no number.
-        expect(within(page).getByTestId('dashboard-metrics')).toHaveTextContent('Pods—');
         expect(within(page).getByTestId('dashboard-metrics')).toHaveTextContent('CPU usage0%');
         expect(within(page).getByTestId('workload-health')).not.toHaveTextContent('mem avg');
         expect(within(page).queryByTestId('dashboard-error')).not.toBeInTheDocument();
@@ -153,8 +146,8 @@ describe('cluster dashboard', () => {
     it('shows the reason and hides a detail that only repeats the title', async () => {
         const { IpcError } = await vi.importActual<typeof import('@/lib/ipc')>('@/lib/ipc');
         invoke.mockImplementation(async (channel: string) => {
-            if (channel === 'namespaces.list')
-                throw new IpcError({ kind: 'unreachable', detail: '', op: 'namespaces.list' });
+            if (channel === 'events.recent')
+                throw new IpcError({ kind: 'unreachable', detail: '', op: 'events.recent' });
             return data[channel];
         });
         renderRoutes(routeTree, '/overview/summary');

@@ -37,12 +37,6 @@ export const namespaceSchema = z.object({
 });
 
 /**
- * How many pods the cluster holds, learned from the list metadata of a one-item list rather than
- * from listing them; null when the API server would not say (a list served from its cache).
- */
-export const podCountSchema = z.object({ total: z.number().int().nonnegative().nullable() });
-
-/**
  * The active selection: `name` is null under "All namespaces", never a display label, so no caller
  * can mistake the label for a namespace and hand it to a cluster call. It is answered from memory,
  * without a cluster call, so the selection is known at once and stays known when the cluster is
@@ -54,5 +48,4 @@ export type Cluster = z.infer<typeof clusterSchema>;
 export type ConnectionProblem = z.infer<typeof connectionProblemSchema>;
 export type NamespaceTone = z.infer<typeof namespaceToneSchema>;
 export type Namespace = z.infer<typeof namespaceSchema>;
-export type PodCount = z.infer<typeof podCountSchema>;
 export type ActiveNamespace = z.infer<typeof activeNamespaceSchema>;

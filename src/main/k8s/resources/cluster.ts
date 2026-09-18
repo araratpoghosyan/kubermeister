@@ -1,6 +1,6 @@
 import type { V1Namespace, V1Node, V1Pod } from '@kubernetes/client-node';
 import type { KubeContext } from '../../../shared/k8s/contexts.js';
-import type { ActiveNamespace, Cluster, Namespace, NamespaceTone, PodCount } from '../../../shared/k8s/cluster.js';
+import type { ActiveNamespace, Cluster, Namespace, NamespaceTone } from '../../../shared/k8s/cluster.js';
 import { apis, getActiveNamespace } from '../client.js';
 import { getCurrentContext, listContexts } from '../context.js';
 import { toK8sError, withK8s } from '../errors.js';
@@ -87,22 +87,6 @@ export function listNamespaces(): Promise<Namespace[]> {
         const active = getActiveNamespace();
         const res = await apis().core.listNamespace();
         return res.items.map((ns) => toNamespace(ns, active));
-    });
-}
-
-/**
- * The cluster's pod total without listing its pods: a one-item list whose metadata carries the
- * continue token and `remainingItemCount`. No token means the list was complete, so the count is
- * exact; a token without a count means the API server served it from its cache and would not
- * estimate, which is reported as null rather than as a guess.
- */
-export function countPods(): Promise<PodCount> {
-    return withK8s('pods.count', async () => {
-        const res = await apis().core.listPodForAllNamespaces({ limit: 1 });
-        const meta = res.metadata ?? {};
-        if (!meta._continue) return { total: res.items.length };
-        const remaining = meta.remainingItemCount;
-        return { total: typeof remaining === 'number' ? res.items.length + remaining : null };
     });
 }
 

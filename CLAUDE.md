@@ -343,9 +343,8 @@ null` under "All namespaces"; the label is the renderer's, never a value handed 
   namespace objects alone and must stay that small: the startup gate primes it into the query
   cache before the shell renders (only when the probe reached the cluster, and only once), so
   the selector and palette open populated. **No list screen lists the cluster's pods for a count**:
-  the Namespaces and Nodes lists carry no pod column, the summary's pod total comes from
-  `pods.count` (a one-item list whose metadata carries `remainingItemCount`, null when the API
-  server will not estimate), and pod alerts come from `status.phase` field selectors plus the
+  the Namespaces and Nodes lists carry no pod column, the cluster summary shows no pod total, and
+  pod alerts come from `status.phase` field selectors plus the
   recent Warning `BackOff` events rather than from every pod's status. Pods are listed only where
   a detail needs them: a namespace's own screen lists its namespace, a node's screen and describe
   count with a `spec.nodeName` field selector, a workload's screen selects its own.

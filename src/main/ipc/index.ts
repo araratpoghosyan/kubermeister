@@ -10,13 +10,7 @@ import { resetHistory } from '../k8s/sampler.js';
 import { endAllStreams } from './streams.js';
 import { stopAllInformers } from '../k8s/watch.js';
 import { readPodLogSnapshot, readPodLogText } from '../k8s/logs.js';
-import {
-    countPods,
-    getActiveCluster,
-    getActiveNamespaceInfo,
-    listClusters,
-    listNamespaces,
-} from '../k8s/resources/cluster.js';
+import { getActiveCluster, getActiveNamespaceInfo, listClusters, listNamespaces } from '../k8s/resources/cluster.js';
 import { getConfigMapEntries, getSecretEntries } from '../k8s/resources/config.js';
 import { listEvents, listEventsForObject, listRecentEvents } from '../k8s/resources/events.js';
 import {
@@ -138,7 +132,6 @@ const handlers: Handlers = {
     'settings.set': async (patch) => updateSettings(patch),
     'kubeconfig.pick': async () => ({ path: await pickKubeconfig() }),
     'namespaces.list': () => listNamespaces(),
-    'pods.count': () => countPods(),
     'namespace.active': () => getActiveNamespaceInfo(),
     'cluster.active': () => getActiveCluster(),
     'clusters.list': () => listClusters(),

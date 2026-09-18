@@ -128,40 +128,6 @@ describe('readers', () => {
         ]);
     });
 
-    describe('countPods', () => {
-        const listPodForAllNamespaces = vi.fn();
-        beforeEach(() => {
-            listPodForAllNamespaces.mockReset();
-            client.apis.mockReturnValue({ core: { listPodForAllNamespaces } });
-        });
-
-        it('asks for one pod and adds the remaining count the list metadata reports', async () => {
-            listPodForAllNamespaces.mockResolvedValue({
-                items: [pod('team-a')],
-                metadata: { _continue: 'tok', remainingItemCount: 899 },
-            });
-            await expect(cluster.countPods()).resolves.toEqual({ total: 900 });
-            expect(listPodForAllNamespaces).toHaveBeenCalledWith({ limit: 1 });
-        });
-
-        it('is exact when the list is complete, including an empty cluster', async () => {
-            listPodForAllNamespaces.mockResolvedValue({ items: [pod('team-a')], metadata: {} });
-            await expect(cluster.countPods()).resolves.toEqual({ total: 1 });
-            listPodForAllNamespaces.mockResolvedValue({ items: [] });
-            await expect(cluster.countPods()).resolves.toEqual({ total: 0 });
-        });
-
-        it('reports null rather than a guess when the server continues without counting', async () => {
-            listPodForAllNamespaces.mockResolvedValue({ items: [pod('team-a')], metadata: { _continue: 'tok' } });
-            await expect(cluster.countPods()).resolves.toEqual({ total: null });
-        });
-
-        it('wraps a failure into a classified error', async () => {
-            listPodForAllNamespaces.mockRejectedValue(Object.assign(new Error('x'), { code: 403 }));
-            await expect(cluster.countPods()).rejects.toMatchObject({ kind: 'forbidden', op: 'pods.count' });
-        });
-    });
-
     it('answers the active namespace from memory, without asking the cluster', async () => {
         mockApis({ fail: true });
         await expect(cluster.getActiveNamespaceInfo()).resolves.toEqual({ name: 'team-a' });

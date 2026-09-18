@@ -21,7 +21,6 @@ const store = { getSettings: vi.fn(), updateSettings: vi.fn() };
 const startup = { runStartupChecks: vi.fn() };
 const resources = {
     listNamespaces: vi.fn(),
-    countPods: vi.fn(),
     getActiveNamespaceInfo: vi.fn(),
     getActiveCluster: vi.fn(),
     listClusters: vi.fn(),
@@ -349,14 +348,12 @@ describe('registerHandlers', () => {
             instanceType: '—',
         };
         resources.listNamespaces.mockResolvedValue([namespace]);
-        resources.countPods.mockResolvedValue({ total: 2 });
         resources.getActiveNamespaceInfo.mockResolvedValue({ name: namespace.name });
         resources.getActiveCluster.mockResolvedValue(clusterInfo);
         resources.listClusters.mockResolvedValue([clusterInfo]);
         nodesMod.listNodes.mockResolvedValue([nodeRow]);
         nodesMod.getNode.mockResolvedValue(null);
         await expect(invoke('namespaces.list', {})).resolves.toEqual([namespace]);
-        await expect(invoke('pods.count', {})).resolves.toEqual({ total: 2 });
         await expect(invoke('namespace.active', {})).resolves.toEqual({ name: namespace.name });
         await expect(invoke('cluster.active', {})).resolves.toEqual(clusterInfo);
         await expect(invoke('clusters.list', {})).resolves.toEqual([clusterInfo]);
