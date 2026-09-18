@@ -154,12 +154,24 @@ describe('startUpdater', () => {
         });
     });
 
+    it('flattens release notes GitHub hands over as HTML', async () => {
+        const { startUpdater, getUpdateState } = await loadUpdater();
+        startUpdater();
+        autoUpdater.emit('update-available', {
+            ...found,
+            releaseNotes: '<h2>What\'s Changed</h2><ul><li>fix(k8s): a fix in <a href="x">#101</a></li></ul>',
+        });
+        expect(getUpdateState()).toMatchObject({ notes: "What's Changed\n• fix(k8s): a fix in #101" });
+    });
+
     it('drops release notes that are not plain text', async () => {
         const { startUpdater, getUpdateState } = await loadUpdater();
         startUpdater();
         autoUpdater.emit('update-available', { ...found, releaseNotes: [{ version: '0.3.0', note: 'x' }] });
         expect(getUpdateState()).not.toHaveProperty('notes');
         autoUpdater.emit('update-available', { ...found, releaseNotes: '   ' });
+        expect(getUpdateState()).not.toHaveProperty('notes');
+        autoUpdater.emit('update-available', { ...found, releaseNotes: '<p></p>' });
         expect(getUpdateState()).not.toHaveProperty('notes');
     });
 
